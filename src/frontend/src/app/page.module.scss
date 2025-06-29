@@ -1,21 +1,19 @@
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  margin: 0 0;
+  padding: 1rem;
 }
 
 .header {
-  text-align: center;
-  margin-bottom: 40px;
-  
+  margin-bottom: 1rem;
+
   h1 {
     font-size: 2.5em;
-    color: #007bff;
-    margin-bottom: 10px;
+    color: #2c3e50;
+    font-weight: 600;
   }
   
   p {
-    color: #666;
+    color: #7f8c8d;
     font-size: 1.1em;
   }
 }
@@ -23,7 +21,7 @@
 .main {
   display: flex;
   flex-direction: column;
-  gap: 30px;
+  gap: 1rem;
 }
 
 .controls {

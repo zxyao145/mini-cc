@@ -1,0 +1,46 @@
+.article-detail {
+
+  &>h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+
+}
+
+.readable-content {
+  font-size: 1.25rem;
+  line-height: 1.6;
+
+  article {
+    > * {
+      margin-bottom: 0.75rem;
+      color: #333;
+    }
+
+    >ol {
+      margin-left: 1em;
+    }
+
+    >div > pre{
+      background-color: #efefef;
+      padding: 4px;
+    }
+    
+    code{
+       background-color: #efefef;
+       padding: 4px 2px;
+       border-radius: 2px;;
+    }
+
+    a {
+      color: #007bff;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}

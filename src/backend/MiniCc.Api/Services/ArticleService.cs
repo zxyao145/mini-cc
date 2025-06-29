@@ -2,6 +2,7 @@ using ContentHandler;
 using Microsoft.EntityFrameworkCore;
 using OmeReader.Api.Data;
 using OmeReader.Api.Models;
+using System;
 
 namespace OmeReader.Api.Services;
 
@@ -27,41 +28,40 @@ public class ArticleService : IArticleService
         {
             return existingArticle;
         }
-
-        try
+        var result = await _contentFetchService.FetchContentAsync(url);
+        if (result == null)
         {
-            var result = await _contentFetchService.FetchContentAsync(url);
-            if(result == null)
-            {
-                throw new InvalidOperationException($"Failed to fetch content from URL: {url}");
-            }
-
-            var readabilityContent = await _readabilityApi.ParseAsync(url, result.Content);
-
-            var article = new Article
-            {
-                Url = url,
-
-                Title = readabilityContent.Title ?? result.Title,
-                Author = result.Author,
-                OriginContent = result.OriginContent,
-                ReadableContent = readabilityContent.Content ?? "",
-                TextContentLegth = readabilityContent.Length,
-                Summary = readabilityContent.Excerpt ?? result.Summary,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Articles.Add(article);
-            await _context.SaveChangesAsync();
-
-            return article;
+            throw new InvalidOperationException($"Failed to fetch content from URL: {url}");
         }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save article from URL: {Url}", url);
-            throw;
-        }
+
+        await SaveContentAsync(result);
     }
+
+
+    public async Task<Article> SaveContentAsync(ContentFetchResult result)
+    {
+        var url = result.Url;
+        var readabilityContent = await _readabilityApi.ParseAsync(url, result.OriginContent);
+
+        var article = new Article
+        {
+            Url = url,
+
+            Title = readabilityContent.Title ?? result.Title ?? "",
+            Author = result.Author ?? "",
+            OriginContent = result.OriginContent,
+            ReadableContent = readabilityContent.Content ?? "",
+            TextContentLegth = readabilityContent.Length,
+            Summary = readabilityContent.Excerpt ?? result.Summary ?? "",
+            CreatedAt = DateTimeOffset.Now
+        };
+
+        _context.Articles.Add(article);
+        await _context.SaveChangesAsync();
+
+        return article;
+    }
+
 
     public async Task<IEnumerable<Article>> GetArticlesAsync(int page = 1, int pageSize = 20, string? search = null)
     {

@@ -1,3 +1,4 @@
+using ContentHandler;
 using OmeReader.Api.Models;
 
 namespace OmeReader.Api.Services;
@@ -5,6 +6,8 @@ namespace OmeReader.Api.Services;
 public interface IArticleService
 {
     Task<Article> SaveArticleAsync(string url);
+    Task<Article> SaveContentAsync(ContentFetchResult result);
+
     Task<IEnumerable<Article>> GetArticlesAsync(int page = 1, int pageSize = 20, string? search = null);
     Task<Article?> GetArticleByIdAsync(int id);
     Task<Article> UpdateArticleAsync(int id, Article article);

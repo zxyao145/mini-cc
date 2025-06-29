@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
-### Root Project Commands (from `/ome-reader/`)
+### Root Project Commands (from `/src/`)
 - `pnpm dev` - Run both backend and frontend concurrently in development mode
 - `pnpm dev:backend` - Run only the ASP.NET Core API (`cd backend/OmeReader.Api && dotnet run`)
 - `pnpm dev:frontend` - Run only the Next.js frontend (`cd frontend && pnpm dev`)
@@ -15,14 +15,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm db:migrate` - Apply database migrations (`cd backend/OmeReader.Api && dotnet ef database update`)
 - `pnpm db:migration` - Create new migration (`cd backend/OmeReader.Api && dotnet ef migrations add`)
 
-### Backend Commands (from `/ome-reader/backend/OmeReader.Api/`)
+### Backend Commands (from `/src/backend/OmeReader.Api/`)
 - `dotnet run` - Start the API server (https://localhost:5001, http://localhost:5000)
 - `dotnet build` - Build the backend
 - `dotnet ef database update` - Apply database migrations
 - `dotnet ef migrations add <MigrationName>` - Create new migration
 - `dotnet tool install --global dotnet-ef` - Install EF Core tools globally (one-time setup)
 
-### Frontend Commands (from `/ome-reader/frontend/`)
+### Frontend Commands (from `/src/frontend/`)
 - `pnpm dev` - Start Next.js development server with Turbopack (http://localhost:3000)
 - `pnpm build` - Build for production
 - `pnpm start` - Start production server
@@ -36,14 +36,14 @@ This is a full-stack read-later application with:
 - **Frontend**: Next.js 15 with TypeScript, SCSS, and App Router
 - **Monorepo**: Uses pnpm workspaces for dependency management
 
-### Backend Architecture (`/ome-reader/backend/OmeReader.Api/`)
+### Backend Architecture (`/src/backend/OmeReader.Api/`)
 - **Controllers**: API endpoints for articles, tags, and highlights
 - **Models**: Entity models (Article, Tag, Highlight) with EF Core annotations
 - **Data**: Entity Framework DbContext with PostgreSQL provider
 - **Services**: Business logic services (ArticleService, WebScraperService)
 - **Database**: PostgreSQL with Entity Framework Core 9.0
 
-### Frontend Architecture (`/ome-reader/frontend/src/`)
+### Frontend Architecture (`/src/frontend/src/`)
 - **App Router**: Next.js 15 app directory structure
 - **Components**: React functional components with SCSS modules
 - **API Client**: Centralized axios-based API client in `lib/api.ts`

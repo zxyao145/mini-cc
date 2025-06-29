@@ -5,6 +5,8 @@ import { Article } from "@/types";
 import { useEffect, useState } from "react";
 import DOMPurify from "dompurify";
 
+import "./main.scss";
+
 export default function Main(params: { id: string }) {
   const [loading, setLoading] = useState(false);
   const [article, setArticles] = useState<Article>();
@@ -35,9 +37,9 @@ export default function Main(params: { id: string }) {
   }
 
   return (
-    <main>
+    <main className="article-detail">
       <h1>{article?.title}</h1>
-      <div dangerouslySetInnerHTML={{ __html: article?.readableContent ?? "" }}></div>
+      <div className="readable-content" dangerouslySetInnerHTML={{ __html: article?.readableContent ?? "" }}></div>
     </main>
   );
 }

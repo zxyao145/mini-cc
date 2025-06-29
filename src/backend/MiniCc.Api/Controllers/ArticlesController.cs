@@ -1,3 +1,4 @@
+using ContentHandler;
 using Microsoft.AspNetCore.Mvc;
 using OmeReader.Api.Models;
 using OmeReader.Api.Services;
@@ -73,6 +74,27 @@ public class ArticlesController : ControllerBase
             return StatusCode(500, "Failed to save article");
         }
     }
+
+    [HttpPost]
+    public async Task<ActionResult<Article>> SaveArticleContent([FromBody] ContentFetchResult request)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(request.Url) || !Uri.IsWellFormedUriString(request.Url, UriKind.Absolute))
+            {
+                return BadRequest("Invalid URL");
+            }
+
+            var article = await _articleService.SaveContentAsync(request);
+            return CreatedAtAction(nameof(GetArticle), new { id = article.Id }, article);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving article from URL: {Url}", request.Url);
+            return StatusCode(500, "Failed to save article");
+        }
+    }
+
 
     [HttpPut("{id}")]
     public async Task<ActionResult<Article>> UpdateArticle(int id, [FromBody] Article article)

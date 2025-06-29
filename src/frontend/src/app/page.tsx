@@ -50,18 +50,16 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>OmeReader</h1>
-        <p>Your personal read-later app</p>
+        <SearchBar 
+            value={searchTerm} 
+            onChange={setSearchTerm} 
+            placeholder="Search articles..." 
+          />
       </header>
 
       <main className={styles.main}>
         <div className={styles.controls}>
           <AddArticleForm onAdd={handleAddArticle} />
-          <SearchBar 
-            value={searchTerm} 
-            onChange={setSearchTerm} 
-            placeholder="Search articles..." 
-          />
         </div>
 
         <ArticleList 

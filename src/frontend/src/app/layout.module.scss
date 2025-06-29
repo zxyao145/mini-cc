@@ -1,0 +1,31 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+.content {
+  flex: 1;
+  transition: margin-left 0.3s ease;
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding: 1rem;
+
+  &.sidebarOpen {
+    margin-left: 250px;
+  }
+  
+  &.sidebarClosed {
+    margin-left: 60px;
+  }
+}
+
+
+@media (max-width: 768px) {
+  .content {
+    &.sidebarOpen,
+    &.sidebarClosed {
+      margin-left: 0;
+    }
+  }
+}
