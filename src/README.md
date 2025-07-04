@@ -1,6 +1,6 @@
-# OmeReader - Read Later Application
+# MiniCC (Mini Cut Collection) - Read Later Application
 
-A modern read-later application similar to Omnivore, built with ASP.NET Core and Next.js.
+Omnivore minimum implementation, built with ASP.NET Core and Next.js.
 
 ## Features
 
