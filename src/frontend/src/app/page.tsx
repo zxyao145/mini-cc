@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import ArticleList from "@/components/ArticleList";
 import AddArticleForm from "@/components/AddArticleForm";
 import SearchBar from "@/components/SearchBar";
@@ -13,11 +13,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    loadArticles();
-  }, [searchTerm]);
 
-  const loadArticles = async () => {
+  const loadArticles = useCallback(async () => {
     setLoading(true);
     try {
       const data = await articleApi.getArticles(1, 20, searchTerm);
@@ -27,7 +24,12 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm]);
+ 
+  useEffect(() => {
+    loadArticles();
+  }, [searchTerm, loadArticles]);
+
 
   const handleAddArticle = async (url: string) => {
     try {

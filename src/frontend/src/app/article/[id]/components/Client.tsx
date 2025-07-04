@@ -5,9 +5,9 @@ import { Article } from "@/types";
 import { useEffect, useState } from "react";
 import DOMPurify from "dompurify";
 
-import "./main.scss";
+import "./client.scss";
 
-export default function Main(params: { id: string }) {
+export default function Client(params: { id: string }) {
   const [loading, setLoading] = useState(false);
   const [article, setArticles] = useState<Article>();
   const getArticle = async (id: string) => {
@@ -26,7 +26,7 @@ export default function Main(params: { id: string }) {
 
   useEffect(() => {
     getArticle(params.id);
-  }, []);
+  }, [params.id]);
 
   if (loading) {
     return (

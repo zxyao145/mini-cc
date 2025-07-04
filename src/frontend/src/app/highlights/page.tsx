@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from "react";
 import styles from "./highlights.module.scss";
@@ -66,7 +66,7 @@ export default function HighlightsPage() {
             {highlights.map((highlight) => (
               <div key={highlight.id} className={styles.highlightCard}>
                 <div className={styles.highlightText}>
-                  "{highlight.text}"
+                  {highlight.text}
                 </div>
                 
                 {highlight.note && (

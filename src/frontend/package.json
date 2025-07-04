@@ -13,10 +13,10 @@
     "dompurify": "^3.2.6",
     "next": "15.3.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "sass": "^1.89.2"
+    "react-dom": "^19.0.0"
   },
-  "devDependencies": {
+  "devDependencies": {   
+    "sass": "^1.89.2",
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
     "@types/react": "^19",

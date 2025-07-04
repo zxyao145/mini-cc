@@ -1,0 +1,50 @@
+# version: '3.9'
+
+services:
+  pgvector:
+    image: pgvector/pgvector:pg17
+    container_name: pgvector
+    user: postgres
+    environment:
+      POSTGRES_DB: mini_cc
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      # test: "exit 0"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minicc-readability-api:
+    image: minicc-readability-api
+    container_name: minicc-readability-api
+    ports:
+      - "5002:5002"  # 假设内部是 3000
+    depends_on:
+      - pgvector
+
+  minicc-api:
+    image: minicc-api
+    container_name: minicc-api
+    ports:
+      - "5001:5001"  # 假设内部是 3000
+    depends_on:
+      pgvector:
+        condition: service_healthy
+      minicc-readability-api:
+        condition: service_started
+
+  minicc-web:
+    image: minicc-web
+    container_name: minicc-web
+    ports:
+      - "5003:3000"  # 假设内部是 3000
+    depends_on:
+      - minicc-api
+volumes:
+  pgdata:

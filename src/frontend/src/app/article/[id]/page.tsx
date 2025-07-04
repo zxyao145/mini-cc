@@ -1,10 +1,9 @@
+import Client from "./components/Client";
+type Params = {
+  params: Promise<{ id: string }>;
+};
 
-
-import Main from "./components/Main";
-interface Params {
-  params: { id: string };
-}
-
-export default async function ArticlePage({ params }: Params) {
- return <Main id={params.id} />;
+export default async function ArticlePage(props: Params) {
+  const params = await props.params;
+  return <Client id={params.id} />;
 }
