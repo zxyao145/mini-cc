@@ -17,7 +17,7 @@ app.post('/extract', async (req, res) => {
     const doc = new JSDOM(content, {});
     const reader = new Readability(doc.window.document, {
         debug: DEBUG_MODE,
-        createImageProxyUrl,
+        // createImageProxyUrl: null,
         keepTables: isNewsletter,
         ignoreLinkDensity: isNewsletter,
         url,

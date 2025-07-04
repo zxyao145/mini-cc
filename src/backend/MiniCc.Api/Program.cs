@@ -2,11 +2,14 @@ using ContentHandler;
 using Microsoft.EntityFrameworkCore;
 using OmeReader.Api.Data;
 using OmeReader.Api.Services;
+using Scalar.AspNetCore;
 using System.Net.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+builder.Services.AddOpenApi();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -44,6 +47,9 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+
     app.UseSwagger();
     app.UseSwaggerUI();
 }

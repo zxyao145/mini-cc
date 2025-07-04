@@ -1,0 +1,21 @@
+{
+  "name": "minicc-extension",
+  "version": "1.0.0",
+  "description": "MiniCC Chrome Extension for saving articles",
+  "scripts": {
+    "dev": "vite build --mode development --watch",
+    "build": "vite build",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.329",
+    "@typescript-eslint/eslint-plugin": "^8.35.1",
+    "@typescript-eslint/parser": "^8.35.1",
+    "@vitejs/plugin-react": "^4.6.0",
+    "eslint": "^9.30.1",
+    "sass": "^1.89.2",
+    "typescript": "^5.3.3",
+    "vite": "^7.0.1",
+    "vite-plugin-web-extension": "^4.4.4"
+  }
+}

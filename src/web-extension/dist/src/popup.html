@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="./src/popup.scss">
+  <script type="module" crossorigin src="/src/popup.js"></script>
+  <link rel="stylesheet" crossorigin href="/popup.css">
+</head>
+<body>
+  <div id="popup-container">
+    <header class="header">
+      <h1 class="title">MiniCC</h1>
+      <p class="subtitle">Save to read later</p>
+    </header>
+    
+    <main class="main">
+      <div id="status" class="status"></div>
+      
+      <div id="content-preview" class="content-preview hidden">
+        <h3 id="preview-title" class="preview-title"></h3>
+        <p id="preview-author" class="preview-author"></p>
+        <p id="preview-url" class="preview-url"></p>
+      </div>
+      
+      <div class="actions">
+        <button id="save-btn" class="btn btn-primary">Save Article</button>
+        <button id="settings-btn" class="btn btn-secondary">Settings</button>
+      </div>
+      
+      <div id="settings-panel" class="settings-panel hidden">
+        <label for="api-url">API URL:</label>
+        <input type="text" id="api-url" placeholder="https://localhost:5001" />
+        <button id="save-settings-btn" class="btn btn-small">Save</button>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

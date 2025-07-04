@@ -34,7 +34,7 @@ public class ArticleService : IArticleService
             throw new InvalidOperationException($"Failed to fetch content from URL: {url}");
         }
 
-        await SaveContentAsync(result);
+        return await SaveContentAsync(result);
     }
 
 

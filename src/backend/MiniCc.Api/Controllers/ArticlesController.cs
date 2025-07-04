@@ -75,6 +75,8 @@ public class ArticlesController : ControllerBase
         }
     }
 
+
+    [Route("content")]
     [HttpPost]
     public async Task<ActionResult<Article>> SaveArticleContent([FromBody] ContentFetchResult request)
     {

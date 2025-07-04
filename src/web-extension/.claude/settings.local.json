@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p src)",
+      "Bash(pnpm install)",
+      "Bash(ls -la node_modules)",
+      "Bash(pnpm install --no-optional)",
+      "Bash(pnpm build)",
+      "Bash(npm install)",
+      "Bash(npm run build)",
+      "Bash(ls -la)",
+      "Bash(ls -la dist/)",
+      "Bash(npm uninstall webpack webpack-cli ts-loader copy-webpack-plugin mini-css-extract-plugin css-loader sass-loader)",
+      "Bash(npm install --save-dev vite @vitejs/plugin-react vite-plugin-web-extension)",
+      "Bash(rm webpack.config.js)"
+    ],
+    "deny": []
+  }
+}
