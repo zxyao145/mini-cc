@@ -43,6 +43,10 @@ ome-reader/
 │   │   ├── lib/           # Utilities and API client
 │   │   └── types/         # TypeScript type definitions
 │   └── public/            # Static assets
+│
+├── web-extension/
+│   └── src/               # source file
+│       
 └── README.md
 ```
 
@@ -50,8 +54,8 @@ ome-reader/
 
 ### Prerequisites
 - .NET 9.0 SDK
-- Node.js 18+ and pnpm
-- PostgreSQL database (install pnpm: `npm install -g pnpm`)
+- Node.js 18+ and pnpm (install pnpm: `npm install -g pnpm`)
+- PostgreSQL database 
 
 ### Backend Setup
 
