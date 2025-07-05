@@ -71,7 +71,7 @@ export default function ArticleCard({ article, onDelete }: ArticleCardProps) {
       <div className={styles.content}>
         <div className={styles.header}>
           <h3 className={styles.title}>
-            <Link href={`/article/${article.id}`} rel="noopener noreferrer">
+            <Link href={`/pages/article/${article.id}`} rel="noopener noreferrer">
               {article.title}
             </Link>
           </h3>

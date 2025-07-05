@@ -18,7 +18,7 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const handleLogout = async () => {
     try {
       await logout();
-      router.push("/login");
+      router.push("/pages/login");
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -26,8 +26,8 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
 
   const navItems = [
     { href: "/", label: "Home", icon: "🏠" },
-    // { href: "/highlights", label: "HighLights", icon: "📝" },
-    // { href: "/tags", label: "Tags", icon: "🏷️" }
+    { href: "/pages/highlights", label: "HighLights", icon: "📝" },
+    { href: "/pages/tags", label: "Tags", icon: "🏷️" }
   ];
 
   return (

@@ -14,7 +14,7 @@ export default function ClientLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const pathname = usePathname();
-  const isLoginPage = pathname === "/login";
+  const isLoginPage = pathname === "/pages/login";
 
   return (
     <AuthProvider>

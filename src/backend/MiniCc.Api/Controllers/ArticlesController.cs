@@ -1,12 +1,16 @@
 using ContentHandler;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MiniCc.Api.Authentication;
 using OmeReader.Api.Models;
 using OmeReader.Api.Services;
 
 namespace OmeReader.Api.Controllers;
 
-[Authorize]
+//[Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
+[Authorize(AuthenticationSchemes = 
+    $"{CookieAuthenticationDefaults.AuthenticationScheme}, {AccessKeyAuthenticationSchemeOptions.DefaultScheme}")]
 [ApiController]
 [Route("api/[controller]")]
 public class ArticlesController : ControllerBase

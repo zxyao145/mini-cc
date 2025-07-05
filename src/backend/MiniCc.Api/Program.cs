@@ -5,6 +5,7 @@ using OmeReader.Api.Data;
 using OmeReader.Api.Services;
 using Scalar.AspNetCore;
 using System.Net.Http;
+using MiniCc.Api.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,17 +18,22 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
             .AddCookie(options =>
             {
-
-                options.LoginPath = "/Account/Login";           // µÇÂ¼Ò³ÃæÂ·¾¶
-                options.LogoutPath = "/Account/Logout";         // µÇ³öÂ·¾¶
-                options.AccessDeniedPath = "/Account/AccessDenied"; // ·ÃÎÊ±»¾Ü¾øÒ³Ãæ
-                options.ExpireTimeSpan = TimeSpan.FromMinutes(30);  // Cookie¹ıÆÚÊ±¼ä
-                options.SlidingExpiration = true;               // ÆôÓÃ»¬¶¯¹ıÆÚ
-                // options.Cookie.Name = "AuthCookie";             // CookieÃû³Æ
-                options.Cookie.HttpOnly = true;                 // ½öHTTP·ÃÎÊ
-                options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest; // °²È«²ßÂÔ
-
-            });
+                options.LoginPath = "/pages/login";           // ç™»å½•é¡µé¢è·¯å¾„
+                options.LogoutPath = "/pages/logout";         // ç™»å‡ºè·¯å¾„
+                options.AccessDeniedPath = "/pages/access-denied"; // è®¿é—®è¢«æ‹’ç»é¡µé¢
+                options.ExpireTimeSpan = TimeSpan.FromMinutes(30);  // Cookieè¿‡æœŸæ—¶é—´
+                options.SlidingExpiration = true;               // å¯ç”¨æ»‘åŠ¨è¿‡æœŸ
+                // options.Cookie.Name = "AuthCookie";             // Cookieåç§°
+                options.Cookie.HttpOnly = true;                 // ä»…HTTPè®¿é—®
+                // if http
+                //options.Cookie.SecurePolicy = CookieSecurePolicy.None; // å®‰å…¨ç­–ç•¥
+                //options.Cookie.SameSite = SameSiteMode.Lax;   // è·¨åŸŸå¿…é¡»
+                // if https
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // å®‰å…¨ç­–ç•¥
+                options.Cookie.SameSite = SameSiteMode.None;   // è·¨åŸŸå¿…é¡»
+            })
+            .AddScheme<AccessKeyAuthenticationSchemeOptions, AccessKeyAuthenticationHandler>(
+                AccessKeyAuthenticationSchemeOptions.DefaultScheme, options => { });
 
 var dbConnectionString = Environment.GetEnvironmentVariable("MiniCC_Db");
 if (string.IsNullOrWhiteSpace(dbConnectionString))
@@ -58,7 +64,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", builder =>
     {
-        builder.WithOrigins("http://localhost:3000")
+        builder.WithOrigins("http://localhost:3000", "https://localhost:3000")
                .AllowAnyMethod()
                .AllowAnyHeader()
                .AllowCredentials();
@@ -78,7 +84,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 app.UseHttpsRedirection();
-// ÆôÓÃÈÏÖ¤ºÍÊÚÈ¨
+// å¯ç”¨è®¤è¯å’Œæˆæƒ
 app.UseAuthentication();
 app.UseAuthorization();
 
