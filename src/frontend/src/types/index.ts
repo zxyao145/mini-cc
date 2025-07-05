@@ -42,3 +42,14 @@ export interface AddTagRequest {
   name: string;
   color?: string;
 }
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+  rememberMe?: boolean;
+}
+
+export interface User {
+  username: string;
+  isAuthenticated: boolean;
+}

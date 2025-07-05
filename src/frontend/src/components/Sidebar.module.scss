@@ -101,6 +101,55 @@
   white-space: nowrap;
 }
 
+.userSection {
+  border-top: 1px solid #e8ddc7;
+  padding: 1rem;
+  margin-top: auto;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background-color: #ede3d3;
+  border-radius: 8px;
+}
+
+.username {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #6b5b47;
+}
+
+.logoutButton {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem;
+  background: none;
+  border: none;
+  color: #a0916f;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  font-size: 0.95rem;
+  
+  &:hover {
+    background-color: #ede3d3;
+    color: #6b5b47;
+  }
+  
+  .icon {
+    margin-right: 0.75rem;
+    font-size: 1.2rem;
+  }
+  
+  .label {
+    font-weight: 500;
+  }
+}
+
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Article, SaveArticleRequest, AddTagRequest, Highlight, Tag } from '@/types';
+import { Article, SaveArticleRequest, AddTagRequest, Highlight, Tag, LoginRequest, User } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://localhost:5001/api';
 
@@ -8,6 +8,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 export const articleApi = {
@@ -69,5 +70,33 @@ export const articleApi = {
 
   async removeTag(articleId: number, tagId: number): Promise<void> {
     await api.delete(`/articles/${articleId}/tags/${tagId}`);
+  },
+};
+
+export const authApi = {
+  async login(credentials: LoginRequest): Promise<void> {
+    const formData = new FormData();
+    formData.append('username', credentials.username);
+    formData.append('password', credentials.password);
+    formData.append('rememberMe', String(credentials.rememberMe ?? true));
+
+    await api.post('/account/login', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  async logout(): Promise<void> {
+    await api.post('/account/loginout');
+  },
+
+  async getCurrentUser(): Promise<User | null> {
+    try {
+      const response = await api.get('/account/current');
+      return response.data;
+    } catch {
+      return null;
+    }
   },
 };

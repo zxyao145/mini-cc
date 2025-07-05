@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import styles from "./Sidebar.module.scss";
 
 interface SidebarProps {
@@ -11,6 +12,17 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   const navItems = [
     { href: "/", label: "Home", icon: "🏠" },
@@ -47,6 +59,24 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
           ))}
         </ul>
       </nav>
+
+      {user && (
+        <div className={styles.userSection}>
+          {isOpen && (
+            <div className={styles.userInfo}>
+              <span className={styles.username}>{user.username}</span>
+            </div>
+          )}
+          <button 
+            onClick={handleLogout} 
+            className={styles.logoutButton}
+            title={isOpen ? "退出登录" : "退出"}
+          >
+            <span className={styles.icon}>🚪</span>
+            {isOpen && <span className={styles.label}>退出</span>}
+          </button>
+        </div>
+      )}
     </aside>
   );
 }

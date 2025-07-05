@@ -21,6 +21,12 @@ public class UserLoginCommand
     public bool RememberMe { get; set; } = true;
 }
 
+public class UserInfo
+{
+    public string UserName { get; set; } = "";
+    public bool IsAuthenticated { get; set; }
+}
+
 
 [ApiController]
 [Route("api/[controller]/[action]")]
@@ -37,7 +43,7 @@ public class AccountController : ControllerBase
         {
             ModelState.AddModelError("", "用户名或密码错误");
 
-            return BadRequest();
+            return BadRequest(ModelState);
         }
 
         var claims = new List<Claim>
@@ -46,10 +52,10 @@ public class AccountController : ControllerBase
             new Claim(ClaimTypes.NameIdentifier, userName),
         };
 
-        var claimsIdentity = new ClaimsIdentity(claims);
+        var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var authProperties = new AuthenticationProperties
         {
-            IsPersistent = command.RememberMe, 
+            IsPersistent = command.RememberMe,
         };
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
@@ -69,4 +75,19 @@ public class AccountController : ControllerBase
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         return Ok();
     }
+
+    // 获取当前用户信息
+    [AllowAnonymous]
+    [HttpGet]
+    public IActionResult Current()
+    {
+        var userInfo = new UserInfo
+        {
+            UserName = User.Identity?.Name ?? "",
+            IsAuthenticated = User.Identity?.IsAuthenticated ?? false
+        };
+
+        return Ok(userInfo);
+    }
+
 }
