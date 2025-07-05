@@ -30,4 +30,8 @@
     <ProjectReference Include="..\ContentHandler\ContentHandler.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Middleware\" />
+  </ItemGroup>
+
 </Project>
