@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using MiniCc.Api.Services;
 using System.Data;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -16,37 +17,34 @@ public class AccessKeyAuthenticationSchemeOptions : AuthenticationSchemeOptions
 public class AccessKeyAuthenticationHandler : AuthenticationHandler<AccessKeyAuthenticationSchemeOptions>
 {
     private readonly ILogger<AccessKeyAuthenticationHandler> _logger;
+    private readonly IAccessKeyService _accessKeyService;
 
-    public AccessKeyAuthenticationHandler(IOptionsMonitor<AccessKeyAuthenticationSchemeOptions> options,
-        ILoggerFactory logger, UrlEncoder encoder)
+
+    public AccessKeyAuthenticationHandler(
+        IOptionsMonitor<AccessKeyAuthenticationSchemeOptions> options,
+        ILoggerFactory logger, UrlEncoder encoder,
+        IAccessKeyService accessKeyService)
         : base(options, logger, encoder)
     {
         _logger = logger.CreateLogger<AccessKeyAuthenticationHandler>();
+        _accessKeyService = accessKeyService;
     }
 
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         // 从Header或Query参数获取AccessKey
         var accessKey = GetAccessKeyFromRequest();
 
         if (string.IsNullOrEmpty(accessKey))
         {
-            return Task.FromResult(AuthenticateResult.NoResult());
+            return AuthenticateResult.NoResult();
         }
 
-        // Get the expected access key from environment variable or configuration
-        var expectedAccessKey = Environment.GetEnvironmentVariable("MiniCC_AccessKey");
-
-        if (string.IsNullOrWhiteSpace(expectedAccessKey))
-        {
-            _logger.LogError("expected AccessKey not set");
-            return Task.FromResult(AuthenticateResult.Fail("Invalid access key"));
-        }
-
-        if (accessKey != expectedAccessKey)
+        var isValid = await _accessKeyService.IsValid(accessKey);
+        if (!isValid)
         {
             _logger.LogWarning("Invalid access key provided: {AccessKey}", accessKey);
-            return Task.FromResult(AuthenticateResult.Fail("Invalid access key"));
+            return AuthenticateResult.Fail("Invalid access key");
         }
 
         // Create claims for the authenticated user
@@ -63,7 +61,7 @@ public class AccessKeyAuthenticationHandler : AuthenticationHandler<AccessKeyAut
         var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
         _logger.LogInformation("Access key authentication successful");
-        return Task.FromResult(AuthenticateResult.Success(ticket));
+        return AuthenticateResult.Success(ticket);
     }
 
 

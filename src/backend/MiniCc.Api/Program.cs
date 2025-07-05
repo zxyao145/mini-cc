@@ -1,11 +1,12 @@
 using ContentHandler;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
+using MiniCc.Api.Authentication;
+using MiniCc.Api.Services;
 using OmeReader.Api.Data;
 using OmeReader.Api.Services;
 using Scalar.AspNetCore;
 using System.Net.Http;
-using MiniCc.Api.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +45,11 @@ if (string.IsNullOrWhiteSpace(dbConnectionString))
 builder.Services.AddDbContext<OmeReaderContext>(options =>
     options.UseNpgsql(dbConnectionString)
     );
+
+builder.Services.AddOptions<AccessKeys>()
+    .Bind(builder.Configuration.GetSection("AccessKey"));
+builder.Services.AddScoped<IAccessKeyService, AccessKeyService>();
+builder.Services.AddScoped<IAccountService, AccountService>();
 
 builder.Services.AddScoped<IArticleService, ArticleService>();
 builder.Services.AddHttpClient("default", (httpClient) =>

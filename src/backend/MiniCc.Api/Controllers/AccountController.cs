@@ -2,24 +2,13 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MiniCc.Api.Services;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
 namespace MiniCc.Api.Controllers;
 
 
-public class UserLoginCommand
-{
-    [Required]
-    public string Username { get; set; } = "";
-    [Required]
-    public string Password { get; set; } = "";
-
-    /// <summary>
-    /// 记住我选项
-    /// </summary>
-    public bool RememberMe { get; set; } = true;
-}
 
 public class UserInfo
 {
@@ -32,6 +21,13 @@ public class UserInfo
 [Route("api/[controller]/[action]")]
 public class AccountController : ControllerBase
 {
+    private readonly IAccountService _accountService;
+
+    public AccountController(IAccountService accountService)
+    {
+        _accountService = accountService;
+    }
+
     [AllowAnonymous]
     [HttpPost]
     public async Task<ActionResult> LoginAsync([FromForm] UserLoginCommand command)
@@ -39,10 +35,10 @@ public class AccountController : ControllerBase
         var userName = Environment.GetEnvironmentVariable("MiniCC_UserName") ?? "demo";
         var pwd = Environment.GetEnvironmentVariable("MiniCC_Password") ?? "demo_password";
 
-        if (command.Username != userName || command.Password != pwd)
+        var loginResult = await _accountService.LoginAsync(command);
+        if (loginResult == LoginResult.Fail )
         {
             ModelState.AddModelError("", "用户名或密码错误");
-
             return BadRequest(ModelState);
         }
 
@@ -60,7 +56,6 @@ public class AccountController : ControllerBase
 
         await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
             new ClaimsPrincipal(claimsIdentity), authProperties);
-
 
         // Simulate a successful login
         Response.StatusCode = 200; // OK
