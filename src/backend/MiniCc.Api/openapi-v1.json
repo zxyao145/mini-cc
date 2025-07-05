@@ -496,17 +496,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/Tag"
+                  "$ref": "#/components/schemas/Tag2"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Tag"
+                  "$ref": "#/components/schemas/Tag2"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Tag"
+                  "$ref": "#/components/schemas/Tag2"
                 }
               }
             }
@@ -538,6 +538,51 @@
               "format": "int32"
             }
           }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Account/Login": {
+      "post": {
+        "tags": [
+          "Account"
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "Username": {
+                    "type": "string"
+                  },
+                  "Password": {
+                    "type": "string"
+                  },
+                  "RememberMe": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Account/LoginOut": {
+      "post": {
+        "tags": [
+          "Account"
         ],
         "responses": {
           "200": {
@@ -755,7 +800,7 @@
             "format": "int32"
           },
           "article": {
-            "$ref": "#/components/schemas/Article"
+            "$ref": "#/components/schemas/Article2"
           }
         }
       },
@@ -826,6 +871,9 @@
   "tags": [
     {
       "name": "Articles"
+    },
+    {
+      "name": "Account"
     }
   ]
 }

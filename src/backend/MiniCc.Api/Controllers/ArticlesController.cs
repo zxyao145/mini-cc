@@ -1,10 +1,12 @@
 using ContentHandler;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OmeReader.Api.Models;
 using OmeReader.Api.Services;
 
 namespace OmeReader.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class ArticlesController : ControllerBase
