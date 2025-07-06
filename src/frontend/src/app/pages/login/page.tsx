@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import styles from './login.module.scss';
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
+  const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
+    if (!userName || !password) {
       setError('请输入用户名和密码');
       return;
     }
@@ -26,7 +26,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      await login(username, password, rememberMe);
+      await login(userName, password, rememberMe);
       router.push('/');
     } catch (error) {
       setError('用户名或密码错误');
@@ -42,14 +42,14 @@ export default function LoginPage() {
         
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.field}>
-            <label htmlFor="username" className={styles.label}>
+            <label htmlFor="userName" className={styles.label}>
               用户名
             </label>
             <input
               type="text"
-              id="username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              id="userName"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
               className={styles.input}
               placeholder="请输入用户名"
               disabled={isLoading}

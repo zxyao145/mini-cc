@@ -72,9 +72,7 @@ public class ArticleService : IArticleService
 
         if (!string.IsNullOrEmpty(search))
         {
-            query = query.Where(a => a.Title.Contains(search) || 
-                                   a.ReadableContent.Contains(search) || 
-                                   a.Author.Contains(search));
+            query = query.Where(a => a.SearchVector.Matches(search));
         }
 
         return await query

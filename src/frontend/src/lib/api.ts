@@ -4,7 +4,7 @@ import { Article, SaveArticleRequest, AddTagRequest, Highlight, Tag, LoginReques
 axios.defaults.withCredentials = true;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
-console.log("API_BASE_URL", API_BASE_URL);
+console.debug("API_BASE_URL", API_BASE_URL);
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -78,7 +78,7 @@ export const articleApi = {
 export const authApi = {
   async login(credentials: LoginRequest): Promise<void> {
     const formData = new FormData();
-    formData.append('username', credentials.username);
+    formData.append('userName', credentials.userName);
     formData.append('password', credentials.password);
     formData.append('rememberMe', String(credentials.rememberMe ?? true));
 

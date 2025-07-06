@@ -44,12 +44,12 @@ export interface AddTagRequest {
 }
 
 export interface LoginRequest {
-  username: string;
+  userName: string;
   password: string;
   rememberMe?: boolean;
 }
 
 export interface User {
-  username: string;
+  userName: string;
   isAuthenticated: boolean;
 }

@@ -1,4 +1,6 @@
+using NpgsqlTypes;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace MiniCc.Api.Models;
 
@@ -32,7 +34,12 @@ public class Article
     public bool IsFavorite { get; set; } = false;
     
     public string ImageUrl { get; set; } = string.Empty;
-    
+
+
+    // 预计算的搜索向量
+    [JsonIgnore]
+    public NpgsqlTsVector SearchVector { get; set; } = default!;
+
     public ICollection<Tag> Tags { get; set; } = new List<Tag>();
     
     public ICollection<Highlight> Highlights { get; set; } = new List<Highlight>();

@@ -2,9 +2,8 @@
 
 services:
   db:
-    image: postgres:16.9
+    image: zhparser/zhparser:bookworm-16
     container_name: db
-    user: postgres
     environment:
       POSTGRES_DB: mini_cc
       POSTGRES_USER: postgres

@@ -64,7 +64,7 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
         <div className={styles.userSection}>
           {isOpen && (
             <div className={styles.userInfo}>
-              <span className={styles.username}>{user.username}</span>
+              <span className={styles.userName}>{user.userName}</span>
             </div>
           )}
           <button 

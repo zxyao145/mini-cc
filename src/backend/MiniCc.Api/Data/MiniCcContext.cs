@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MiniCc.Api.Models;
 using MiniCc.Api.Services;
 using System.Reflection;
-using AccessKey = MiniCc.Api.Models.AccessKey;
 
 namespace MiniCc.Api.Data;
 
@@ -78,6 +77,22 @@ public class MiniCcContext : DbContext
             entity.Property(e => e.ImageUrl).HasMaxLength(2000);
             entity.HasIndex(e => e.Url).IsUnique();
             entity.HasIndex(e => e.CreatedAt);
+
+
+            //entity.HasGeneratedTsVectorColumn(
+            //    p => p.SearchVector,
+            //    "english",  // Text search config
+            //    p => new { p.Title, p.ReadableContent, p.Author })  // Included properties
+            //.HasIndex(p => p.SearchVector)
+            //.HasMethod("GIN"); // Index method on the search vector (GIN or GIST)
+
+            entity.HasGeneratedTsVectorColumn(
+               p => p.SearchVector,
+               "mixed_zh_en",  // Text search config
+               p => new { p.Title, p.ReadableContent, p.Author })  // Included properties
+           .HasIndex(p => p.SearchVector)
+           .HasMethod("GIN"); // Index method on the search vector (GIN or GIST)
+
         });
 
         modelBuilder.Entity<Tag>(entity =>

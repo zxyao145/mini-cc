@@ -14,7 +14,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (
-    username: string,
+    userName: string,
     password: string,
     rememberMe?: boolean
   ) => Promise<void>;
@@ -47,12 +47,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (
-    username: string,
+    userName: string,
     password: string,
     rememberMe = true
   ) => {
-    await authApi.login({ username, password, rememberMe });
-    setUser({ username, isAuthenticated: true });
+    await authApi.login({ userName: userName, password, rememberMe });
+    setUser({ userName: userName, isAuthenticated: true });
   };
 
   const logout = async () => {
