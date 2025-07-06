@@ -14,7 +14,7 @@ class PopupManager {
   private apiAkInput: HTMLInputElement;
   private saveSettingsBtn: HTMLButtonElement;
 
-  private apiUrl: string = 'https://localhost:5001';
+  private apiUrl: string = 'http://localhost:5001';
   private ak: string = '';
 
   constructor() {
