@@ -1,5 +1,6 @@
 using ContentHandler;
 using Microsoft.EntityFrameworkCore;
+using MiniCc.Api.Common;
 using MiniCc.Api.Data;
 using MiniCc.Api.Models;
 using System;
@@ -45,8 +46,8 @@ public class ArticleService : IArticleService
 
         var article = new Article
         {
+            Id = UuidUtil.NewGuidV7(),
             Url = url,
-
             Title = readabilityContent.Title ?? result.Title ?? "",
             Author = result.Author ?? "",
             OriginContent = result.OriginContent,
@@ -82,7 +83,7 @@ public class ArticleService : IArticleService
             .ToListAsync();
     }
 
-    public async Task<Article?> GetArticleByIdAsync(int id)
+    public async Task<Article?> GetArticleByIdAsync(Guid id)
     {
         return await _context.Articles
             .Include(a => a.Tags)
@@ -90,7 +91,7 @@ public class ArticleService : IArticleService
             .FirstOrDefaultAsync(a => a.Id == id);
     }
 
-    public async Task<Article> UpdateArticleAsync(int id, Article article)
+    public async Task<Article> UpdateArticleAsync(Guid id, Article article)
     {
         var existingArticle = await _context.Articles.FindAsync(id);
         if (existingArticle == null)
@@ -108,7 +109,7 @@ public class ArticleService : IArticleService
         return existingArticle;
     }
 
-    public async Task DeleteArticleAsync(int id)
+    public async Task DeleteArticleAsync(Guid id)
     {
         var article = await _context.Articles.FindAsync(id);
         if (article != null)
@@ -118,7 +119,7 @@ public class ArticleService : IArticleService
         }
     }
 
-    public async Task<Article> ToggleFavoriteAsync(int id)
+    public async Task<Article> ToggleFavoriteAsync(Guid id)
     {
         var article = await _context.Articles.FindAsync(id);
         if (article == null)
@@ -131,7 +132,7 @@ public class ArticleService : IArticleService
         return article;
     }
 
-    public async Task<Article> ToggleArchiveAsync(int id)
+    public async Task<Article> ToggleArchiveAsync(Guid id)
     {
         var article = await _context.Articles.FindAsync(id);
         if (article == null)
@@ -144,8 +145,9 @@ public class ArticleService : IArticleService
         return article;
     }
 
-    public async Task<Highlight> AddHighlightAsync(int articleId, Highlight highlight)
+    public async Task<Highlight> AddHighlightAsync(Guid articleId, Highlight highlight)
     {
+        highlight.Id = UuidUtil.NewGuidV7();
         highlight.ArticleId = articleId;
         highlight.CreatedAt = DateTime.UtcNow;
 
@@ -154,7 +156,7 @@ public class ArticleService : IArticleService
         return highlight;
     }
 
-    public async Task DeleteHighlightAsync(int highlightId)
+    public async Task DeleteHighlightAsync(Guid highlightId)
     {
         var highlight = await _context.Highlights.FindAsync(highlightId);
         if (highlight != null)
@@ -164,7 +166,7 @@ public class ArticleService : IArticleService
         }
     }
 
-    public async Task<Tag> AddTagToArticleAsync(int articleId, string tagName, string? color = null)
+    public async Task<Tag> AddTagToArticleAsync(Guid articleId, string tagName, string? color = null)
     {
         var article = await _context.Articles
             .Include(a => a.Tags)
@@ -180,6 +182,7 @@ public class ArticleService : IArticleService
         {
             existingTag = new Tag
             {
+                Id = UuidUtil.NewGuidV7(),
                 Name = tagName,
                 Color = color ?? "#3B82F6",
                 CreatedAt = DateTime.UtcNow
@@ -196,7 +199,7 @@ public class ArticleService : IArticleService
         return existingTag;
     }
 
-    public async Task RemoveTagFromArticleAsync(int articleId, int tagId)
+    public async Task RemoveTagFromArticleAsync(Guid articleId, Guid tagId)
     {
         var article = await _context.Articles
             .Include(a => a.Tags)

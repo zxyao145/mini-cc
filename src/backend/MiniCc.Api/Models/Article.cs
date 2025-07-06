@@ -6,8 +6,7 @@ namespace MiniCc.Api.Models;
 
 public class Article
 {
-    public int Id { get; set; }
-
+    public Guid Id { get; set; }
 
     [Required]
     public string Url { get; set; } = string.Empty;

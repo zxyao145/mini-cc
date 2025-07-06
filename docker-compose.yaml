@@ -10,8 +10,8 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
-    # ports:
-    #  - "15432:5432"
+    ports:
+      - "15432:5432"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       # test: "exit 0"
@@ -39,8 +39,6 @@ services:
     ports:
       - "5001:8080"
     environment:
-      MiniCC_UserName: mini_cc
-      MiniCC_Password: mini_cc_password
       MiniCC_Db: "Host=db;Port=5432;Database=mini_cc;Username=postgres;Password=postgres"
       MiniCC_ReadabilityApi: "http://readability-api:5002"
     depends_on:

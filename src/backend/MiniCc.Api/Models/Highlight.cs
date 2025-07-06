@@ -4,7 +4,7 @@ namespace MiniCc.Api.Models;
 
 public class Highlight
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
     
     [Required]
     public string Text { get; set; } = string.Empty;
@@ -19,7 +19,7 @@ public class Highlight
     
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     
-    public int ArticleId { get; set; }
+    public Guid ArticleId { get; set; }
     
     public Article Article { get; set; } = null!;
 }

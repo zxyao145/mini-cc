@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using MiniCc.Api.Common;
 using MiniCc.Api.Controllers;
 using MiniCc.Api.Data;
+using MiniCc.Api.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
@@ -34,6 +35,7 @@ public enum LoginResult
 public interface IAccountService
 {
     Task<LoginResult> LoginAsync(UserLoginCommand command);
+    Task<User> FindByUserName(string userName);
 }
 
 public class AccountService : IAccountService
@@ -48,6 +50,8 @@ public class AccountService : IAccountService
         _logger = logger;
         _httpContextAccessor = httpContextAccessor;
     }
+
+
 
     public async Task<LoginResult> LoginAsync(UserLoginCommand command)
     {
@@ -84,5 +88,13 @@ public class AccountService : IAccountService
             );
 
         return LoginResult.Success;
+    }
+
+
+    public async Task<User?> FindByUserName(string userName)
+    {
+        var user = await _context.Users
+           .FirstOrDefaultAsync(x => x.UserName == userName);
+        return user;
     }
 }

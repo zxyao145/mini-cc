@@ -25,11 +25,11 @@ namespace MiniCc.Api.Migrations
 
             modelBuilder.Entity("ArticleTags", b =>
                 {
-                    b.Property<int>("ArticlesId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ArticlesId")
+                        .HasColumnType("uuid");
 
-                    b.Property<int>("TagsId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("TagsId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("ArticlesId", "TagsId");
 
@@ -72,11 +72,9 @@ namespace MiniCc.Api.Migrations
 
             modelBuilder.Entity("MiniCc.Api.Models.Article", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Author")
                         .IsRequired()
@@ -148,14 +146,12 @@ namespace MiniCc.Api.Migrations
 
             modelBuilder.Entity("MiniCc.Api.Models.Highlight", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ArticleId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ArticleId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Color")
                         .IsRequired()
@@ -188,11 +184,9 @@ namespace MiniCc.Api.Migrations
 
             modelBuilder.Entity("MiniCc.Api.Models.Tag", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Color")
                         .IsRequired()

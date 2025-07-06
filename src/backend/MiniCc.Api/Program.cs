@@ -113,11 +113,10 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-# if DEBUG
+
 using var scope = app.Services.CreateScope();
 var dbSeeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
 await dbSeeder.InitAsync();
-#endif
 
 app.Run();
 

@@ -1,13 +1,13 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using NpgsqlTypes;
 
 #nullable disable
 
 namespace MiniCc.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddUserAndAccessKey : Migration
+    public partial class ChangeIdToGuid : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,8 +32,7 @@ namespace MiniCc.Api.Migrations
                 name: "Articles",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Url = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
                     Title = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     Author = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
@@ -45,7 +44,10 @@ namespace MiniCc.Api.Migrations
                     ReadAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     IsArchived = table.Column<bool>(type: "boolean", nullable: false),
                     IsFavorite = table.Column<bool>(type: "boolean", nullable: false),
-                    ImageUrl = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false)
+                    ImageUrl = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
+                    SearchVector = table.Column<NpgsqlTsVector>(type: "tsvector", nullable: false)
+                        .Annotation("Npgsql:TsVectorConfig", "mixed_zh_en")
+                        .Annotation("Npgsql:TsVectorProperties", new[] { "Title", "ReadableContent", "Author" })
                 },
                 constraints: table =>
                 {
@@ -56,8 +58,7 @@ namespace MiniCc.Api.Migrations
                 name: "Tags",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Color = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
@@ -84,15 +85,14 @@ namespace MiniCc.Api.Migrations
                 name: "Highlights",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Text = table.Column<string>(type: "text", nullable: false),
                     Note = table.Column<string>(type: "text", nullable: false),
                     Color = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
                     StartOffset = table.Column<int>(type: "integer", nullable: false),
                     EndOffset = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    ArticleId = table.Column<int>(type: "integer", nullable: false)
+                    ArticleId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -109,8 +109,8 @@ namespace MiniCc.Api.Migrations
                 name: "ArticleTags",
                 columns: table => new
                 {
-                    ArticlesId = table.Column<int>(type: "integer", nullable: false),
-                    TagsId = table.Column<int>(type: "integer", nullable: false)
+                    ArticlesId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TagsId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -138,6 +138,12 @@ namespace MiniCc.Api.Migrations
                 name: "IX_Articles_CreatedAt",
                 table: "Articles",
                 column: "CreatedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Articles_SearchVector",
+                table: "Articles",
+                column: "SearchVector")
+                .Annotation("Npgsql:IndexMethod", "GIN");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Articles_Url",

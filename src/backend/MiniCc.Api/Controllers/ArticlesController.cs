@@ -43,7 +43,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Article>> GetArticle(int id)
+    public async Task<ActionResult<Article>> GetArticle(Guid id)
     {
         try
         {
@@ -105,7 +105,7 @@ public class ArticlesController : ControllerBase
 
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<Article>> UpdateArticle(int id, [FromBody] Article article)
+    public async Task<ActionResult<Article>> UpdateArticle(Guid id, [FromBody] Article article)
     {
         try
         {
@@ -124,7 +124,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteArticle(int id)
+    public async Task<IActionResult> DeleteArticle(Guid id)
     {
         try
         {
@@ -139,7 +139,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost("{id}/favorite")]
-    public async Task<ActionResult<Article>> ToggleFavorite(int id)
+    public async Task<ActionResult<Article>> ToggleFavorite(Guid id)
     {
         try
         {
@@ -158,7 +158,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost("{id}/archive")]
-    public async Task<ActionResult<Article>> ToggleArchive(int id)
+    public async Task<ActionResult<Article>> ToggleArchive(Guid id)
     {
         try
         {
@@ -177,7 +177,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost("{id}/highlights")]
-    public async Task<ActionResult<Highlight>> AddHighlight(int id, [FromBody] Highlight highlight)
+    public async Task<ActionResult<Highlight>> AddHighlight(Guid id, [FromBody] Highlight highlight)
     {
         try
         {
@@ -192,7 +192,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpDelete("highlights/{highlightId}")]
-    public async Task<IActionResult> DeleteHighlight(int highlightId)
+    public async Task<IActionResult> DeleteHighlight(Guid highlightId)
     {
         try
         {
@@ -207,7 +207,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost("{id}/tags")]
-    public async Task<ActionResult<Tag>> AddTag(int id, [FromBody] AddTagRequest request)
+    public async Task<ActionResult<Tag>> AddTag(Guid id, [FromBody] AddTagRequest request)
     {
         try
         {
@@ -226,7 +226,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpDelete("{id}/tags/{tagId}")]
-    public async Task<IActionResult> RemoveTag(int id, int tagId)
+    public async Task<IActionResult> RemoveTag(Guid id, Guid tagId)
     {
         try
         {

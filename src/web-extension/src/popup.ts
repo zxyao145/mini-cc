@@ -11,9 +11,11 @@ class PopupManager {
   private previewAuthor: HTMLElement;
   private previewUrl: HTMLElement;
   private apiUrlInput: HTMLInputElement;
+  private apiAkInput: HTMLInputElement;
   private saveSettingsBtn: HTMLButtonElement;
 
   private apiUrl: string = 'https://localhost:5001';
+  private ak: string = '';
 
   constructor() {
     this.statusEl = document.getElementById('status')!;
@@ -25,6 +27,7 @@ class PopupManager {
     this.previewAuthor = document.getElementById('preview-author')!;
     this.previewUrl = document.getElementById('preview-url')!;
     this.apiUrlInput = document.getElementById('api-url') as HTMLInputElement;
+    this.apiAkInput = document.getElementById('api-ak') as HTMLInputElement;
     this.saveSettingsBtn = document.getElementById('save-settings-btn') as HTMLButtonElement;
 
     this.init();
@@ -37,11 +40,15 @@ class PopupManager {
   }
 
   private async loadSettings() {
-    const result = await chrome.storage.sync.get(['apiUrl']);
+    const result = await chrome.storage.sync.get(['apiUrl', 'ak']);
     if (result.apiUrl) {
       this.apiUrl = result.apiUrl;
     }
+    if (result.ak) {
+      this.ak = result.ak;
+    }
     this.apiUrlInput.value = this.apiUrl;
+    this.apiAkInput.value = this.ak;
   }
 
   private bindEvents() {
@@ -56,9 +63,11 @@ class PopupManager {
 
   private async saveSettings() {
     const newApiUrl = this.apiUrlInput.value.trim();
-    if (newApiUrl) {
+    const newAk = this.apiAkInput.value.trim();
+    
+    if (newApiUrl && newAk) {
       this.apiUrl = newApiUrl;
-      await chrome.storage.sync.set({ apiUrl: newApiUrl });
+      await chrome.storage.sync.set({ apiUrl: newApiUrl, ak: newAk });
       this.showStatus('Settings saved', 'success');
       this.settingsPanel.classList.add('hidden');
     }
@@ -127,6 +136,7 @@ class PopupManager {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          "X-Access-Key": this.ak,
         },
         body: JSON.stringify(payload),
       });

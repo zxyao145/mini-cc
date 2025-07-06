@@ -1,11 +1,1 @@
-(function() {
-  "use strict";
-  chrome.runtime.onInstalled.addListener(() => {
-    console.log("MiniCC Extension installed");
-  });
-  chrome.action.onClicked.addListener((tab) => {
-    if (tab.id) {
-      chrome.tabs.sendMessage(tab.id, { action: "extractContent" });
-    }
-  });
-})();
+(function(){"use strict";chrome.runtime.onInstalled.addListener(()=>{console.log("MiniCC Extension installed")}),chrome.action.onClicked.addListener(e=>{e.id&&chrome.tabs.sendMessage(e.id,{action:"extractContent"})})})();
