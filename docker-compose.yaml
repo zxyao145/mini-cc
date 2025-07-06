@@ -21,6 +21,9 @@ services:
 
   readability-api:
     image: minicc-readability-api
+    build:
+      context: ./src/backend/readability-api/
+      dockerfile: ./src/backend/readability-api/Dockerfile
     container_name: readability_api
     # ports:
     #   - "5002:5002" 
@@ -29,6 +32,9 @@ services:
 
   minicc-api:
     image: minicc-api
+    build:
+      context: .
+      dockerfile: ./src/backend/MiniCc.Api/Dockerfile
     container_name: minicc-api
     ports:
       - "5001:8080"
@@ -45,7 +51,8 @@ services:
 
   minicc-web:
     build:
-      context: .
+      context: ./src/frontend
+      dockerfile: ./src/frontend/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:5001/api
     image: minicc-web
