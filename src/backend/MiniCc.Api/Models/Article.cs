@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace OmeReader.Api.Models;
+namespace MiniCc.Api.Models;
 
 public class Article
 {
@@ -23,7 +23,7 @@ public class Article
 
     public string Summary { get; set; } = string.Empty;
 
-    public DateTimeOffset CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     
     public DateTimeOffset? ReadAt { get; set; }
     

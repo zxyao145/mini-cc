@@ -2,7 +2,7 @@
 using System.Reflection.Metadata;
 using System.Text.Json.Serialization;
 
-namespace OmeReader.Api.Services;
+namespace MiniCc.Api.Services;
 
 //如果好用，请收藏地址，帮忙分享。
 public class ReadabilityContent

@@ -6,16 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Root Project Commands (from `/src/`)
 - `pnpm dev` - Run both backend and frontend concurrently in development mode
-- `pnpm dev:backend` - Run only the ASP.NET Core API (`cd backend/OmeReader.Api && dotnet run`)
+- `pnpm dev:backend` - Run only the ASP.NET Core API (`cd backend/MiniCc.Api && dotnet run`)
 - `pnpm dev:frontend` - Run only the Next.js frontend (`cd frontend && pnpm dev`)
 - `pnpm build` - Build the frontend for production
-- `pnpm build:backend` - Build the backend (`cd backend/OmeReader.Api && dotnet build`)
+- `pnpm build:backend` - Build the backend (`cd backend/MiniCc.Api && dotnet build`)
 - `pnpm install:all` - Install dependencies for both backend and frontend
 - `pnpm lint` - Run ESLint on frontend code
-- `pnpm db:migrate` - Apply database migrations (`cd backend/OmeReader.Api && dotnet ef database update`)
-- `pnpm db:migration` - Create new migration (`cd backend/OmeReader.Api && dotnet ef migrations add`)
+- `pnpm db:migrate` - Apply database migrations (`cd backend/MiniCc.Api && dotnet ef database update`)
+- `pnpm db:migration` - Create new migration (`cd backend/MiniCc.Api && dotnet ef migrations add`)
 
-### Backend Commands (from `/src/backend/OmeReader.Api/`)
+### Backend Commands (from `/src/backend/MiniCc.Api/`)
 - `dotnet run` - Start the API server (https://localhost:5001, http://localhost:5000)
 - `dotnet build` - Build the backend
 - `dotnet ef database update` - Apply database migrations
@@ -36,7 +36,7 @@ This is a full-stack read-later application with:
 - **Frontend**: Next.js 15 with TypeScript, SCSS, and App Router
 - **Monorepo**: Uses pnpm workspaces for dependency management
 
-### Backend Architecture (`/src/backend/OmeReader.Api/`)
+### Backend Architecture (`/src/backend/MiniCc.Api/`)
 - **Controllers**: API endpoints for articles, tags, and highlights
 - **Models**: Entity models (Article, Tag, Highlight) with EF Core annotations
 - **Data**: Entity Framework DbContext with PostgreSQL provider

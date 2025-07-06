@@ -4,27 +4,45 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace OmeReader.Api.Migrations
+namespace MiniCc.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class AddUserAndAccessKey : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "AccessKeys",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    Key = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
+                    ExpiredTime = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    Disabled = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AccessKeys", x => x.Id);
+                });
+
             migrationBuilder.CreateTable(
                 name: "Articles",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Title = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     Url = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
-                    Content = table.Column<string>(type: "text", nullable: false),
-                    Summary = table.Column<string>(type: "text", nullable: false),
+                    Title = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     Author = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    ReadAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    OriginContent = table.Column<string>(type: "text", nullable: false),
+                    ReadableContent = table.Column<string>(type: "text", nullable: false),
+                    TextContentLegth = table.Column<int>(type: "integer", nullable: false),
+                    Summary = table.Column<string>(type: "text", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    ReadAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
                     IsArchived = table.Column<bool>(type: "boolean", nullable: false),
                     IsFavorite = table.Column<bool>(type: "boolean", nullable: false),
                     ImageUrl = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false)
@@ -42,11 +60,24 @@ namespace OmeReader.Api.Migrations
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     Color = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Tags", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Users",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserName = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    Password = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Users", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -60,7 +91,7 @@ namespace OmeReader.Api.Migrations
                     Color = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
                     StartOffset = table.Column<int>(type: "integer", nullable: false),
                     EndOffset = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     ArticleId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
@@ -99,6 +130,11 @@ namespace OmeReader.Api.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_AccessKeys_UserId",
+                table: "AccessKeys",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Articles_CreatedAt",
                 table: "Articles",
                 column: "CreatedAt");
@@ -124,16 +160,28 @@ namespace OmeReader.Api.Migrations
                 table: "Tags",
                 column: "Name",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_UserName",
+                table: "Users",
+                column: "UserName",
+                unique: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "AccessKeys");
+
+            migrationBuilder.DropTable(
                 name: "ArticleTags");
 
             migrationBuilder.DropTable(
                 name: "Highlights");
+
+            migrationBuilder.DropTable(
+                name: "Users");
 
             migrationBuilder.DropTable(
                 name: "Tags");

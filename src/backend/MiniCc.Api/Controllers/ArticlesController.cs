@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniCc.Api.Authentication;
-using OmeReader.Api.Models;
-using OmeReader.Api.Services;
+using MiniCc.Api.Models;
+using MiniCc.Api.Services;
 
-namespace OmeReader.Api.Controllers;
+namespace MiniCc.Api.Controllers;
 
 //[Authorize(AuthenticationSchemes = CookieAuthenticationDefaults.AuthenticationScheme)]
 [Authorize(AuthenticationSchemes = 

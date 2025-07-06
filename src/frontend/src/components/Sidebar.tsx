@@ -34,7 +34,7 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
     <aside className={`${styles.sidebar} ${isOpen ? styles.open : styles.closed}`}>
       <div className={styles.header}>
         {
-          isOpen ? <h2 className={styles.title}>OmeReader</h2> : ""
+          isOpen ? <h2 className={styles.title}>MiniCc</h2> : ""
         }
         
         {onToggle && (

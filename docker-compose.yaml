@@ -1,9 +1,9 @@
 # version: '3.9'
 
 services:
-  pgvector:
-    image: pgvector/pgvector:pg17
-    container_name: pgvector
+  db:
+    image: postgres:16.9
+    container_name: db
     user: postgres
     environment:
       POSTGRES_DB: mini_cc
@@ -11,8 +11,8 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "15432:5432"
+    # ports:
+    #  - "15432:5432"
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       # test: "exit 0"
@@ -20,31 +20,41 @@ services:
       timeout: 5s
       retries: 5
 
-  minicc-readability-api:
+  readability-api:
     image: minicc-readability-api
-    container_name: minicc-readability-api
-    ports:
-      - "5002:5002"  # 假设内部是 3000
+    container_name: readability_api
+    # ports:
+    #   - "5002:5002" 
     depends_on:
-      - pgvector
+      - db
 
   minicc-api:
     image: minicc-api
     container_name: minicc-api
     ports:
-      - "5001:5001"  # 假设内部是 3000
+      - "5001:8080"
+    environment:
+      MiniCC_UserName: mini_cc
+      MiniCC_Password: mini_cc_password
+      MiniCC_Db: "Host=db;Port=5432;Database=mini_cc;Username=postgres;Password=postgres"
+      MiniCC_ReadabilityApi: "http://readability-api:5002"
     depends_on:
-      pgvector:
+      db:
         condition: service_healthy
-      minicc-readability-api:
+      readability-api:
         condition: service_started
 
   minicc-web:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5001/api
     image: minicc-web
     container_name: minicc-web
     ports:
-      - "5003:3000"  # 假设内部是 3000
+      - "5000:3000"  # 假设内部是 3000
     depends_on:
       - minicc-api
+
 volumes:
   pgdata:

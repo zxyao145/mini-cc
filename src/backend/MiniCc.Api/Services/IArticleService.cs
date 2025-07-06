@@ -1,7 +1,7 @@
 using ContentHandler;
-using OmeReader.Api.Models;
+using MiniCc.Api.Models;
 
-namespace OmeReader.Api.Services;
+namespace MiniCc.Api.Services;
 
 public interface IArticleService
 {

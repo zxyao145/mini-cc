@@ -1,45 +1,45 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using MiniCc.Api.Data;
+using MiniCc.Api.Models;
 
 namespace MiniCc.Api.Services;
-
-
-public class AccessKeys
-{
-    public List<AccessKey> Keys { get; set; } = new();
-}
-
-
-public class AccessKey
-{
-    public string Key { get; set; } = "";
-}
 
 
 public interface IAccessKeyService
 {
     Task<bool> IsValid(string key);
+    Task<List<AccessKey>> List(Guid userId);
 }
 
 
-public class AccessKeyService: IAccessKeyService
+public class AccessKeyService : IAccessKeyService
 {
-    private readonly Dictionary<string, AccessKey> _accessKeys;
+    private readonly MiniCcContext _context;
+    private readonly ILogger<AccountService> _logger;
+    private readonly IEncryptionService _encryptionService;
 
-    public AccessKeyService(IOptions<AccessKeys> options)
+    public AccessKeyService(MiniCcContext context, ILogger<AccountService> logger, IEncryptionService encryptionService)
     {
-        _accessKeys = options.Value
-            .Keys
-            .Where(x => !string.IsNullOrWhiteSpace(x.Key))
-            .ToDictionary(x => x.Key, x => x)
-            ;
+        _context = context;
+        _logger = logger;
+        _encryptionService = encryptionService;
     }
+
     public Task<bool> IsValid(string key)
     {
         if (string.IsNullOrWhiteSpace(key))
         {
             return Task.FromResult(false);
         }
-        var isValid = _accessKeys.ContainsKey(key);
-        return Task.FromResult(isValid);
+        var encryptKey = _encryptionService.Encrypt(key);
+        return _context.AccessKeys.AnyAsync(x => x.Key == encryptKey);
+    }
+
+    public Task<List<AccessKey>> List(Guid userId)
+    {
+        return _context.AccessKeys
+            .Where(x => x.UserId == userId)
+            .ToListAsync();
     }
 }

@@ -28,9 +28,9 @@ Omnivore minimum implementation, built with ASP.NET Core and Next.js.
 ## Project Structure
 
 ```
-ome-reader/
+mini-cc/
 ├── backend/
-│   └── OmeReader.Api/
+│   └── MiniCc.Api/
 │       ├── Controllers/     # API controllers
 │       ├── Data/           # Entity Framework context
 │       ├── Models/         # Domain models
@@ -61,7 +61,7 @@ ome-reader/
 
 1. Navigate to the backend directory:
    ```bash
-   cd backend/OmeReader.Api
+   cd backend/MiniCc.Api
    ```
 
 2. Install Entity Framework tools (if not already installed):

@@ -3,7 +3,7 @@ import "./globals.css";
 import ClientLayout from "./ClientLayout";
 
 export const metadata: Metadata = {
-  title: "OmeReader - Read Later App",
+  title: "MiniCc - Read Later App",
   description: "A read-later application similar to Omnivore",
 };
 

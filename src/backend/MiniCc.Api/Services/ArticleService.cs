@@ -1,19 +1,19 @@
 using ContentHandler;
 using Microsoft.EntityFrameworkCore;
-using OmeReader.Api.Data;
-using OmeReader.Api.Models;
+using MiniCc.Api.Data;
+using MiniCc.Api.Models;
 using System;
 
-namespace OmeReader.Api.Services;
+namespace MiniCc.Api.Services;
 
 public class ArticleService : IArticleService
 {
     private readonly IReadabilityApi _readabilityApi;
-    private readonly OmeReaderContext _context;
+    private readonly MiniCcContext _context;
     private readonly IContentFetchService _contentFetchService;
     private readonly ILogger<ArticleService> _logger;
 
-    public ArticleService(OmeReaderContext context, IContentFetchService contentFetchService, ILogger<ArticleService> logger, IReadabilityApi readabilityApi)
+    public ArticleService(MiniCcContext context, IContentFetchService contentFetchService, ILogger<ArticleService> logger, IReadabilityApi readabilityApi)
     {
         _context = context;
         _contentFetchService = contentFetchService;

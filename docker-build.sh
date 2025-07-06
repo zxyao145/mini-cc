@@ -10,7 +10,3 @@ docker build -f ./src/backend/readability-api/Dockerfile  -t minicc-readability-
 
 # frontend
 docker build -f ./src/frontend/Dockerfile -t minicc-web:latest ./src/frontend/
-
-
-# docker compose
-docker compose -f ./docker-compose.yml up -d

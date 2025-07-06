@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace OmeReader.Api.Models;
+namespace MiniCc.Api.Models;
 
 public class Tag
 {
@@ -11,7 +11,7 @@ public class Tag
     
     public string Color { get; set; } = "#3B82F6";
     
-    public DateTimeOffset CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     
     public ICollection<Article> Articles { get; set; } = new List<Article>();
 }

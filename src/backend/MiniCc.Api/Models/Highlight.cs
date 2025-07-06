@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace OmeReader.Api.Models;
+namespace MiniCc.Api.Models;
 
 public class Highlight
 {
@@ -17,7 +17,7 @@ public class Highlight
     
     public int EndOffset { get; set; }
     
-    public DateTimeOffset CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     
     public int ArticleId { get; set; }
     

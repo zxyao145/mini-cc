@@ -9,12 +9,15 @@ RUN npm config set registry https://registry.npmmirror.com \
 # --- 编译 ---
 FROM base as builder
 
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 WORKDIR /app
 
 COPY package.json ./
 COPY . .
 RUN ls -lah && pnpm install --prod
-RUN cat ./tsconfig.json && ls -lah ./src/components && pnpm run build
+RUN cat ./tsconfig.json && ls -lah ./src/components && pnpm config set registry https://registry.npmmirror.com && pnpm run build
 
 
 # --- 生产阶段 ---

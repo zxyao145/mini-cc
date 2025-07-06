@@ -2,6 +2,22 @@
 
 # 此阶段用于在快速模式(默认为调试配置)下从 VS 运行时
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
+
+# 重建 apt 源列表为阿里云
+RUN rm -rf /etc/apt/sources.list.d/* && \
+    echo "deb http://mirrors.aliyun.com/debian/ bookworm main contrib non-free non-free-firmware\n\
+deb-src http://mirrors.aliyun.com/debian/ bookworm main contrib non-free non-free-firmware\n\
+deb http://mirrors.aliyun.com/debian-security bookworm-security main contrib non-free non-free-firmware\n\
+deb-src http://mirrors.aliyun.com/debian-security bookworm-security main contrib non-free non-free-firmware\n\
+deb http://mirrors.aliyun.com/debian/ bookworm-updates main contrib non-free non-free-firmware\n\
+deb-src http://mirrors.aliyun.com/debian/ bookworm-updates main contrib non-free non-free-firmware\n\
+deb http://mirrors.aliyun.com/debian/ bookworm-backports main contrib non-free non-free-firmware\n\
+deb-src http://mirrors.aliyun.com/debian/ bookworm-backports main contrib non-free non-free-firmware" \
+> /etc/apt/sources.list && \
+    apt-get update && apt-get clean && \
+    apt install curl wget -y
+
+
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080

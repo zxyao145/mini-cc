@@ -3,15 +3,15 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using MiniCc.Api.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using OmeReader.Api.Data;
 
 #nullable disable
 
-namespace OmeReader.Api.Migrations
+namespace MiniCc.Api.Migrations
 {
-    [DbContext(typeof(OmeReaderContext))]
-    partial class OmeReaderContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(MiniCcContext))]
+    partial class MiniCcContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
@@ -37,7 +37,39 @@ namespace OmeReader.Api.Migrations
                     b.ToTable("ArticleTags");
                 });
 
-            modelBuilder.Entity("OmeReader.Api.Models.Article", b =>
+            modelBuilder.Entity("MiniCc.Api.Models.AccessKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Disabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("ExpiredTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AccessKeys");
+                });
+
+            modelBuilder.Entity("MiniCc.Api.Models.Article", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -102,7 +134,7 @@ namespace OmeReader.Api.Migrations
                     b.ToTable("Articles");
                 });
 
-            modelBuilder.Entity("OmeReader.Api.Models.Highlight", b =>
+            modelBuilder.Entity("MiniCc.Api.Models.Highlight", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -142,7 +174,7 @@ namespace OmeReader.Api.Migrations
                     b.ToTable("Highlights");
                 });
 
-            modelBuilder.Entity("OmeReader.Api.Models.Tag", b =>
+            modelBuilder.Entity("MiniCc.Api.Models.Tag", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -171,24 +203,48 @@ namespace OmeReader.Api.Migrations
                     b.ToTable("Tags");
                 });
 
+            modelBuilder.Entity("MiniCc.Api.Models.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Password")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserName")
+                        .IsUnique();
+
+                    b.ToTable("Users");
+                });
+
             modelBuilder.Entity("ArticleTags", b =>
                 {
-                    b.HasOne("OmeReader.Api.Models.Article", null)
+                    b.HasOne("MiniCc.Api.Models.Article", null)
                         .WithMany()
                         .HasForeignKey("ArticlesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("OmeReader.Api.Models.Tag", null)
+                    b.HasOne("MiniCc.Api.Models.Tag", null)
                         .WithMany()
                         .HasForeignKey("TagsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("OmeReader.Api.Models.Highlight", b =>
+            modelBuilder.Entity("MiniCc.Api.Models.Highlight", b =>
                 {
-                    b.HasOne("OmeReader.Api.Models.Article", "Article")
+                    b.HasOne("MiniCc.Api.Models.Article", "Article")
                         .WithMany("Highlights")
                         .HasForeignKey("ArticleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -197,7 +253,7 @@ namespace OmeReader.Api.Migrations
                     b.Navigation("Article");
                 });
 
-            modelBuilder.Entity("OmeReader.Api.Models.Article", b =>
+            modelBuilder.Entity("MiniCc.Api.Models.Article", b =>
                 {
                     b.Navigation("Highlights");
                 });
