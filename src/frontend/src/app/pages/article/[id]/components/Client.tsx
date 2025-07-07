@@ -13,7 +13,7 @@ export default function Client(params: { id: string }) {
   const getArticle = async (id: string) => {
     setLoading(true);
     try {
-      const data = await articleApi.getArticleById(parseInt(id));
+      const data = await articleApi.getArticleById(id);
       const cleanHtml = DOMPurify.sanitize(data.readableContent);
       data.readableContent = cleanHtml;
       setArticles(data);

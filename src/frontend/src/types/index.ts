@@ -1,5 +1,5 @@
 export interface Article {
-    id: number;
+    id: string;
     url: string;
     title: string;
     author: string;
@@ -18,20 +18,20 @@ export interface Article {
 
 
 export interface Tag {
-  id: number;
+  id: string;
   name: string;
   color: string;
   createdAt: string;
 }
 
 export interface Highlight {
-  id: number;
+  id: string;
   text: string;
   note: string;
   startOffset: number;
   endOffset: number;
   createdAt: string;
-  articleId: number;
+  articleId: string;
 }
 
 export interface SaveArticleRequest {
