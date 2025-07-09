@@ -3,7 +3,8 @@ const { Readability } = require('@mozilla/readability');
 const { JSDOM } = require('jsdom');
 
 const app = express();
-app.use(express.json());
+// 取消 JSON body 大小限制
+app.use(express.json({ limit: 'infinity' }));
 
 const DEBUG_MODE = process.env.DEBUG === 'true' || false
 

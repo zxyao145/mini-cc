@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import styles from "./highlights.module.scss";
 
 interface Highlight {
-  id: number;
+  id?: string;
   text: string;
   note?: string;
   articleTitle: string;
@@ -22,7 +22,7 @@ export default function HighlightsPage() {
     // Mock data for now
     setHighlights([
       {
-        id: 1,
+        id: "1",
         text: "This is an important highlighted text from an article",
         note: "My personal note about this highlight",
         articleTitle: "Sample Article Title",
@@ -30,7 +30,7 @@ export default function HighlightsPage() {
         createdAt: "2024-01-15T10:30:00Z"
       },
       {
-        id: 2,
+        id: "2",
         text: "Another highlighted section that I found interesting",
         articleTitle: "Another Article",
         articleUrl: "/article/2",

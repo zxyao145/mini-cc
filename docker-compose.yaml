@@ -23,7 +23,7 @@ services:
     image: minicc-readability-api
     build:
       context: ./src/backend/readability-api/
-      dockerfile: ./src/backend/readability-api/Dockerfile
+      dockerfile: ./Dockerfile
     container_name: readability_api
     # ports:
     #   - "5002:5002" 
@@ -36,8 +36,8 @@ services:
       context: .
       dockerfile: ./src/backend/MiniCc.Api/Dockerfile
     container_name: minicc-api
-    ports:
-      - "5001:8080"
+    # ports:
+    #   - "5001:8080"
     environment:
       MiniCC_Db: "Host=db;Port=5432;Database=mini_cc;Username=postgres;Password=postgres"
       MiniCC_ReadabilityApi: "http://readability-api:5002"
@@ -50,15 +50,27 @@ services:
   minicc-web:
     build:
       context: ./src/frontend
-      dockerfile: ./src/frontend/Dockerfile
+      dockerfile: ./Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:5001/api
+        NEXT_PUBLIC_API_URL: http://localhost:5000/api
     image: minicc-web
     container_name: minicc-web
-    ports:
-      - "5000:3000"  # 假设内部是 3000
+    # ports:
+    #   - "5000:3000"  # 假设内部是 3000
     depends_on:
       - minicc-api
+  
+  lb:
+    build:
+      context: ./src/lb/ng
+      dockerfile: ./Dockerfile
+    image: minicc-lb
+    container_name: minicc-lb
+    ports:
+      - "5000:80"  
+    depends_on:
+      - minicc-api
+      - minicc-web
 
 volumes:
   pgdata:

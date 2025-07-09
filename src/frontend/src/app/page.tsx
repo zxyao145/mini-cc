@@ -40,7 +40,7 @@ export default function Home() {
     }
   };
 
-  const handleDeleteArticle = async (id: number) => {
+  const handleDeleteArticle = async (id: string) => {
     try {
       await articleApi.deleteArticle(id);
       setArticles(articles.filter(article => article.id !== id));

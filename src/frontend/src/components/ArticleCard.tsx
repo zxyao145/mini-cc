@@ -9,7 +9,7 @@ import Link from "next/link";
 
 interface ArticleCardProps {
   article: Article;
-  onDelete: (id: number) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
 export default function ArticleCard({ article, onDelete }: ArticleCardProps) {

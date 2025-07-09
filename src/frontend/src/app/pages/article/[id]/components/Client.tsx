@@ -3,6 +3,7 @@
 import { articleApi } from "@/lib/api";
 import { Article } from "@/types";
 import { useEffect, useState } from "react";
+
 import DOMPurify from "dompurify";
 
 import "./client.scss";
@@ -10,6 +11,7 @@ import "./client.scss";
 export default function Client(params: { id: string }) {
   const [loading, setLoading] = useState(false);
   const [article, setArticles] = useState<Article>();
+
   const getArticle = async (id: string) => {
     setLoading(true);
     try {

@@ -7,7 +7,7 @@ import styles from "./ArticleList.module.scss";
 interface ArticleListProps {
   articles: Article[];
   loading: boolean;
-  onDelete: (id: number) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
   onRefresh: () => Promise<void>;
 }
 
