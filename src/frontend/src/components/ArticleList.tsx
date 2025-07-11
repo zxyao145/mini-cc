@@ -9,9 +9,10 @@ interface ArticleListProps {
   loading: boolean;
   onDelete: (id: string) => Promise<void>;
   onRefresh: () => Promise<void>;
+  onUpdate?: (article: Article) => void;
 }
 
-export default function ArticleList({ articles, loading, onDelete, onRefresh }: ArticleListProps) {
+export default function ArticleList({ articles, loading, onDelete, onRefresh, onUpdate }: ArticleListProps) {
   if (loading) {
     return (
       <div className={styles.container}>
@@ -49,6 +50,7 @@ export default function ArticleList({ articles, loading, onDelete, onRefresh }: 
             key={article.id}
             article={article}
             onDelete={onDelete}
+            onUpdate={onUpdate}
           />
         ))}
       </div>

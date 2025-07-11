@@ -13,5 +13,5 @@ public class Tag
     
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     
-    public ICollection<Article> Articles { get; set; } = new List<Article>();
+    public virtual ICollection<Article> Articles { get; set; } = new List<Article>();
 }

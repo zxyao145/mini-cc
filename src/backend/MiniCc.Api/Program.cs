@@ -2,6 +2,7 @@ using ContentHandler;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using MiniCc.Api.Authentication;
+using MiniCc.Api.Configurations;
 using MiniCc.Api.Data;
 using MiniCc.Api.Services;
 using Scalar.AspNetCore;
@@ -15,7 +16,14 @@ builder.Host.UseDefaultServiceProvider(options =>
     options.ValidateScopes = true;       // 验证 Scoped 生命周期使用是否合法（防止 Singleton 注入 Scoped）
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // 处理循环引用
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        // 写入缩进格式化（可选，用于调试）
+        options.JsonSerializerOptions.WriteIndented = false;
+    });
 builder.Services.AddOpenApi();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -80,6 +88,9 @@ builder.Services.AddHttpClient<IReadabilityApi, ReadabilityApi>((httpClient) =>
 
 builder.Services.AddContentHandlers();
 
+// 配置 Mapster
+MapsterConfig.ConfigureMapster();
+
 
 builder.Services.AddCors(options =>
 {
@@ -106,6 +117,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 app.UseHttpsRedirection();
+
+// 注册 Mapster 映射
+MapsterConfig.RegisterMappings();
+
 // 启用认证和授权
 app.UseAuthentication();
 app.UseAuthorization();
@@ -116,7 +131,7 @@ app.MapControllers();
 
 using var scope = app.Services.CreateScope();
 var dbSeeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
-await dbSeeder.InitAsync();
+//await dbSeeder.InitAsync();
 
 app.Run();
 

@@ -1,21 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { Article } from "@/types";
+import { Article, Tag } from "@/types";
 import { articleApi } from "@/lib/api";
-import TagList from "./TagList";
+import TagManager from "./TagManager";
 import styles from "./ArticleCard.module.scss";
 import Link from "next/link";
 
 interface ArticleCardProps {
   article: Article;
   onDelete: (id: string) => Promise<void>;
+  onUpdate?: (article: Article) => void;
 }
 
-export default function ArticleCard({ article, onDelete }: ArticleCardProps) {
+export default function ArticleCard({ article, onDelete, onUpdate }: ArticleCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isFavorite, setIsFavorite] = useState(article.isFavorite);
   const [isArchived, setIsArchived] = useState(article.isArchived);
+  const [currentArticle, setCurrentArticle] = useState(article);
 
   const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this article?")) {
@@ -51,6 +53,12 @@ export default function ArticleCard({ article, onDelete }: ArticleCardProps) {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const handleTagsChange = (newTags: Tag[]) => {
+    const updatedArticle = { ...currentArticle, tags: newTags };
+    setCurrentArticle(updatedArticle);
+    onUpdate?.(updatedArticle);
+  };
+
   const truncateText = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
     return text.slice(0, maxLength) + "...";
@@ -58,11 +66,11 @@ export default function ArticleCard({ article, onDelete }: ArticleCardProps) {
 
   return (
     <div className={`${styles.card} ${isArchived ? styles.archived : ""}`}>
-      {article.imageUrl && (
+      {currentArticle.imageUrl && (
         <div className={styles.imageContainer}>
           <img
-            src={article.imageUrl}
-            alt={article.title}
+            src={currentArticle.imageUrl}
+            alt={currentArticle.title}
             className={styles.image}
           />
         </div>
@@ -71,8 +79,8 @@ export default function ArticleCard({ article, onDelete }: ArticleCardProps) {
       <div className={styles.content}>
         <div className={styles.header}>
           <h3 className={styles.title}>
-            <Link href={`/pages/article/${article.id}`} rel="noopener noreferrer">
-              {article.title}
+            <Link href={`/pages/article/${currentArticle.id}`} rel="noopener noreferrer">
+              {currentArticle.title}
             </Link>
           </h3>
           <div className={styles.actions}>
@@ -105,24 +113,27 @@ export default function ArticleCard({ article, onDelete }: ArticleCardProps) {
           </div>
         </div>
 
-        {article.author && <p className={styles.author}>by {article.author}</p>}
+        {currentArticle.author && <p className={styles.author}>by {currentArticle.author}</p>}
 
-        {article.summary && (
-          <p className={styles.summary}>{truncateText(article.summary, 150)}</p>
+        {currentArticle.summary && (
+          <p className={styles.summary}>{truncateText(currentArticle.summary, 150)}</p>
         )}
 
-        {article.tags && article.tags.length > 0 && (
-          <TagList tags={article.tags} />
-        )}
+        <TagManager 
+          articleId={currentArticle.id}
+          tags={currentArticle.tags || []}
+          onTagsChange={handleTagsChange}
+          compact={true}
+        />
 
         <div className={styles.footer}>
           <span className={styles.date}>
-            Saved {formatDate(article.createdAt)}
+            Saved {formatDate(currentArticle.createdAt)}
           </span>
-          {article.highlights && article.highlights.length > 0 && (
+          {currentArticle.highlights && currentArticle.highlights.length > 0 && (
             <span className={styles.highlights}>
-              {article.highlights.length} highlight
-              {article.highlights.length !== 1 ? "s" : ""}
+              {currentArticle.highlights.length} highlight
+              {currentArticle.highlights.length !== 1 ? "s" : ""}
             </span>
           )}
         </div>

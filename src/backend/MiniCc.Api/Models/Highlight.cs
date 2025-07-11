@@ -21,5 +21,5 @@ public class Highlight
     
     public Guid ArticleId { get; set; }
     
-    public Article Article { get; set; } = null!;
+    public virtual Article Article { get; set; } = null!;
 }

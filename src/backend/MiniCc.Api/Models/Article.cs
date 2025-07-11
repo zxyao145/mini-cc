@@ -20,7 +20,7 @@ public class Article
 
     public string ReadableContent { get; set; } = string.Empty;
 
-    public int TextContentLegth { get; set; }
+    public int TextContentLength { get; set; }
 
     public string Summary { get; set; } = string.Empty;
 
@@ -35,7 +35,7 @@ public class Article
     public string ImageUrl { get; set; } = string.Empty;
 
 
-    // Ô¤¼ÆËãµÄËÑË÷ÏòÁ¿
+    // Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     [JsonIgnore]
     public NpgsqlTsVector SearchVector { get; set; } = default!;
 

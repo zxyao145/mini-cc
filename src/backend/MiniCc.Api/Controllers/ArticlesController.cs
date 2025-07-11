@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniCc.Api.Authentication;
 using MiniCc.Api.Models;
+using MiniCc.Api.Models.Dtos;
 using MiniCc.Api.Services;
+using MiniCc.Api.Extensions;
 
 namespace MiniCc.Api.Controllers;
 
@@ -25,7 +27,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Article>>> GetArticles(
+    public async Task<ActionResult<IEnumerable<ArticleDto>>> GetArticles(
         [FromQuery] int page = 1, 
         [FromQuery] int pageSize = 20, 
         [FromQuery] string? search = null)
@@ -33,7 +35,7 @@ public class ArticlesController : ControllerBase
         try
         {
             var articles = await _articleService.GetArticlesAsync(page, pageSize, search);
-            return Ok(articles);
+            return Ok(articles.ToDto());
         }
         catch (Exception ex)
         {
@@ -43,7 +45,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<ActionResult<Article>> GetArticle(Guid id)
+    public async Task<ActionResult<ArticleDto>> GetArticle(Guid id)
     {
         try
         {
@@ -52,7 +54,7 @@ public class ArticlesController : ControllerBase
             {
                 return NotFound();
             }
-            return Ok(article);
+            return Ok(article.ToDto());
         }
         catch (Exception ex)
         {
@@ -62,7 +64,7 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<Article>> SaveArticle([FromBody] SaveArticleRequest request)
+    public async Task<ActionResult<ArticleDto>> SaveArticle([FromBody] SaveArticleRequest request)
     {
         try
         {
@@ -72,7 +74,7 @@ public class ArticlesController : ControllerBase
             }
 
             var article = await _articleService.SaveArticleAsync(request.Url);
-            return CreatedAtAction(nameof(GetArticle), new { id = article.Id }, article);
+            return CreatedAtAction(nameof(GetArticle), new { id = article.Id }, article.ToDto());
         }
         catch (Exception ex)
         {
@@ -84,7 +86,7 @@ public class ArticlesController : ControllerBase
 
     [Route("content")]
     [HttpPost]
-    public async Task<ActionResult<Article>> SaveArticleContent([FromBody] ContentFetchResult request)
+    public async Task<ActionResult<ArticleDto>> SaveArticleContent([FromBody] ContentFetchResult request)
     {
         try
         {
@@ -94,7 +96,7 @@ public class ArticlesController : ControllerBase
             }
 
             var article = await _articleService.SaveContentAsync(request);
-            return CreatedAtAction(nameof(GetArticle), new { id = article.Id }, article);
+            return CreatedAtAction(nameof(GetArticle), new { id = article.Id }, article.ToDto());
         }
         catch (Exception ex)
         {
@@ -105,12 +107,12 @@ public class ArticlesController : ControllerBase
 
 
     [HttpPut("{id}")]
-    public async Task<ActionResult<Article>> UpdateArticle(Guid id, [FromBody] Article article)
+    public async Task<ActionResult<ArticleDto>> UpdateArticle(Guid id, [FromBody] Article article)
     {
         try
         {
             var updatedArticle = await _articleService.UpdateArticleAsync(id, article);
-            return Ok(updatedArticle);
+            return Ok(updatedArticle.ToDto());
         }
         catch (ArgumentException)
         {
@@ -139,12 +141,12 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost("{id}/favorite")]
-    public async Task<ActionResult<Article>> ToggleFavorite(Guid id)
+    public async Task<ActionResult<ArticleDto>> ToggleFavorite(Guid id)
     {
         try
         {
             var article = await _articleService.ToggleFavoriteAsync(id);
-            return Ok(article);
+            return Ok(article.ToDto());
         }
         catch (ArgumentException)
         {
@@ -158,12 +160,12 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost("{id}/archive")]
-    public async Task<ActionResult<Article>> ToggleArchive(Guid id)
+    public async Task<ActionResult<ArticleDto>> ToggleArchive(Guid id)
     {
         try
         {
             var article = await _articleService.ToggleArchiveAsync(id);
-            return Ok(article);
+            return Ok(article.ToDto());
         }
         catch (ArgumentException)
         {
@@ -177,12 +179,12 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost("{id}/highlights")]
-    public async Task<ActionResult<Highlight>> AddHighlight(Guid id, [FromBody] Highlight highlight)
+    public async Task<ActionResult<HighlightDto>> AddHighlight(Guid id, [FromBody] Highlight highlight)
     {
         try
         {
             var newHighlight = await _articleService.AddHighlightAsync(id, highlight);
-            return Ok(newHighlight);
+            return Ok(newHighlight.ToDto());
         }
         catch (Exception ex)
         {
@@ -207,12 +209,12 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost("{id}/tags")]
-    public async Task<ActionResult<Tag>> AddTag(Guid id, [FromBody] AddTagRequest request)
+    public async Task<ActionResult<TagDto>> AddTag(Guid id, [FromBody] AddTagRequest request)
     {
         try
         {
             var tag = await _articleService.AddTagToArticleAsync(id, request.Name, request.Color);
-            return Ok(tag);
+            return Ok(tag.ToDto());
         }
         catch (ArgumentException)
         {
@@ -236,6 +238,27 @@ public class ArticlesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error removing tag from article {Id}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// 获取文章列表 - 轻量版本（不包含内容和高亮）
+    /// </summary>
+    [HttpGet("light")]
+    public async Task<ActionResult<IEnumerable<ArticleDto>>> GetArticlesLight(
+        [FromQuery] int page = 1, 
+        [FromQuery] int pageSize = 20, 
+        [FromQuery] string? search = null)
+    {
+        try
+        {
+            var articles = await _articleService.GetArticlesAsync(page, pageSize, search);
+            return Ok(articles.ToLightDto()); // 使用轻量级映射
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting articles");
             return StatusCode(500, "Internal server error");
         }
     }

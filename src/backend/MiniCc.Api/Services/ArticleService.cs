@@ -52,7 +52,7 @@ public class ArticleService : IArticleService
             Author = result.Author ?? "",
             OriginContent = result.OriginContent,
             ReadableContent = readabilityContent.Content ?? "",
-            TextContentLegth = readabilityContent.Length,
+            TextContentLength = readabilityContent.Length,
             Summary = readabilityContent.Excerpt ?? result.Summary ?? "",
             CreatedAt = DateTimeOffset.Now
         };

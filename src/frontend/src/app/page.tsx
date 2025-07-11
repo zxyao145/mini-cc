@@ -49,6 +49,12 @@ export default function Home() {
     }
   };
 
+  const handleUpdateArticle = (updatedArticle: Article) => {
+    setArticles(articles.map(article => 
+      article.id === updatedArticle.id ? updatedArticle : article
+    ));
+  };
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
@@ -69,6 +75,7 @@ export default function Home() {
           loading={loading}
           onDelete={handleDeleteArticle}
           onRefresh={loadArticles}
+          onUpdate={handleUpdateArticle}
         />
       </main>
     </div>

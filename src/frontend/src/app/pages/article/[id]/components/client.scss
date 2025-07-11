@@ -1,12 +1,21 @@
 .article-detail {
+  .article-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
 
-  &>h1 {
-    font-size: 2rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .author {
+      color: #666;
+      font-style: italic;
+      margin-bottom: 1rem;
+    }
   }
-
-
 }
 
 .readable-content {
