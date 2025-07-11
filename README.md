@@ -28,7 +28,7 @@ Omnivore minimum implementation, built with ASP.NET Core and Next.js.
 ## Project Structure
 
 ```
-mini-cc/
+src/
 ├── backend/
 │   └── MiniCc.Api/
 │       ├── Controllers/     # API controllers
@@ -44,10 +44,8 @@ mini-cc/
 │   │   └── types/         # TypeScript type definitions
 │   └── public/            # Static assets
 │
-├── web-extension/
-│   └── src/               # source file
-│       
-└── README.md
+└── web-extension/
+    └── src/               # source file
 ```
 
 ## Getting Started
@@ -88,7 +86,7 @@ mini-cc/
    dotnet run
    ```
 
-The API will be available at `https://localhost:5001` and `http://localhost:5000`.
+The API will be available at `http://localhost:5000`.
 
 ### Frontend Setup
 
@@ -104,7 +102,7 @@ The API will be available at `https://localhost:5001` and `http://localhost:5000
 
 3. Update the API URL in `.env.local` if needed:
    ```
-   NEXT_PUBLIC_API_URL=https://localhost:5001/api
+   NEXT_PUBLIC_API_URL=http://localhost:5000/api
    ```
 
 4. Run the development server:
@@ -113,6 +111,28 @@ The API will be available at `https://localhost:5001` and `http://localhost:5000
    ```
 
 The frontend will be available at `http://localhost:3000`.
+
+### Web Extension
+
+1. Navigate to the web-extension directory:
+
+   ```bash
+   cd web-extension
+   ```
+
+2. Install dependencies:
+
+   ```bash
+   pnpm install
+   ```
+
+3. Run the development server:
+
+   ```bash
+   pnpm dev
+   ```
+
+The web extension will be available at Chrome web extension.
 
 ## API Endpoints
 
@@ -152,6 +172,9 @@ dotnet ef database update
 
 ### Frontend Commands
 ```bash
+# Install all dependencies
+pnpm install:all
+
 # Development server
 pnpm dev
 
@@ -165,20 +188,23 @@ pnpm start
 pnpm lint
 ```
 
-### Root Project Commands
+### Web Extension Commands
+
 ```bash
 # Install all dependencies
 pnpm install:all
 
-# Run both backend and frontend in development
+# Development server
 pnpm dev
 
-# Build frontend
+# Production build
 pnpm build
 
-# Database migration
-pnpm db:migrate
+# Linting
+pnpm lint
 ```
+
+
 
 ## Database Schema
 
