@@ -4,6 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
+### Docker Stack (Recommended)
+- `./docker-build.sh` - Build all container images
+- `./docker-run.sh` - Start complete stack with PostgreSQL, nginx, API, frontend, and readability service
+- External access: http://localhost:5000 (nginx proxy routes to appropriate services)
+
 ### Backend Commands (from `/src/backend/MiniCc.Api/`)
 - `dotnet run` - Start the API server (https://localhost:5001, http://localhost:5000)
 - `dotnet build` - Build the backend
@@ -18,26 +23,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm lint` - Run ESLint
 
 ### Web Extension Commands (from `/src/web-extension/`)
-
 - `pnpm dev` - Start Chrome Extension development
 - `pnpm build` - Build Chrome Extension for production
 - `pnpm lint` - Run ESLint
 
+### Readability API Commands (from `/src/backend/readability-api/`)
+- `npm start` - Start content extraction service (http://localhost:5002)
+
 ## Architecture Overview
 
 ### Project Structure
-This is a full-stack read-later application with:
-- **Backend**: ASP.NET Core 9.0 Web API with PostgreSQL database
+This is a microservices-based read-later application with:
+- **Backend API**: ASP.NET Core 9.0 Web API with PostgreSQL database
 - **Frontend**: Next.js 15 with TypeScript, SCSS, and App Router
-- **Web Extension**: Vitejs, TypeScript, SCSS, vite-plugin-web-extension
+- **Web Extension**: Vite-based TypeScript Chrome extension
+- **Readability Service**: Node.js service for content extraction using Mozilla Readability
+- **Load Balancer**: Nginx reverse proxy for routing
+- **Database**: PostgreSQL 16 with Chinese text search (zhparser extension)
 
 ### Backend Architecture (`/src/backend/MiniCc.Api/`)
-- **Authentication**: Cookies and AccessKey methods
+- **Authentication**: Dual authentication (Cookie for web, AccessKey for API/extension)
 - **Controllers**: API endpoints for articles, tags, and highlights
 - **Models**: Entity models (Article, Tag, Highlight) with EF Core annotations, Primary Key Type Guid
-- **Data**: Entity Framework DbContext with PostgreSQL provider
-- **Services**: Business logic services (ArticleService, WebScraperService)
-- **Database**: PostgreSQL with Entity Framework Core 9.0
+- **Data**: Entity Framework DbContext with PostgreSQL provider, sensitive data encryption
+- **Services**: Business logic services (ArticleService, TagService, HighlightService)
+- **ContentHandler**: Chain of responsibility pattern for content extraction with extensible handlers
+- **Database**: PostgreSQL with Entity Framework Core 9.0 and Chinese text search support
+
+### Content Processing Pipeline
+Content extraction follows this flow:
+1. **URL Input** → ContentHandler (ASP.NET Core)
+2. **Raw HTML Fetch** → ContentHandler using HtmlAgilityPack
+3. **Content Cleaning** → Readability API (Node.js service with Mozilla Readability)
+4. **Processed Content** → Database storage with metadata
+
+### Docker Service Architecture
+```
+nginx (port 5000) → Routes traffic to:
+├── minicc-api (port 8080 internal) → Main ASP.NET Core API
+├── minicc-web (port 3000 internal) → Next.js frontend
+└── readability-api (port 5002) → Content extraction service
+                   ↓
+            PostgreSQL (port 15432) → Database with zhparser
+```
 
 ### Frontend Architecture (`/src/frontend/src/`)
 - **App Router**: Next.js 15 app directory structure
@@ -46,9 +74,11 @@ This is a full-stack read-later application with:
 - **Types**: TypeScript definitions in `types/index.ts`
 
 ### Key Dependencies
-- **Backend**: Entity Framework Core, HtmlAgilityPack (web scraping), Npgsql (PostgreSQL)
+- **Backend**: Entity Framework Core, HtmlAgilityPack (web scraping), Npgsql (PostgreSQL), Mapster (object mapping)
 - **Frontend**: React 19, Next.js 15, TypeScript, Axios, SASS
-- **Web Extension**: Vitejs, TypeScript, SCSS, vite-plugin-web-extension
+- **Web Extension**: Vite, TypeScript, SCSS, vite-plugin-web-extension
+- **Readability Service**: @mozilla/readability, Express.js, JSDOM
+- **Infrastructure**: PostgreSQL 16, Nginx, Docker/Podman
 
 ### Database Schema
 Three main entities with relationships:
@@ -64,13 +94,20 @@ Base URL: `http://localhost:5000/api`
 - Highlights: `/articles/{id}/highlights` (POST), `/highlights/{id}` (DELETE)
 
 ### Environment Configuration
-- Backend connection string in `appsettings.json`
-- Frontend API URL via `NEXT_PUBLIC_API_URL` environment variable
-- CORS configured for `http://localhost:3000` in development
+- **Backend connection string**: Set via `MiniCC_Db` environment variable or `appsettings.json`
+- **Readability API URL**: Set via `MiniCC_ReadabilityApi` environment variable (defaults to http://127.0.0.1:5002)
+- **Frontend API URL**: Set via `NEXT_PUBLIC_API_URL` environment variable
+- **CORS**: Configured for `http://localhost:3000` and `http://localhost:5000` in development
+- **Container Mode**: Use `./docker-run.sh` for full stack with proper service discovery
+
+### Authentication Methods
+- **Web Frontend**: Cookie-based authentication for browser sessions
+- **Web Extension/API**: AccessKey authentication for programmatic access
+- **Dual Support**: Both methods available simultaneously
 
 ### Development Prerequisites
 - .NET 9.0 SDK
 - Node.js 18+ and pnpm
-- PostgreSQL database
+- PostgreSQL database (or use Docker stack)
 - Entity Framework Core CLI tools (`dotnet tool install --global dotnet-ef`)
-- Chrome Web Extension
+- Docker/Podman for containerized development (recommended)
