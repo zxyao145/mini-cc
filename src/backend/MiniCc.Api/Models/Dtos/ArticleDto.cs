@@ -19,12 +19,34 @@ public class ArticleDto
     public List<HighlightDto> Highlights { get; set; } = new();
 }
 
+public class ArticleSummaryDto
+{
+    public Guid Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Author { get; set; } = string.Empty;
+    public string Summary { get; set; } = string.Empty;
+    public DateTimeOffset CreatedAt { get; set; }
+    public string ImageUrl { get; set; } = string.Empty;
+    public bool IsFavorite { get; set; }
+    public bool IsArchived { get; set; }
+}
+
 public class TagDto
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Color { get; set; } = string.Empty;
     public DateTimeOffset CreatedAt { get; set; }
+}
+
+public class TagWithArticleCountDto : TagDto
+{
+    public int ArticleCount { get; set; }
+}
+
+public class TagWithArticlesDto : TagDto
+{
+    public List<ArticleSummaryDto> Articles { get; set; } = new();
 }
 
 public class HighlightDto

@@ -1,5 +1,6 @@
 using ContentHandler;
 using MiniCc.Api.Models;
+using MiniCc.Api.Models.Dtos;
 
 namespace MiniCc.Api.Services;
 
@@ -14,7 +15,7 @@ public interface IArticleService
     Task DeleteArticleAsync(Guid id);
     Task<Article> ToggleFavoriteAsync(Guid id);
     Task<Article> ToggleArchiveAsync(Guid id);
-    Task<Highlight> AddHighlightAsync(Guid articleId, Highlight highlight);
+    Task<Highlight> AddHighlightAsync(Guid articleId, HighlightRequest highlight);
     Task DeleteHighlightAsync(Guid highlightId);
     Task<Tag> AddTagToArticleAsync(Guid articleId, string tagName, string? color = null);
     Task RemoveTagFromArticleAsync(Guid articleId, Guid tagId);

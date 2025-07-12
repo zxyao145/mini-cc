@@ -1,9 +1,11 @@
 "use client";
 
 import { articleApi } from "@/lib/api";
-import { Article, Tag } from "@/types";
+import { Article, Tag, Highlight } from "@/types";
 import { useEffect, useState } from "react";
 import TagManager from "@/components/TagManager";
+import HighlightManager from "@/components/HighlightManager";
+import HighlightList from "@/components/HighlightList";
 
 import DOMPurify from "dompurify";
 
@@ -30,6 +32,12 @@ export default function Client(params: { id: string }) {
   const handleTagsChange = (newTags: Tag[]) => {
     if (article) {
       setArticle({ ...article, tags: newTags });
+    }
+  };
+
+  const handleHighlightsChange = (newHighlights: Highlight[]) => {
+    if (article) {
+      setArticle({ ...article, highlights: newHighlights });
     }
   };
 
@@ -66,7 +74,22 @@ export default function Client(params: { id: string }) {
         />
       </div>
       
-      <div className="readable-content" dangerouslySetInnerHTML={{ __html: article.readableContent }}></div>
+      <div className="article-content">
+        <HighlightManager
+          articleId={article.id}
+          highlights={article.highlights || []}
+          onHighlightsChange={handleHighlightsChange}
+        />
+        <div 
+          className="readable-content" 
+          dangerouslySetInnerHTML={{ __html: article.readableContent }}
+        ></div>
+        
+        <HighlightList
+          highlights={article.highlights || []}
+          onHighlightsChange={handleHighlightsChange}
+        />
+      </div>
     </main>
   );
 }

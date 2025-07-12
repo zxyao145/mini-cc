@@ -16,11 +16,16 @@
       margin-bottom: 1rem;
     }
   }
+  
+  .article-content {
+    position: relative;
+  }
 }
 
 .readable-content {
   font-size: 1.25rem;
   line-height: 1.6;
+  user-select: text;
 
   article {
     > * {

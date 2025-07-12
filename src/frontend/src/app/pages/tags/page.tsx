@@ -2,40 +2,59 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { TagWithArticleCount } from "@/types";
+import { tagApi } from "@/lib/api";
 import styles from "./tags.module.scss";
-
-interface Tag {
-  id: number;
-  name: string;
-  color: string;
-  articleCount: number;
-}
 
 interface TagGroup {
   letter: string;
-  tags: Tag[];
+  tags: TagWithArticleCount[];
 }
 
 export default function TagsPage() {
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [tags, setTags] = useState<TagWithArticleCount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    // TODO: Load tags from API
-    setLoading(false);
-    // Mock data for now
-    setTags([
-      { id: 1, name: "Technology", color: "#3498db", articleCount: 15 },
-      { id: 2, name: "Science", color: "#e74c3c", articleCount: 8 },
-      { id: 3, name: "Programming", color: "#2ecc71", articleCount: 23 },
-      { id: 4, name: "Design", color: "#9b59b6", articleCount: 12 },
-      { id: 5, name: "Business", color: "#f39c12", articleCount: 7 },
-      { id: 6, name: "AI", color: "#1abc9c", articleCount: 19 },
-      { id: 7, name: "Web Development", color: "#34495e", articleCount: 31 },
-      { id: 8, name: "Mobile", color: "#e67e22", articleCount: 9 }
-    ]);
+    loadTags();
   }, []);
+
+  const loadTags = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const tagsData = await tagApi.getTags();
+      setTags(tagsData);
+    } catch (err) {
+      console.error("Error loading tags:", err);
+      setError("Failed to load tags");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const searchTags = async (searchTerm: string) => {
+    try {
+      setError(null);
+      const tagsData = await tagApi.getTags(searchTerm || undefined);
+      setTags(tagsData);
+    } catch (err) {
+      console.error("Error searching tags:", err);
+      setError("Failed to search tags");
+    }
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    // 使用 debounce 来避免频繁的 API 调用
+    const timeoutId = setTimeout(() => {
+      searchTags(value);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  };
 
   const filteredTags = tags.filter(tag => 
     tag.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -57,8 +76,24 @@ export default function TagsPage() {
   if (loading) {
     return (
       <div className={styles.container}>
-        <h1>Tags</h1>
-        <p>Loading tags...</p>
+        <div className={styles.loading}>
+          <h1>Tags</h1>
+          <p>Loading tags...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.error}>
+          <h1>Tags</h1>
+          <p>{error}</p>
+          <button onClick={loadTags} className={styles.retryButton}>
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -76,7 +111,7 @@ export default function TagsPage() {
             type="text"
             placeholder="Search tags..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className={styles.searchInput}
           />
         </div>
@@ -91,7 +126,12 @@ export default function TagsPage() {
         {filteredTags.length === 0 ? (
           <div className={styles.empty}>
             <h2>No tags found</h2>
-            <p>Try adjusting your search or create some tags for your articles.</p>
+            <p>
+              {searchTerm 
+                ? "Try adjusting your search terms." 
+                : "Start adding tags to your articles to see them here."
+              }
+            </p>
           </div>
         ) : (
           <div className={styles.tagGroups}>
@@ -102,7 +142,7 @@ export default function TagsPage() {
                   {group.tags.map((tag) => (
                     <Link 
                       key={tag.id} 
-                      href={`/?tag=${tag.id}`} 
+                      href={`/pages/tags/${tag.id}`} 
                       className={styles.tagCard}
                     >
                       <div 

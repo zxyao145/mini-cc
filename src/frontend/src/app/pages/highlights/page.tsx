@@ -1,42 +1,152 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import { highlightApi, articleApi } from "@/lib/api";
+import { Highlight } from "@/types";
 import styles from "./highlights.module.scss";
 
-interface Highlight {
-  id?: string;
-  text: string;
-  note?: string;
-  articleTitle: string;
-  articleUrl: string;
-  createdAt: string;
+interface HighlightCardProps {
+  highlight: Highlight;
+  onDelete: (id: string) => void;
+  onUpdateNote: (id: string, note: string) => void;
+}
+
+function HighlightCard({ highlight, onDelete, onUpdateNote }: HighlightCardProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editNote, setEditNote] = useState(highlight.note || '');
+  const [articleTitle, setArticleTitle] = useState<string>('');
+
+  useEffect(() => {
+    const loadArticleTitle = async () => {
+      try {
+        const article = await articleApi.getArticleById(highlight.articleId);
+        setArticleTitle(article.title);
+      } catch (err) {
+        console.error('Failed to load article title:', err);
+        setArticleTitle('Unknown Article');
+      }
+    };
+    
+    if (highlight.articleId) {
+      loadArticleTitle();
+    }
+  }, [highlight.articleId]);
+
+  const handleSaveNote = () => {
+    onUpdateNote(highlight.id, editNote);
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditNote(highlight.note || '');
+    setIsEditing(false);
+  };
+
+  return (
+    <div className={styles.highlightCard}>
+      <div className={styles.highlightText} style={{ backgroundColor: highlight.color || '#ffeb3b' }}>
+        {highlight.text}
+      </div>
+      
+      <div className={styles.noteSection}>
+        {isEditing ? (
+          <div className={styles.noteEdit}>
+            <textarea
+              value={editNote}
+              onChange={(e) => setEditNote(e.target.value)}
+              placeholder="Add a note..."
+              className={styles.noteTextarea}
+            />
+            <div className={styles.noteActions}>
+              <button onClick={handleSaveNote} className={styles.saveButton}>
+                Save
+              </button>
+              <button onClick={handleCancelEdit} className={styles.cancelButton}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.noteDisplay}>
+            {highlight.note ? (
+              <div className={styles.note}>
+                <strong>Note:</strong> {highlight.note}
+              </div>
+            ) : (
+              <div className={styles.noNote}>No note</div>
+            )}
+            <button 
+              onClick={() => setIsEditing(true)}
+              className={styles.editButton}
+            >
+              {highlight.note ? 'Edit Note' : 'Add Note'}
+            </button>
+          </div>
+        )}
+      </div>
+      
+      <div className={styles.metadata}>
+        <a 
+          href={`/pages/article/${highlight.articleId}`} 
+          className={styles.articleLink}
+        >
+          {articleTitle}
+        </a>
+        <span className={styles.date}>
+          {new Date(highlight.createdAt).toLocaleDateString()}
+        </span>
+        <button 
+          onClick={() => onDelete(highlight.id)}
+          className={styles.deleteButton}
+          title="Delete highlight"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function HighlightsPage() {
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [error, setError] = useState<string | null>(null);
+
+  const loadHighlights = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await highlightApi.getHighlights();
+      setHighlights(data);
+    } catch (err) {
+      console.error('Failed to load highlights:', err);
+      setError('Failed to load highlights');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteHighlight = async (highlightId: string) => {
+    try {
+      await highlightApi.deleteHighlight(highlightId);
+      setHighlights(highlights.filter(h => h.id !== highlightId));
+    } catch (err) {
+      console.error('Failed to delete highlight:', err);
+    }
+  };
+
+  const handleUpdateNote = async (highlightId: string, note: string) => {
+    try {
+      const updated = await highlightApi.updateHighlight(highlightId, note);
+      setHighlights(highlights.map(h => h.id === highlightId ? updated : h));
+    } catch (err) {
+      console.error('Failed to update highlight note:', err);
+    }
+  };
+
   useEffect(() => {
-    // TODO: Load highlights from API
-    setLoading(false);
-    // Mock data for now
-    setHighlights([
-      {
-        id: "1",
-        text: "This is an important highlighted text from an article",
-        note: "My personal note about this highlight",
-        articleTitle: "Sample Article Title",
-        articleUrl: "/article/1",
-        createdAt: "2024-01-15T10:30:00Z"
-      },
-      {
-        id: "2",
-        text: "Another highlighted section that I found interesting",
-        articleTitle: "Another Article",
-        articleUrl: "/article/2",
-        createdAt: "2024-01-14T15:45:00Z"
-      }
-    ]);
+    loadHighlights();
   }, []);
 
   if (loading) {
@@ -44,6 +154,18 @@ export default function HighlightsPage() {
       <div className={styles.container}>
         <h1>HighLights</h1>
         <p>Loading highlights...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <h1>HighLights</h1>
+        <p className={styles.error}>{error}</p>
+        <button onClick={loadHighlights} className={styles.retryButton}>
+          Retry
+        </button>
       </div>
     );
   }
@@ -64,26 +186,12 @@ export default function HighlightsPage() {
         ) : (
           <div className={styles.highlightsList}>
             {highlights.map((highlight) => (
-              <div key={highlight.id} className={styles.highlightCard}>
-                <div className={styles.highlightText}>
-                  {highlight.text}
-                </div>
-                
-                {highlight.note && (
-                  <div className={styles.note}>
-                    <strong>Note:</strong> {highlight.note}
-                  </div>
-                )}
-                
-                <div className={styles.metadata}>
-                  <a href={highlight.articleUrl} className={styles.articleLink}>
-                    {highlight.articleTitle}
-                  </a>
-                  <span className={styles.date}>
-                    {new Date(highlight.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
+              <HighlightCard
+                key={highlight.id}
+                highlight={highlight}
+                onDelete={handleDeleteHighlight}
+                onUpdateNote={handleUpdateNote}
+              />
             ))}
           </div>
         )}

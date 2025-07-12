@@ -5,7 +5,7 @@ export interface Article {
     author: string;
     originContent: string;
     readableContent: string;
-    textContentLegth: number;
+    textContentLength: number; // 修复拼写错误
     summary: string;
     createdAt: string;
     readAt?: string ;
@@ -16,6 +16,16 @@ export interface Article {
     highlights: Highlight[];
 }
 
+export interface ArticleSummary {
+    id: string;
+    title: string;
+    author: string;
+    summary: string;
+    createdAt: string;
+    imageUrl: string;
+    isFavorite: boolean;
+    isArchived: boolean;
+}
 
 export interface Tag {
   id: string;
@@ -24,10 +34,19 @@ export interface Tag {
   createdAt: string;
 }
 
+export interface TagWithArticleCount extends Tag {
+  articleCount: number;
+}
+
+export interface TagWithArticles extends Tag {
+  articles: ArticleSummary[];
+}
+
 export interface Highlight {
   id: string;
   text: string;
   note: string;
+  color: string;
   startOffset: number;
   endOffset: number;
   createdAt: string;

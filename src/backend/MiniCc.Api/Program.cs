@@ -65,6 +65,8 @@ builder.Services.AddDbContext<MiniCcContext>(options =>
 builder.Services.AddScoped<IAccessKeyService, AccessKeyService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IArticleService, ArticleService>();
+builder.Services.AddScoped<ITagService, TagService>();
+builder.Services.AddScoped<IHighlightService, HighlightService>();
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddHttpContextAccessor();
 

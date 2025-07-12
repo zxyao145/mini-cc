@@ -18,11 +18,13 @@ namespace MiniCc.Api.Controllers;
 public class ArticlesController : ControllerBase
 {
     private readonly IArticleService _articleService;
+    private readonly IHighlightService _highlightService;
     private readonly ILogger<ArticlesController> _logger;
 
-    public ArticlesController(IArticleService articleService, ILogger<ArticlesController> logger)
+    public ArticlesController(IArticleService articleService, IHighlightService highlightService, ILogger<ArticlesController> logger)
     {
         _articleService = articleService;
+        _highlightService = highlightService;
         _logger = logger;
     }
 
@@ -179,11 +181,11 @@ public class ArticlesController : ControllerBase
     }
 
     [HttpPost("{id}/highlights")]
-    public async Task<ActionResult<HighlightDto>> AddHighlight(Guid id, [FromBody] Highlight highlight)
+    public async Task<ActionResult<HighlightDto>> AddHighlight(Guid id, [FromBody] HighlightRequest highlight)
     {
         try
         {
-            var newHighlight = await _articleService.AddHighlightAsync(id, highlight);
+            var newHighlight = await _highlightService.CreateHighlightAsync(id, highlight);
             return Ok(newHighlight.ToDto());
         }
         catch (Exception ex)
@@ -198,7 +200,11 @@ public class ArticlesController : ControllerBase
     {
         try
         {
-            await _articleService.DeleteHighlightAsync(highlightId);
+            var success = await _highlightService.DeleteHighlightAsync(highlightId);
+            if (!success)
+            {
+                return NotFound();
+            }
             return NoContent();
         }
         catch (Exception ex)

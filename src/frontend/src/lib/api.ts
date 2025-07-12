@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Article, SaveArticleRequest, AddTagRequest, Highlight, Tag, LoginRequest, User } from '@/types';
+import { Article, SaveArticleRequest, AddTagRequest, Highlight, Tag, TagWithArticleCount, TagWithArticles, LoginRequest, User } from '@/types';
 
 axios.defaults.withCredentials = true;
 
@@ -72,6 +72,53 @@ export const articleApi = {
 
   async removeTag(articleId: string, tagId: string): Promise<void> {
     await api.delete(`/articles/${articleId}/tags/${tagId}`);
+  },
+};
+
+export const tagApi = {
+  async getTags(search?: string): Promise<TagWithArticleCount[]> {
+    const params = new URLSearchParams();
+    if (search) {
+      params.append('search', search);
+    }
+    
+    const response = await api.get(`/tags${params.toString() ? `?${params}` : ''}`);
+    return response.data;
+  },
+
+  async getTagById(id: string): Promise<TagWithArticles> {
+    const response = await api.get(`/tags/${id}`);
+    return response.data;
+  },
+
+  async getTagArticles(id: string, page = 1, pageSize = 20): Promise<Article[]> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      pageSize: pageSize.toString(),
+    });
+    
+    const response = await api.get(`/tags/${id}/articles?${params}`);
+    return response.data;
+  },
+
+  async deleteTag(id: string): Promise<void> {
+    await api.delete(`/tags/${id}`);
+  },
+};
+
+export const highlightApi = {
+  async getHighlights(): Promise<Highlight[]> {
+    const response = await api.get('/highlights');
+    return response.data;
+  },
+
+  async updateHighlight(highlightId: string, note: string): Promise<Highlight> {
+    const response = await api.put(`/highlights/${highlightId}`, { note });
+    return response.data;
+  },
+
+  async deleteHighlight(highlightId: string): Promise<void> {
+    await api.delete(`/highlights/${highlightId}`);
   },
 };
 

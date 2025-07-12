@@ -1,8 +1,10 @@
 using ContentHandler;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 using MiniCc.Api.Common;
 using MiniCc.Api.Data;
 using MiniCc.Api.Models;
+using MiniCc.Api.Models.Dtos;
 using System;
 
 namespace MiniCc.Api.Services;
@@ -145,8 +147,9 @@ public class ArticleService : IArticleService
         return article;
     }
 
-    public async Task<Highlight> AddHighlightAsync(Guid articleId, Highlight highlight)
+    public async Task<Highlight> AddHighlightAsync(Guid articleId, HighlightRequest highlightAddCommand)
     {
+        var highlight = highlightAddCommand.Adapt<Highlight>();
         highlight.Id = UuidUtil.NewGuidV7();
         highlight.ArticleId = articleId;
         highlight.CreatedAt = DateTime.UtcNow;

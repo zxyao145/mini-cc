@@ -28,7 +28,7 @@ export default function LoginPage() {
     try {
       await login(userName, password, rememberMe);
       router.push('/');
-    } catch (error) {
+    } catch {
       setError('用户名或密码错误');
     } finally {
       setIsLoading(false);
