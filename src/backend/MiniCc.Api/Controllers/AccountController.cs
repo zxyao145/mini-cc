@@ -16,6 +16,24 @@ public class UserInfo
     public bool IsAuthenticated { get; set; }
 }
 
+public class UpdateUserRequest
+{
+    [Required]
+    [StringLength(20, MinimumLength = 2, ErrorMessage = "用户名长度必须在2-20字符之间")]
+    public string UserName { get; set; } = "";
+}
+
+public class UpdatePasswordRequest
+{
+    [Required]
+    [StringLength(20, MinimumLength = 6, ErrorMessage = "密码长度必须在6-20字符之间")]
+    public string CurrentPassword { get; set; } = "";
+    
+    [Required]
+    [StringLength(20, MinimumLength = 6, ErrorMessage = "密码长度必须在6-20字符之间")]
+    public string NewPassword { get; set; } = "";
+}
+
 
 [ApiController]
 [Route("api/[controller]/[action]")]
@@ -62,6 +80,38 @@ public class AccountController : ControllerBase
         };
 
         return Ok(userInfo);
+    }
+
+    // 更新用户名
+    [Authorize]
+    [HttpPut]
+    public async Task<ActionResult> UpdateUserName([FromBody] UpdateUserRequest request)
+    {
+        var userName = User.Identity?.Name ?? "";
+        var result = await _accountService.UpdateUserNameAsync(userName, request.UserName);
+        
+        if (!result.Success)
+        {
+            return BadRequest(new { message = result.ErrorMessage });
+        }
+
+        return Ok(new { message = "用户名更新成功" });
+    }
+
+    // 更新密码
+    [Authorize]
+    [HttpPut]
+    public async Task<ActionResult> UpdatePassword([FromBody] UpdatePasswordRequest request)
+    {
+        var userName = User.Identity?.Name ?? "";
+        var result = await _accountService.UpdatePasswordAsync(userName, request.CurrentPassword, request.NewPassword);
+        
+        if (!result.Success)
+        {
+            return BadRequest(new { message = result.ErrorMessage });
+        }
+
+        return Ok(new { message = "密码更新成功" });
     }
 
 }

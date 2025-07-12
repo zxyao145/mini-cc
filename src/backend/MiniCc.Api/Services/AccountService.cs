@@ -32,10 +32,18 @@ public enum LoginResult
     UserNoFound = 2,
 }
 
+public class UpdateResult
+{
+    public bool Success { get; set; }
+    public string ErrorMessage { get; set; } = "";
+}
+
 public interface IAccountService
 {
     Task<LoginResult> LoginAsync(UserLoginCommand command);
-    Task<User> FindByUserName(string userName);
+    Task<User?> FindByUserName(string userName);
+    Task<UpdateResult> UpdateUserNameAsync(string currentUserName, string newUserName);
+    Task<UpdateResult> UpdatePasswordAsync(string userName, string currentPassword, string newPassword);
 }
 
 public class AccountService : IAccountService
@@ -96,5 +104,47 @@ public class AccountService : IAccountService
         var user = await _context.Users
            .FirstOrDefaultAsync(x => x.UserName == userName);
         return user;
+    }
+
+    public async Task<UpdateResult> UpdateUserNameAsync(string currentUserName, string newUserName)
+    {
+        var user = await FindByUserName(currentUserName);
+        if (user == null)
+        {
+            return new UpdateResult { Success = false, ErrorMessage = "用户未找到" };
+        }
+
+        // 检查新用户名是否已存在
+        var existingUser = await FindByUserName(newUserName);
+        if (existingUser != null && existingUser.Id != user.Id)
+        {
+            return new UpdateResult { Success = false, ErrorMessage = "用户名已存在" };
+        }
+
+        user.UserName = newUserName;
+        await _context.SaveChangesAsync();
+
+        return new UpdateResult { Success = true };
+    }
+
+    public async Task<UpdateResult> UpdatePasswordAsync(string userName, string currentPassword, string newPassword)
+    {
+        var user = await FindByUserName(userName);
+        if (user == null)
+        {
+            return new UpdateResult { Success = false, ErrorMessage = "用户未找到" };
+        }
+
+        // 验证当前密码
+        if (!PasswordUtil.VerifyHashedPassword(user.Password, currentPassword))
+        {
+            return new UpdateResult { Success = false, ErrorMessage = "当前密码错误" };
+        }
+
+        // 更新密码
+        user.Password = PasswordUtil.HashPassword(newPassword);
+        await _context.SaveChangesAsync();
+
+        return new UpdateResult { Success = true };
     }
 }

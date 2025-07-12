@@ -72,3 +72,33 @@ export interface User {
   userName: string;
   isAuthenticated: boolean;
 }
+
+export interface AccessKey {
+  id: string;
+  userId: string;
+  name: string;
+  key: string;
+  expiredTime?: string;
+  disabled: boolean;
+}
+
+export interface UpdateUserRequest {
+  userName: string;
+}
+
+export interface UpdatePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface CreateAccessKeyRequest {
+  name: string;
+  expiredTime?: string;
+}
+
+export interface UpdateAccessKeyRequest {
+  id: string;
+  name: string;
+  expiredTime?: string;
+  disabled: boolean;
+}

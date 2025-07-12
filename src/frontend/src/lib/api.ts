@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Article, SaveArticleRequest, AddTagRequest, Highlight, Tag, TagWithArticleCount, TagWithArticles, LoginRequest, User } from '@/types';
+import { Article, SaveArticleRequest, AddTagRequest, Highlight, Tag, TagWithArticleCount, TagWithArticles, LoginRequest, User, AccessKey, UpdateUserRequest, UpdatePasswordRequest, CreateAccessKeyRequest, UpdateAccessKeyRequest } from '@/types';
 
 axios.defaults.withCredentials = true;
 
@@ -147,5 +147,33 @@ export const authApi = {
     } catch {
       return null;
     }
+  },
+
+  async updateUserName(request: UpdateUserRequest): Promise<void> {
+    await api.put('/account/updateusername', request);
+  },
+
+  async updatePassword(request: UpdatePasswordRequest): Promise<void> {
+    await api.put('/account/updatepassword', request);
+  },
+};
+
+export const accessKeyApi = {
+  async getAccessKeys(): Promise<AccessKey[]> {
+    const response = await api.get('/accesskey/list');
+    return response.data;
+  },
+
+  async createAccessKey(request: CreateAccessKeyRequest): Promise<AccessKey> {
+    const response = await api.post('/accesskey/create', request);
+    return response.data;
+  },
+
+  async updateAccessKey(request: UpdateAccessKeyRequest): Promise<void> {
+    await api.put('/accesskey/update', request);
+  },
+
+  async deleteAccessKey(id: string): Promise<void> {
+    await api.delete(`/accesskey/delete/${id}`);
   },
 };

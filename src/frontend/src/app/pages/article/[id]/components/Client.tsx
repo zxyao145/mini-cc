@@ -64,8 +64,23 @@ export default function Client(params: { id: string }) {
   return (
     <main className="article-detail">
       <div className="article-header">
-        <h1>{article.title}</h1>
-        {article.author && <p className="author">by {article.author}</p>}
+        <div className="article-title-section">
+          <h1>{article.title}</h1>
+          {article.author && <p className="author">by {article.author}</p>}
+        </div>
+        
+        <div className="article-actions">
+          <a 
+            href={article.url} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="visit-original-btn"
+            title="访问原始页面"
+          >
+            <span className="icon">🔗</span>
+            <span className="text">访问原文</span>
+          </a>
+        </div>
         
         <TagManager 
           articleId={article.id}
