@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using MiniCc.Api.Data;
+using MiniCc.Api.Shared.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using NpgsqlTypes;
 
@@ -12,7 +12,7 @@ using NpgsqlTypes;
 
 namespace MiniCc.Api.Migrations
 {
-    [DbContext(typeof(MiniCcContext))]
+    [DbContext(typeof(MiniCcDbContext))]
     [Migration("20250706144850_ChangeIdToGuid")]
     partial class ChangeIdToGuid
     {
@@ -41,7 +41,7 @@ namespace MiniCc.Api.Migrations
                     b.ToTable("ArticleTags");
                 });
 
-            modelBuilder.Entity("MiniCc.Api.Models.AccessKey", b =>
+            modelBuilder.Entity("MiniCc.Api.Models.ApiKey", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()

@@ -1,0 +1,41 @@
+﻿using Mapster;
+using MediatR;
+using MiniCc.Api.Core.ArticleNs.Application.Commands;
+using MiniCc.Api.Core.ArticleNs.Domain.Services;
+using MiniCc.Api.Core.TagNs.Application.DTOs;
+using MiniCc.Api.Core.TagNs.Domain.AggregatesModel;
+using MiniCc.Api.Core.TagNs.Domain.AggregatesModel.ValueObjects;
+using MiniCc.Api.Shared;
+using MiniCc.Api.Shared.Data.Common;
+using MiniCc.Api.Shared.Data.Repositories;
+using System.Xml.Linq;
+
+namespace MiniCc.Api.Core.TagNs.Application.Commands;
+
+public class CreateTagCommandHandler : IRequestHandler<CreateTagCommand, Result<Tag>>
+{
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IMediator _mediator;
+    private readonly ILogger<CreateTagCommandHandler> _logger;
+
+    public CreateTagCommandHandler(
+        IUnitOfWork unitOfWork,
+        IArticleDomainService articleDomainService,
+        ILogger<CreateTagCommandHandler> logger,
+        IMediator mediator)
+    {
+        _unitOfWork = unitOfWork;
+        _logger = logger;
+        _mediator = mediator;
+    }
+
+    public async Task<Result<Tag>> Handle(CreateTagCommand request, CancellationToken cancellationToken)
+    {
+        var color = string.IsNullOrWhiteSpace(request.Color) ? TagColor.Default : TagColor.Create(request.Color);
+
+        var tag = Tag.Create( request.Name, color);
+        await _unitOfWork.Tags.AddAsync(tag);
+        await _unitOfWork.SaveChangesAsync();
+        return Result<Tag>.Success(tag);
+    }
+}

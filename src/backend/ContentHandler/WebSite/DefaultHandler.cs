@@ -1,8 +1,8 @@
-﻿
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
 using Microsoft.Extensions.Logging;
 
 namespace ContentHandler.WebSite;
+
 public class DefaultHandler : ContentHandlerBase
 {
     public override int Order => int.MaxValue;
@@ -12,16 +12,14 @@ public class DefaultHandler : ContentHandlerBase
 
     public DefaultHandler(ILogger<DefaultHandler> logger, IHttpClientFactory httpClientFactory)
     {
-        _logger = logger; 
+        _logger = logger;
         _httpClient = httpClientFactory.CreateClient("default");
     }
-
 
     public override bool ShouldHandle(string url)
     {
         return true;
     }
-
 
     public override Task<string?> ResolveAsync(string url)
     {
@@ -50,7 +48,7 @@ public class DefaultHandler : ContentHandlerBase
                 Title = title,
                 Summary = summary,
                 Author = author,
-                OriginContent = htmlContent,
+                OriginalContent = htmlContent,
                 Content = htmlContent,
                 ContentType = contentType,
                 Dom = htmlDoc,

@@ -3,7 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using MiniCc.Api.Data;
+using MiniCc.Api.Shared.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using NpgsqlTypes;
 
@@ -11,16 +11,17 @@ using NpgsqlTypes;
 
 namespace MiniCc.Api.Migrations
 {
-    [DbContext(typeof(MiniCcContext))]
+    [DbContext(typeof(MiniCcDbContext))]
     partial class MiniCcContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.6")
+                .HasAnnotation("ProductVersion", "9.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "zhparser");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("ArticleTags", b =>
@@ -38,11 +39,17 @@ namespace MiniCc.Api.Migrations
                     b.ToTable("ArticleTags");
                 });
 
-            modelBuilder.Entity("MiniCc.Api.Models.AccessKey", b =>
+            modelBuilder.Entity("MiniCc.Api.Core.ApiKeys.Domain.AggregatesModel.ApiKey", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
 
                     b.Property<bool>("Disabled")
                         .HasColumnType("boolean");
@@ -54,6 +61,12 @@ namespace MiniCc.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -67,10 +80,10 @@ namespace MiniCc.Api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("AccessKeys");
+                    b.ToTable("ApiKeys");
                 });
 
-            modelBuilder.Entity("MiniCc.Api.Models.Article", b =>
+            modelBuilder.Entity("MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.Article", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -95,7 +108,10 @@ namespace MiniCc.Api.Migrations
                     b.Property<bool>("IsFavorite")
                         .HasColumnType("boolean");
 
-                    b.Property<string>("OriginContent")
+                    b.Property<int>("Length")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("OriginalContent")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -115,36 +131,24 @@ namespace MiniCc.Api.Migrations
 
                     b.Property<string>("Summary")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<int>("TextContentLength")
-                        .HasColumnType("integer");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<string>("Url")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
 
                     b.HasIndex("SearchVector");
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("SearchVector"), "GIN");
 
-                    b.HasIndex("Url")
-                        .IsUnique();
-
                     b.ToTable("Articles");
                 });
 
-            modelBuilder.Entity("MiniCc.Api.Models.Highlight", b =>
+            modelBuilder.Entity("MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.Highlight", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -155,8 +159,7 @@ namespace MiniCc.Api.Migrations
 
                     b.Property<string>("Color")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
+                        .HasColumnType("text");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -166,14 +169,16 @@ namespace MiniCc.Api.Migrations
 
                     b.Property<string>("Note")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<int>("StartOffset")
                         .HasColumnType("integer");
 
                     b.Property<string>("Text")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.HasKey("Id");
 
@@ -182,19 +187,23 @@ namespace MiniCc.Api.Migrations
                     b.ToTable("Highlights");
                 });
 
-            modelBuilder.Entity("MiniCc.Api.Models.Tag", b =>
+            modelBuilder.Entity("MiniCc.Api.Core.TagNs.Domain.AggregatesModel.Tag", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Color")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -209,11 +218,23 @@ namespace MiniCc.Api.Migrations
                     b.ToTable("Tags");
                 });
 
-            modelBuilder.Entity("MiniCc.Api.Models.User", b =>
+            modelBuilder.Entity("MiniCc.Api.Core.UserNs.Domain.AggregatesModel.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("LastModifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("text");
 
                     b.Property<string>("Password")
                         .IsRequired()
@@ -235,22 +256,58 @@ namespace MiniCc.Api.Migrations
 
             modelBuilder.Entity("ArticleTags", b =>
                 {
-                    b.HasOne("MiniCc.Api.Models.Article", null)
+                    b.HasOne("MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.Article", null)
                         .WithMany()
                         .HasForeignKey("ArticlesId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MiniCc.Api.Models.Tag", null)
+                    b.HasOne("MiniCc.Api.Core.TagNs.Domain.AggregatesModel.Tag", null)
                         .WithMany()
                         .HasForeignKey("TagsId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("MiniCc.Api.Models.Highlight", b =>
+            modelBuilder.Entity("MiniCc.Api.Core.ApiKeys.Domain.AggregatesModel.ApiKey", b =>
                 {
-                    b.HasOne("MiniCc.Api.Models.Article", "Article")
+                    b.HasOne("MiniCc.Api.Core.UserNs.Domain.AggregatesModel.User", "User")
+                        .WithMany("ApiKeys")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.Article", b =>
+                {
+                    b.OwnsOne("MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects.Url", "Url", b1 =>
+                        {
+                            b1.Property<Guid>("ArticleId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Value")
+                                .IsRequired()
+                                .HasMaxLength(2000)
+                                .HasColumnType("character varying(2000)")
+                                .HasColumnName("Url");
+
+                            b1.HasKey("ArticleId");
+
+                            b1.ToTable("Articles");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ArticleId");
+                        });
+
+                    b.Navigation("Url")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.Highlight", b =>
+                {
+                    b.HasOne("MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.Article", "Article")
                         .WithMany("Highlights")
                         .HasForeignKey("ArticleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -259,9 +316,39 @@ namespace MiniCc.Api.Migrations
                     b.Navigation("Article");
                 });
 
-            modelBuilder.Entity("MiniCc.Api.Models.Article", b =>
+            modelBuilder.Entity("MiniCc.Api.Core.TagNs.Domain.AggregatesModel.Tag", b =>
+                {
+                    b.OwnsOne("MiniCc.Api.Core.TagNs.Domain.AggregatesModel.ValueObjects.TagColor", "Color", b1 =>
+                        {
+                            b1.Property<Guid>("TagId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<string>("Value")
+                                .IsRequired()
+                                .HasMaxLength(7)
+                                .HasColumnType("character varying(7)")
+                                .HasColumnName("Color");
+
+                            b1.HasKey("TagId");
+
+                            b1.ToTable("Tags");
+
+                            b1.WithOwner()
+                                .HasForeignKey("TagId");
+                        });
+
+                    b.Navigation("Color")
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.Article", b =>
                 {
                     b.Navigation("Highlights");
+                });
+
+            modelBuilder.Entity("MiniCc.Api.Core.UserNs.Domain.AggregatesModel.User", b =>
+                {
+                    b.Navigation("ApiKeys");
                 });
 #pragma warning restore 612, 618
         }

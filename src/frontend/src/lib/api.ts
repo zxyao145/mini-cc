@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Article, SaveArticleRequest, AddTagRequest, Highlight, Tag, TagWithArticleCount, TagWithArticles, LoginRequest, User, AccessKey, UpdateUserRequest, UpdatePasswordRequest, CreateAccessKeyRequest, UpdateAccessKeyRequest } from '@/types';
+import { Article, SaveArticleRequest, AddTagRequest, Highlight, Tag, TagWithArticleCount, TagWithArticles, LoginRequest, User, ApiKey, UpdateUserRequest, UpdatePasswordRequest, CreateApiKeyRequest, UpdateApiKeyRequest } from '@/types';
 
 axios.defaults.withCredentials = true;
 
@@ -137,7 +137,7 @@ export const authApi = {
   },
 
   async logout(): Promise<void> {
-    await api.post('/account/loginout');
+    await api.post('/account/logout');
   },
 
   async getCurrentUser(): Promise<User | null> {
@@ -150,30 +150,30 @@ export const authApi = {
   },
 
   async updateUserName(request: UpdateUserRequest): Promise<void> {
-    await api.put('/account/updateusername', request);
+    await api.put('/account/username', request);
   },
 
   async updatePassword(request: UpdatePasswordRequest): Promise<void> {
-    await api.put('/account/updatepassword', request);
+    await api.put('/account/password', request);
   },
 };
 
 export const accessKeyApi = {
-  async getAccessKeys(): Promise<AccessKey[]> {
-    const response = await api.get('/accesskey/list');
+  async getApiKeys(): Promise<ApiKey[]> {
+    const response = await api.get('/apiKey/list');
     return response.data;
   },
 
-  async createAccessKey(request: CreateAccessKeyRequest): Promise<AccessKey> {
-    const response = await api.post('/accesskey/create', request);
+  async createApiKey(request: CreateApiKeyRequest): Promise<ApiKey> {
+    const response = await api.post('/apiKey/create', request);
     return response.data;
   },
 
-  async updateAccessKey(request: UpdateAccessKeyRequest): Promise<void> {
-    await api.put('/accesskey/update', request);
+  async updateApiKey(request: UpdateApiKeyRequest): Promise<void> {
+    await api.put('/apiKey/update', request);
   },
 
-  async deleteAccessKey(id: string): Promise<void> {
-    await api.delete(`/accesskey/delete/${id}`);
+  async deleteApiKey(id: string): Promise<void> {
+    await api.delete(`/apiKey/delete/${id}`);
   },
 };

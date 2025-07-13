@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi, accessKeyApi } from "@/lib/api";
-import { AccessKey, CreateAccessKeyRequest, UpdateAccessKeyRequest } from "@/types";
+import { ApiKey, CreateApiKeyRequest, UpdateApiKeyRequest } from "@/types";
 import styles from "./account.module.scss";
 
 interface UserUpdateForm {
@@ -16,7 +16,7 @@ interface PasswordUpdateForm {
   confirmPassword: string;
 }
 
-interface AccessKeyForm {
+interface ApiKeyForm {
   name: string;
   expiredTime: string;
 }
@@ -34,13 +34,13 @@ export default function AccountPage() {
   });
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   
-  // Access Keys states
-  const [accessKeys, setAccessKeys] = useState<AccessKey[]>([]);
+  // Api Keys states
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [isLoadingKeys, setIsLoadingKeys] = useState(true);
   const [showCreateKeyForm, setShowCreateKeyForm] = useState(false);
-  const [keyForm, setKeyForm] = useState<AccessKeyForm>({ name: "", expiredTime: "" });
+  const [keyForm, setKeyForm] = useState<ApiKeyForm>({ name: "", expiredTime: "" });
   const [isCreatingKey, setIsCreatingKey] = useState(false);
-  const [editingKey, setEditingKey] = useState<AccessKey | null>(null);
+  const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
 
   // Messages
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -53,7 +53,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (activeTab === "accessKeys") {
-      loadAccessKeys();
+      loadApiKeys();
     }
   }, [activeTab]);
 
@@ -62,13 +62,13 @@ export default function AccountPage() {
     setTimeout(() => setMessage(null), 3000);
   };
 
-  const loadAccessKeys = async () => {
+  const loadApiKeys = async () => {
     try {
       setIsLoadingKeys(true);
-      const keys = await accessKeyApi.getAccessKeys();
-      setAccessKeys(keys);
+      const keys = await accessKeyApi.getApiKeys();
+      setApiKeys(keys);
     } catch (error) {
-      showMessage("error", "加载 Access Keys 失败");
+      showMessage("error", "加载 Api Keys 失败");
     } finally {
       setIsLoadingKeys(false);
     }
@@ -121,61 +121,61 @@ export default function AccountPage() {
     }
   };
 
-  const handleCreateAccessKey = async (e: React.FormEvent) => {
+  const handleCreateApiKey = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!keyForm.name.trim()) {
-      showMessage("error", "请输入 Access Key 名称");
+      showMessage("error", "请输入 Api Key 名称");
       return;
     }
     
     try {
       setIsCreatingKey(true);
-      const request: CreateAccessKeyRequest = {
+      const request: CreateApiKeyRequest = {
         name: keyForm.name,
         expiredTime: keyForm.expiredTime || undefined,
       };
       
-      await accessKeyApi.createAccessKey(request);
+      await accessKeyApi.createApiKey(request);
       setKeyForm({ name: "", expiredTime: "" });
       setShowCreateKeyForm(false);
-      await loadAccessKeys();
-      showMessage("success", "Access Key 创建成功");
+      await loadApiKeys();
+      showMessage("success", "Api Key 创建成功");
     } catch (error: any) {
-      showMessage("error", error.response?.data?.message || "Access Key 创建失败");
+      showMessage("error", error.response?.data?.message || "Api Key 创建失败");
     } finally {
       setIsCreatingKey(false);
     }
   };
 
-  const handleUpdateAccessKey = async (key: AccessKey, disabled: boolean) => {
+  const handleUpdateApiKey = async (key: ApiKey, disabled: boolean) => {
     try {
-      const request: UpdateAccessKeyRequest = {
+      const request: UpdateApiKeyRequest = {
         id: key.id,
         name: key.name,
         expiredTime: key.expiredTime,
         disabled,
       };
       
-      await accessKeyApi.updateAccessKey(request);
-      await loadAccessKeys();
-      showMessage("success", disabled ? "Access Key 已禁用" : "Access Key 已启用");
+      await accessKeyApi.updateApiKey(request);
+      await loadApiKeys();
+      showMessage("success", disabled ? "Api Key 已禁用" : "Api Key 已启用");
     } catch (error: any) {
-      showMessage("error", error.response?.data?.message || "Access Key 更新失败");
+      showMessage("error", error.response?.data?.message || "Api Key 更新失败");
     }
   };
 
-  const handleDeleteAccessKey = async (id: string) => {
-    if (!confirm("确定要删除这个 Access Key 吗？")) {
+  const handleDeleteApiKey = async (id: string) => {
+    if (!confirm("确定要删除这个 Api Key 吗？")) {
       return;
     }
     
     try {
-      await accessKeyApi.deleteAccessKey(id);
-      await loadAccessKeys();
-      showMessage("success", "Access Key 删除成功");
+      await accessKeyApi.deleteApiKey(id);
+      await loadApiKeys();
+      showMessage("success", "Api Key 删除成功");
     } catch (error: any) {
-      showMessage("error", error.response?.data?.message || "Access Key 删除失败");
+      showMessage("error", error.response?.data?.message || "Api Key 删除失败");
     }
   };
 
@@ -211,7 +211,7 @@ export default function AccountPage() {
           className={`${styles.tab} ${activeTab === "accessKeys" ? styles.active : ""}`}
           onClick={() => setActiveTab("accessKeys")}
         >
-          Access Keys
+          Api Keys
         </button>
       </div>
 
@@ -285,23 +285,23 @@ export default function AccountPage() {
       {activeTab === "accessKeys" && (
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
-            <h2>Access Keys</h2>
+            <h2>Api Keys</h2>
             <button
               onClick={() => setShowCreateKeyForm(true)}
               className={styles.button}
-              disabled={accessKeys.length >= 10}
+              disabled={apiKeys.length >= 10}
             >
-              新建 Access Key
+              新建 Api Key
             </button>
           </div>
           
           <p className={styles.hint}>
-            Access Keys 用于 API 调用和浏览器扩展。最多可创建 10 个。
+            Api Keys 用于 API 调用和浏览器扩展。最多可创建 10 个。
           </p>
 
           {showCreateKeyForm && (
-            <form onSubmit={handleCreateAccessKey} className={styles.form}>
-              <h3>创建新的 Access Key</h3>
+            <form onSubmit={handleCreateApiKey} className={styles.form}>
+              <h3>创建新的 Api Key</h3>
               <div className={styles.field}>
                 <label htmlFor="keyName">名称</label>
                 <input
@@ -309,7 +309,7 @@ export default function AccountPage() {
                   type="text"
                   value={keyForm.name}
                   onChange={(e) => setKeyForm({ ...keyForm, name: e.target.value })}
-                  placeholder="输入 Access Key 名称"
+                  placeholder="输入 Api Key 名称"
                   maxLength={50}
                   required
                 />
@@ -342,10 +342,10 @@ export default function AccountPage() {
             <div className={styles.loading}>加载中...</div>
           ) : (
             <div className={styles.keyList}>
-              {accessKeys.length === 0 ? (
-                <div className={styles.empty}>暂无 Access Keys</div>
+              {apiKeys.length === 0 ? (
+                <div className={styles.empty}>暂无 Api Keys</div>
               ) : (
-                accessKeys.map((key) => (
+                apiKeys.map((key) => (
                   <div key={key.id} className={styles.keyItem}>
                     <div className={styles.keyInfo}>
                       <h4>{key.name}</h4>
@@ -369,13 +369,13 @@ export default function AccountPage() {
                     </div>
                     <div className={styles.keyActions}>
                       <button
-                        onClick={() => handleUpdateAccessKey(key, !key.disabled)}
+                        onClick={() => handleUpdateApiKey(key, !key.disabled)}
                         className={styles.buttonSecondary}
                       >
                         {key.disabled ? "启用" : "禁用"}
                       </button>
                       <button
-                        onClick={() => handleDeleteAccessKey(key.id)}
+                        onClick={() => handleDeleteApiKey(key.id)}
                         className={styles.buttonDanger}
                       >
                         删除

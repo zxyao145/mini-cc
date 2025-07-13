@@ -1,5 +1,4 @@
-﻿
-namespace ContentHandler;
+﻿namespace ContentHandler;
 
 public interface IContentFetchService
 {

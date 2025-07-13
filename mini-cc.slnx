@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="deploy.yaml" />
+    <File Path="docker-compose.yaml" />
+    <File Path="init-db-text-search.sql" />
+    <File Path="init-db.sh" />
+    <File Path="init-db.sql" />
+  </Folder>
+  <Folder Name="/src/" />
+  <Folder Name="/src/backend/">
+    <Project Path="src/backend/ContentHandler/ContentHandler.csproj" />
+    <Project Path="src/backend/MiniCc.Api/MiniCc.Api.csproj" />
+  </Folder>
+</Solution>

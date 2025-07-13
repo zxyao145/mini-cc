@@ -73,7 +73,7 @@ export interface User {
   isAuthenticated: boolean;
 }
 
-export interface AccessKey {
+export interface ApiKey {
   id: string;
   userId: string;
   name: string;
@@ -91,12 +91,12 @@ export interface UpdatePasswordRequest {
   newPassword: string;
 }
 
-export interface CreateAccessKeyRequest {
+export interface CreateApiKeyRequest {
   name: string;
   expiredTime?: string;
 }
 
-export interface UpdateAccessKeyRequest {
+export interface UpdateApiKeyRequest {
   id: string;
   name: string;
   expiredTime?: string;

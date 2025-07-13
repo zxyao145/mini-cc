@@ -9,14 +9,13 @@ public class ContentHandleResult
     public string Summary { get; set; } = "";
 
     public string? Author { get; set; }
-    public string? OriginContent { get; set; }
+    public string? OriginalContent { get; set; }
 
     public string? Content { get; set; }
     public string? ContentType { get; set; }
 
     public HtmlDocument? Dom { get; set; }
 }
-
 
 public abstract class ContentHandlerBase
 {

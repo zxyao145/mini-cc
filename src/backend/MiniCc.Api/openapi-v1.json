@@ -834,7 +834,7 @@
           },
           "articles": {
             "type": "array",
-            "items": { }
+            "items": {}
           }
         }
       },

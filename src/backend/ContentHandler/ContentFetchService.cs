@@ -1,18 +1,17 @@
-﻿
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace ContentHandler;
-
 
 public class ContentFetchResult
 {
     [Required]
     public string Url { get; set; } = "";
+
     [Required]
     public string Title { get; set; } = "";
+
     [Required]
-    public string OriginContent { get; set; } = "";
+    public string OriginalContent { get; set; } = "";
 
     public string Summary { get; set; } = "";
 
@@ -32,7 +31,6 @@ public class ContentFetchService : IContentFetchService
 
     public async Task<ContentFetchResult?> FetchContentAsync(string url)
     {
-
         foreach (var handler in _contentHandlers)
         {
             if (handler.ShouldHandle(url))
@@ -50,7 +48,7 @@ public class ContentFetchService : IContentFetchService
                     Url = contentHandleResult.Url ?? "",
                     Title = contentHandleResult.Title ?? "",
                     Author = contentHandleResult.Author ?? "",
-                    OriginContent = contentHandleResult.OriginContent ?? "",
+                    OriginalContent = contentHandleResult.OriginalContent ?? "",
                     ContentType = contentHandleResult.ContentType ?? ""
                 };
             }
