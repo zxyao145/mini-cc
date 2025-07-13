@@ -8,11 +8,17 @@ interface ArticleListProps {
   articles: Article[];
   loading: boolean;
   onDelete: (id: string) => Promise<void>;
-  onRefresh: () => Promise<void>;
   onUpdate?: (article: Article) => void;
+  articleStyle: string;
 }
 
-export default function ArticleList({ articles, loading, onDelete, onRefresh, onUpdate }: ArticleListProps) {
+export default function ArticleList({
+  articles,
+  loading,
+  onDelete,
+  onUpdate,
+  articleStyle,
+}: ArticleListProps) {
   if (loading) {
     return (
       <div className={styles.container}>
@@ -35,16 +41,14 @@ export default function ArticleList({ articles, loading, onDelete, onRefresh, on
     );
   }
 
+  const className = articleStyle == "grid"
+   ? styles.articleGrid 
+   : styles.articleList;
+
+
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h2>My Articles ({articles.length})</h2>
-        <button onClick={onRefresh} className="btn btn-secondary">
-          Refresh
-        </button>
-      </div>
-      
-      <div className={styles.grid}>
+    <div>
+      <div className={className}>
         {articles.map((article) => (
           <ArticleCard
             key={article.id}

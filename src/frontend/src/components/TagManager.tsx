@@ -68,22 +68,24 @@ export default function TagManager({
     <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
       <div className={styles.tagList}>
         {tags.map((tag) => (
-          <div
-            key={tag.id}
-            className={styles.tag}
-            style={{ backgroundColor: tag.color }}
-          >
-            <span className={styles.tagName}>{tag.name}</span>
-            <button
-              onClick={() => handleRemoveTag(tag.id)}
-              className={styles.removeBtn}
-              title="Remove tag"
+          <>
+            <span
+              key={tag.id}
+              className="inline-block bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold"
             >
-              ×
-            </button>
-          </div>
+              <span className="pr-2">{tag.name}</span>
+              <button
+                className="w-4"
+                onClick={() => handleRemoveTag(tag.id)}
+                title="Remove tag"
+                
+              >
+                ×
+              </button>
+            </span>
+          </>
         ))}
-        
+
         {!showAddForm && (
           <button
             onClick={() => setShowAddForm(true)}
@@ -107,7 +109,7 @@ export default function TagManager({
               disabled={isAdding}
               maxLength={20}
             />
-            
+
             <div className={styles.colorPicker}>
               {predefinedColors.map((color) => (
                 <button
@@ -130,7 +132,7 @@ export default function TagManager({
               />
             </div>
           </div>
-          
+
           <div className={styles.formActions}>
             <button
               type="submit"

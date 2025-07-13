@@ -10,11 +10,11 @@
   display: flex;
   flex-direction: column;
   border-right: 1px solid #e8ddc7;
-  
+
   &.open {
     width: 250px;
   }
-  
+
   &.closed {
     width: 60px;
   }
@@ -46,7 +46,7 @@
   padding: 0.25rem;
   border-radius: 4px;
   transition: background-color 0.2s ease;
-  
+
   &:hover {
     background-color: #ede3d3;
   }
@@ -70,18 +70,17 @@
 .navLink {
   display: flex;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 1rem;
   color: #a0916f;
   text-decoration: none;
   transition: all 0.2s ease;
-  border-radius: 0 25px 25px 0;
-  margin-right: 1rem;
-  
+  border-radius: 4px;
+
   &:hover {
     background-color: #ede3d3;
     color: #6b5b47;
   }
-  
+
   &.active {
     background-color: #d4c4a8;
     color: #5a4a37;
@@ -90,12 +89,16 @@
 
 .icon {
   font-size: 1.2rem;
-  margin-right: 0.75rem;
-  min-width: 1.2rem;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
 }
 
 .label {
+  margin-left: 0.75rem;
   font-size: 0.95rem;
   font-weight: 500;
   white-space: nowrap;
@@ -117,11 +120,11 @@
   justify-content: space-between;
   padding: 0.5rem;
   background-color: #ede3d3;
-  border-radius: 8px;
+  border-radius: 4px;
   text-decoration: none;
   color: #6b5b47;
   transition: all 0.2s ease;
-  
+
   &:hover {
     background-color: #d4c4a8;
     color: #5a4a37;
@@ -138,7 +141,9 @@
   font-size: 1rem;
   opacity: 0.7;
   transition: opacity 0.2s ease;
-  
+  display: flex;
+  align-items: center;
+
   .accountLink:hover & {
     opacity: 1;
   }
@@ -148,25 +153,25 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.5rem;
   background: none;
   border: none;
   color: #a0916f;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: 4px;
   transition: all 0.2s ease;
   font-size: 0.95rem;
-  
+
   &:hover {
     background-color: #ede3d3;
     color: #6b5b47;
   }
-  
+
   .icon {
     margin-right: 0.75rem;
     font-size: 1.2rem;
   }
-  
+
   .label {
     font-weight: 500;
   }
@@ -175,12 +180,12 @@
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
-    
+
     &.open {
       transform: translateX(0);
       width: 280px;
     }
-    
+
     &.closed {
       transform: translateX(-100%);
     }

@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  color: #333;
+  background-color: #f8f9fa;
+  line-height: 1.6;
+}
+
+
+button {
+  cursor: pointer;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+
+  &.btn-primary {
+    color: #fff;
+    background-color: #4d83ff;
+    border-color: #4d83ff;
+
+    &:hover {
+      background-color: #2768ff;
+      border-color: #1a5fff;
+    }
+  }
+
+  &.btn-secondary {
+    color: #fff;
+    background-color: #686868;
+    border-color: #686868;
+
+    &:hover {
+      color: #fff;
+      background-color: #555555;
+      border-color: #4f4f4f;
+    }
+  }
+
+  &.btn-navy {
+    color: #fff;
+    background-color: #2d5f8b;
+    border-color: #686868;
+    box-shadow: 0 2px 2px 0 rgba(104, 104, 104, .14);
+
+    &:hover {
+
+      color: #fff;
+      background-color: #4276a4;
+      border-color: #4276a4;
+    }
+  }
+
+  &.btn-danger {
+    color: #fff;
+    background-color: #ff4747;
+    border-color: #ff4747;
+
+    &:hover {
+      color: #fff;
+      background-color: #ff2121;
+      border-color: #ff1414;
+    }
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-sm,
+  .btn-group-sm>.btn {
+    padding: 0.5rem 0.81rem;
+    font-size: 0.875rem;
+    line-height: 1;
+    border-radius: 0.1875rem;
+  }
+}
+
+
+.btn-group > .btn:not(:last-child) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.btn-group > .btn:not(:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}

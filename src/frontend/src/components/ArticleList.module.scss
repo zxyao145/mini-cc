@@ -22,8 +22,8 @@
   }
 }
 
-.grid {
-  margin-top: 1rem;
+.articleGrid {
+  margin-bottom: 1rem;
   background: none;
 
   display: grid;
@@ -32,6 +32,10 @@
   @media (min-width: 768px) {
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   }
+}
+
+.articleList{
+
 }
 
 .loading, .empty {

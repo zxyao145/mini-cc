@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import ArticleList from "@/components/ArticleList";
-import AddArticleForm from "@/components/AddArticleForm";
-import SearchBar from "@/components/SearchBar";
+import SearchBar from "@/components/HomeHeader";
 import { Article } from "@/types";
 import { articleApi } from "@/lib/api";
 import styles from "./page.module.scss";
@@ -12,7 +11,7 @@ export default function Home() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-
+  const [articleStyle, setArticleStyle] = useState("grid");
 
   const loadArticles = useCallback(async () => {
     setLoading(true);
@@ -61,21 +60,19 @@ export default function Home() {
         <SearchBar 
             value={searchTerm} 
             onChange={setSearchTerm} 
+            onAdd={handleAddArticle} 
+            onStyleChange={setArticleStyle}
             placeholder="Search articles..." 
           />
       </header>
 
       <main className={styles.main}>
-        <div className={styles.controls}>
-          <AddArticleForm onAdd={handleAddArticle} />
-        </div>
-
         <ArticleList 
           articles={articles} 
           loading={loading}
           onDelete={handleDeleteArticle}
-          onRefresh={loadArticles}
           onUpdate={handleUpdateArticle}
+          articleStyle={articleStyle}
         />
       </main>
     </div>
