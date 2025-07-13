@@ -12,12 +12,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Backend Commands (from `/src/backend/MiniCc.Api/`)
 - `dotnet run` - Start the API server (https://localhost:5001, http://localhost:5000)
 - `dotnet build` - Build the backend
+- `dotnet build` (from solution root) - Build entire solution including ContentHandler
 - `dotnet tool install --global dotnet-ef` - Install EF Core tools globally (one-time setup)
 - `dotnet ef migrations add <MigrationName>` - Create new migration
 - `dotnet ef database update` - Apply database migrations
 
 ### Frontend Commands (from `/src/frontend/`)
 - `pnpm dev` - Start Next.js development server with Turbopack (http://localhost:3000)
+- `pnpm dev-https` - Start development server with HTTPS
 - `pnpm build` - Build for production
 - `pnpm start` - Start production server
 - `pnpm lint` - Run ESLint
@@ -69,13 +71,13 @@ nginx (port 5000) → Routes traffic to:
 
 ### Frontend Architecture (`/src/frontend/src/`)
 - **App Router**: Next.js 15 app directory structure
-- **Components**: React functional components with SCSS modules
+- **Components**: React functional components with SCSS modules and Tailwind CSS
 - **API Client**: Centralized axios-based API client in `lib/api.ts`
 - **Types**: TypeScript definitions in `types/index.ts`
 
 ### Key Dependencies
 - **Backend**: Entity Framework Core, HtmlAgilityPack (web scraping), Npgsql (PostgreSQL), Mapster (object mapping)
-- **Frontend**: React 19, Next.js 15, TypeScript, Axios, SASS
+- **Frontend**: React 19, Next.js 15, TypeScript, Axios, SASS, Tailwind CSS
 - **Web Extension**: Vite, TypeScript, SCSS, vite-plugin-web-extension
 - **Readability Service**: @mozilla/readability, Express.js, JSDOM
 - **Infrastructure**: PostgreSQL 16, Nginx, Docker/Podman
@@ -111,3 +113,51 @@ Base URL: `http://localhost:5000/api`
 - PostgreSQL database (or use Docker stack)
 - Entity Framework Core CLI tools (`dotnet tool install --global dotnet-ef`)
 - Docker/Podman for containerized development (recommended)
+
+### Testing
+- **Backend**: No test projects currently configured
+- **Frontend**: No test framework currently configured  
+- **Linting**: ESLint available for frontend and web extension
+
+## Checkpoint 记录
+
+项目: MiniCC (Mini Cut Collection)
+时间: 2025-07-13 17:30:00 +0800
+里程碑: 用户界面重构与功能完善阶段
+
+### 技术状态
+- 代码质量: 良好 (8/10)
+- 架构健康: 稳定 (8/10)
+- 开发活跃度: 高
+
+### 历史轨迹分析
+- 首次检查点: 无历史记录
+- 期间提交: 13个提交 (高活跃度)
+- 主要活动: UI重构, 功能增强, 账户系统
+- 发展趋势: 快速上升
+
+### 文档状态
+- README.md: 最新且完整
+- CLAUDE.md: 已更新
+- 配置同步: 完成
+
+### 期间主要进展
+- **UI重构** (122e90c): Tailwind CSS集成，全新组件设计
+- **账户功能** (f6b65d0): 完整的用户账户管理系统
+- **标签高亮** (269827f): 文章标签和高亮功能
+- **中文支持** (41dc069): 中文全文搜索支持
+- **架构优化** (c38a553): ID系统改为GUID
+
+### 当前技术栈健康度
+- **前端**: Next.js 15 + Tailwind CSS + TypeScript (现代化)
+- **后端**: ASP.NET Core 9.0 + PostgreSQL (稳定)
+- **扩展**: Chrome Extension + Vite (活跃开发)
+- **服务**: 微服务架构良好分离
+
+### 建议行动
+1. 继续UI优化和用户体验改进
+2. 考虑添加测试覆盖
+3. 性能优化和监控
+4. 文档持续维护
+
+Git提交: 122e90c
