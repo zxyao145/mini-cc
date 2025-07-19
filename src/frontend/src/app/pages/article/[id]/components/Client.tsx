@@ -3,9 +3,9 @@
 import { articleApi } from "@/lib/api";
 import { Article, Tag, Highlight } from "@/types";
 import { useEffect, useState } from "react";
-import TagManager from "@/components/TagManager";
-import HighlightManager from "@/components/HighlightManager";
-import HighlightList from "@/components/HighlightList";
+import TagManager from "@/app/pages/article/[id]/components/TagManager";
+import HighlightManager from "@/app/pages/article/[id]/components/HighlightManager";
+import HighlightList from "@/app/pages/article/[id]/components/HighlightList";
 
 import DOMPurify from "dompurify";
 

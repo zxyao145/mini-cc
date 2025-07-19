@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.scss";
-import ClientLayout from "./ClientLayout";
+import ClientLayout from "./layout/ClientLayout";
 
 export const metadata: Metadata = {
   title: "MiniCc - Read Later App",

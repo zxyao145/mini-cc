@@ -1,0 +1,239 @@
+.highlightList {
+  margin-top: 2rem;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: white;
+  overflow: hidden;
+}
+
+.header {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.2s ease;
+  
+  &:hover {
+    background: #e9ecef;
+  }
+  
+  h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+}
+
+.toggleButton {
+  background: none;
+  border: none;
+  color: #6c757d;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: color 0.2s ease;
+  
+  &:hover {
+    color: #495057;
+  }
+}
+
+.highlightItems {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.highlightItem {
+  padding: 1rem;
+  border-bottom: 1px solid #f1f3f4;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.highlightText {
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font-style: italic;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s ease;
+  border-left: 4px solid rgba(0, 0, 0, 0.1);
+  
+  &:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.highlightMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.date {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+.noteDisplay {
+  margin-bottom: 0.75rem;
+}
+
+.note {
+  padding: 0.5rem 0.75rem;
+  background: #e8f4fd;
+  border-radius: 4px;
+  border-left: 4px solid #3498db;
+  
+  strong {
+    color: #2980b9;
+  }
+}
+
+.noNote {
+  color: #95a5a6;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
+.noteEdit {
+  margin-bottom: 0.75rem;
+  
+  .noteTextarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 0.75rem;
+    border: 1px solid #bdc3c7;
+    border-radius: 4px;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 0.5rem;
+    
+    &:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+    }
+  }
+}
+
+.noteActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.editButton, .deleteButton, .saveButton, .cancelButton {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.2s ease;
+}
+
+.editButton {
+  background: #3498db;
+  color: white;
+  
+  &:hover {
+    background: #2980b9;
+  }
+}
+
+.deleteButton {
+  background: #e74c3c;
+  color: white;
+  
+  &:hover {
+    background: #c0392b;
+  }
+}
+
+.saveButton {
+  background: #27ae60;
+  color: white;
+  
+  &:hover {
+    background: #219a52;
+  }
+}
+
+.cancelButton {
+  background: #95a5a6;
+  color: white;
+  
+  &:hover {
+    background: #7f8c8d;
+  }
+}
+
+.highlighted {
+  animation: highlightPulse 2s ease-in-out;
+}
+
+@keyframes highlightPulse {
+  0%, 100% {
+    background-color: inherit;
+  }
+  50% {
+    background-color: #ffeaa7 !important;
+    transform: scale(1.02);
+  }
+}
+
+@media (max-width: 768px) {
+  .highlightList {
+    margin-top: 1.5rem;
+  }
+  
+  .header {
+    padding: 0.75rem;
+    
+    h3 {
+      font-size: 1rem;
+    }
+  }
+  
+  .highlightItem {
+    padding: 0.75rem;
+  }
+  
+  .highlightText {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .actions {
+    flex-direction: column;
+    
+    .editButton, .deleteButton {
+      justify-content: center;
+      padding: 0.5rem;
+    }
+  }
+  
+  .noteActions {
+    flex-direction: column;
+    
+    .saveButton, .cancelButton {
+      justify-content: center;
+    }
+  }
+}

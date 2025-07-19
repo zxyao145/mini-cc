@@ -12,11 +12,11 @@ interface TagManagerProps {
   compact?: boolean;
 }
 
-export default function TagManager({ 
-  articleId, 
-  tags, 
-  onTagsChange, 
-  compact = false 
+export default function TagManager({
+  articleId,
+  tags,
+  onTagsChange,
+  compact = false,
 }: TagManagerProps) {
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#3b82f6");
@@ -33,10 +33,10 @@ export default function TagManager({
         name: newTagName.trim(),
         color: newTagColor,
       };
-      
+
       const newTag = await articleApi.addTag(articleId, tagRequest);
       onTagsChange([...tags, newTag]);
-      
+
       setNewTagName("");
       setNewTagColor("#3b82f6");
       setShowAddForm(false);
@@ -51,7 +51,7 @@ export default function TagManager({
   const handleRemoveTag = async (tagId: string) => {
     try {
       await articleApi.removeTag(articleId, tagId);
-      onTagsChange(tags.filter(tag => tag.id !== tagId));
+      onTagsChange(tags.filter((tag) => tag.id !== tagId));
     } catch (error) {
       console.error("Failed to remove tag:", error);
       alert("Failed to remove tag. Please try again.");
@@ -59,31 +59,35 @@ export default function TagManager({
   };
 
   const predefinedColors = [
-    "#3b82f6", "#ef4444", "#10b981", "#f59e0b", 
-    "#8b5cf6", "#f97316", "#06b6d4", "#84cc16",
-    "#ec4899", "#6b7280"
+    "#3b82f6",
+    "#ef4444",
+    "#10b981",
+    "#f59e0b",
+    "#8b5cf6",
+    "#f97316",
+    "#06b6d4",
+    "#84cc16",
+    "#ec4899",
+    "#6b7280",
   ];
 
   return (
     <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
       <div className={styles.tagList}>
         {tags.map((tag) => (
-          <>
-            <span
-              key={tag.id}
-              className="inline-block bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold"
+          <span
+            key={tag.id}
+            className="inline-block bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold"
+          >
+            <span className="pr-2">{tag.name}</span>
+            <button
+              className="w-4"
+              onClick={() => handleRemoveTag(tag.id)}
+              title="Remove tag"
             >
-              <span className="pr-2">{tag.name}</span>
-              <button
-                className="w-4"
-                onClick={() => handleRemoveTag(tag.id)}
-                title="Remove tag"
-                
-              >
-                ×
-              </button>
-            </span>
-          </>
+              ×
+            </button>
+          </span>
         ))}
 
         {!showAddForm && (

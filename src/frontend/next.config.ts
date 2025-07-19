@@ -10,6 +10,13 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
+  turbopack: {
+    resolveAlias: {
+       '@': path.resolve(__dirname, 'src'),
+    },
+  },
+  // Also enable for webpack fallback
+  // productionBrowserSourceMaps: true,
 };
 
 export default nextConfig;

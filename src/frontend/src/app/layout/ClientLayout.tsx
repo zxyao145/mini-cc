@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import Sidebar from "@/components/Sidebar";
+import Sidebar from "@/app/layout/Sidebar";
 import { AuthProvider } from "@/contexts/AuthContext";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import styles from "./layout.module.scss";
+import ProtectedRoute from "@/app/layout/ProtectedRoute";
+import styles from "./ClientLayout.module.scss";
 
 export default function ClientLayout({
   children,

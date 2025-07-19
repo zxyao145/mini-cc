@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import TagDetail from "@/components/TagDetail";
+import TagDetail from "./components/TagDetail";
 
 interface TagDetailPageProps {
   params: Promise<{

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import ArticleList from "@/components/ArticleList";
-import SearchBar from "@/components/HomeHeader";
+import ArticleList from "@/app/components/ArticleList";
+import SearchBar from "@/app/components/HomeHeader";
 import { Article } from "@/types";
 import { articleApi } from "@/lib/api";
 import styles from "./page.module.scss";

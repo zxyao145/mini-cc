@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Article, Tag } from "@/types";
 import { articleApi } from "@/lib/api";
-import TagManager from "./TagManager";
+import TagManager from "../pages/article/[id]/components/TagManager";
 import styles from "./ArticleCard.module.scss";
 import Link from "next/link";
 
