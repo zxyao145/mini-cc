@@ -96,6 +96,7 @@ public class ArticlesController : ApiControllerBase
         return CreatedAtAction(nameof(GetArticle), new { id = result.Value.Id }, result.Value);
     }
 
+    [DisableRequestSizeLimit]
     [HttpPost("content")]
     public async Task<ActionResult<ArticleDto>> SaveArticleContent([FromBody] SaveArticleContentRequest request)
     {

@@ -17,7 +17,7 @@ WORKDIR /app
 COPY package.json ./
 COPY . .
 RUN ls -lah && pnpm install --prod
-RUN cat ./tsconfig.json && ls -lah ./src/components && pnpm config set registry https://registry.npmmirror.com && pnpm run build
+RUN cat ./tsconfig.json && pnpm config set registry https://registry.npmmirror.com && pnpm run build
 
 
 # --- 生产阶段 ---
