@@ -127,7 +127,7 @@ class PopupManager {
       const payload: ContentFetchResult = {
         url: content.url,
         title: content.title,
-        originContent: content.content,
+        originalContent: content.content,
         author: content.author,
         contentType: 'text/html'
       };

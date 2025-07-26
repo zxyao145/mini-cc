@@ -3,7 +3,7 @@ export interface Article {
     url: string;
     title: string;
     author: string;
-    originContent: string;
+    originalContent: string;
     readableContent: string;
     textContentLength: number; // 修复拼写错误
     summary: string;

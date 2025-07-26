@@ -1,7 +1,7 @@
 export interface ContentFetchResult {
   url: string;
   title: string;
-  originContent: string;
+  originalContent: string;
   summary?: string;
   author?: string;
   contentType?: string;

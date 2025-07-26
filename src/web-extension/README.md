@@ -53,7 +53,7 @@ The extension sends POST requests to `/api/Articles/content` with the following 
 {
   "url": "https://example.com",
   "title": "Article Title",
-  "originContent": "HTML content...",
+  "originalContent": "HTML content...",
   "author": "Author Name",
   "contentType": "text/html"
 }
