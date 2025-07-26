@@ -9,7 +9,7 @@ namespace MiniCc.Api.Authentication;
 public class ApiKeyAuthenticationSchemeOptions : AuthenticationSchemeOptions
 {
     public const string DefaultScheme = "ApiKey";
-    public string HeaderName { get; set; } = "X-ApiKey-Key";
+    public string HeaderName { get; set; } = "X-Api-Key";
     public string QueryParameterName { get; set; } = "api_key";
 }
 

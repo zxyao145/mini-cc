@@ -136,7 +136,7 @@ class PopupManager {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          "X-Access-Key": this.ak,
+          "X-Api-Key": this.ak,
         },
         body: JSON.stringify(payload),
       });
