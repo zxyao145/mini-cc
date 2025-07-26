@@ -7,9 +7,12 @@
     <File Path="init-db.sh" />
     <File Path="init-db.sql" />
   </Folder>
-  <Folder Name="/src/" />
-  <Folder Name="/src/backend/">
+  <Folder Name="/src/">
     <Project Path="src/backend/ContentHandler/ContentHandler.csproj" />
     <Project Path="src/backend/MiniCc.Api/MiniCc.Api.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/backend/ContentHandler.Test/ContentHandler.Test.csproj" Id="6f1ef23c-0494-49e7-a97e-e462798863d8" />
+    <Project Path="test/backend/MiniCc.Api.Test/MiniCc.Api.Test.csproj" Id="1536c2e9-fb9f-4433-8073-b66c77491b2e" />
   </Folder>
 </Solution>
