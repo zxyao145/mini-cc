@@ -1,4 +1,4 @@
-using ContentHandler;
+ï»¿using ContentHandler;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using MiniCc.Api.Acl;
 using MiniCc.Api.Authentication;
@@ -106,7 +106,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 
-// ÆôÓÃÈÏÖ¤ºÍÊÚÈ¨
+// å¯ç”¨è®¤è¯å’Œæˆæƒ
 app.UseAuthentication();
 app.UseAuthorization();
 

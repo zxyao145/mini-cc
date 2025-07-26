@@ -78,7 +78,7 @@ public class ApiKeyService : IApiKeyService
             Id = Guid.NewGuid(),
             UserId = userId,
             Name = name,
-            Key = KeyGen.Generate(32),
+            Key = "ak_" + KeyGen.Generate(32),
             ExpiredTime = expiredTime,
             Disabled = false
         };

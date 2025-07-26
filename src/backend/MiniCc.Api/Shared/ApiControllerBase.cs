@@ -7,7 +7,7 @@ namespace MiniCc.Api.Shared;
 [Route("/api/[controller]")]
 public class ApiControllerBase : ControllerBase
 {
-    public Guid? GetUserId()
+    protected Guid? GetUserId()
     {
         if (User == null || User.Identity == null || !User.Identity.IsAuthenticated)
         {
