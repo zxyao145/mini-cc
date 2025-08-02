@@ -1,7 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using MiniCc.Api.Core.ArticleNs.Api;
+using MiniCc.Api.Controllers.ArticleNs;
 using MiniCc.Api.Core.ArticleNs.Api.Requests;
 using MiniCc.Api.Core.ArticleNs.Application.Commands;
 using MiniCc.Api.Core.ArticleNs.Application.DTOs;

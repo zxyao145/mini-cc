@@ -12,16 +12,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Controllers\**" />
     <Compile Remove="Core\1TempNs\**" />
     <Compile Remove="Core\ApiKeys\Application\Queries\**" />
-    <Content Remove="Controllers\**" />
     <Content Remove="Core\1TempNs\**" />
     <Content Remove="Core\ApiKeys\Application\Queries\**" />
-    <EmbeddedResource Remove="Controllers\**" />
     <EmbeddedResource Remove="Core\1TempNs\**" />
     <EmbeddedResource Remove="Core\ApiKeys\Application\Queries\**" />
-    <None Remove="Controllers\**" />
     <None Remove="Core\1TempNs\**" />
     <None Remove="Core\ApiKeys\Application\Queries\**" />
   </ItemGroup>

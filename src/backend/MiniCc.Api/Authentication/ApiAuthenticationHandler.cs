@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
-using MiniCc.Api.Core.ApiKeys.Application.Handlers;
+using MiniCc.Api.Core.ApiKeys.Application.Services;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 

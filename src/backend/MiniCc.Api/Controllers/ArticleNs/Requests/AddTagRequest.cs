@@ -1,4 +1,4 @@
-﻿namespace MiniCc.Api.Core.ArticleNs.Api.Requests;
+namespace MiniCc.Api.Controllers.ArticleNs.Requests;
 
 public class AddTagRequest
 {

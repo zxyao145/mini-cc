@@ -1,16 +1,16 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniCc.Api.Authentication;
-using MiniCc.Api.Core.ArticleNs.Api.Requests;
+using MiniCc.Api.Controllers.ArticleNs.Requests;
 using MiniCc.Api.Core.ArticleNs.Application.Commands;
 using MiniCc.Api.Core.ArticleNs.Application.DTOs;
 using MiniCc.Api.Core.ArticleNs.Application.Queries;
 using MiniCc.Api.Core.TagNs.Application.DTOs;
 using MiniCc.Api.Shared;
 
-namespace MiniCc.Api.Core.ArticleNs.Api;
+namespace MiniCc.Api.Controllers.ArticleNs;
 
 [Authorize(AuthenticationSchemes =
     $"{CookieAuthenticationDefaults.AuthenticationScheme}, {ApiKeyAuthenticationSchemeOptions.DefaultScheme}")]
