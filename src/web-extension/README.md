@@ -43,7 +43,7 @@ A Chrome extension for saving articles to your MiniCC read-later application.
 
 ## Configuration
 
-The default API URL is `https://localhost:5001`. You can change this in the extension settings.
+The default API URL is `https://localhost:5000`. You can change this in the extension settings.
 
 ## API Endpoint
 

@@ -5,4 +5,4 @@ alias docker=podman
 # Set-Alias docker podman
 
 # docker compose
-docker compose -f ./docker-compose.yaml up -d
+docker compose -f ./docker-compose.yaml up -d --build

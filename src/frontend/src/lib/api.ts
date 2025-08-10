@@ -3,7 +3,7 @@ import { Article, SaveArticleRequest, AddTagRequest, Highlight, Tag, TagWithArti
 
 axios.defaults.withCredentials = true;
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 console.debug("API_BASE_URL", API_BASE_URL);
 const api = axios.create({
   baseURL: API_BASE_URL,

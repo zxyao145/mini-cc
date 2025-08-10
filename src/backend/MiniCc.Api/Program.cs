@@ -9,8 +9,17 @@ using MiniCc.Api.Core.TagNs.Application.Services;
 using MiniCc.Api.Infra;
 using MiniCc.Api.Shared.Data;
 using Scalar.AspNetCore;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+#region serilog
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateLogger();
+builder.Services.AddSerilog();
+#endregion
 
 builder.Host.UseDefaultServiceProvider(options =>
 {
@@ -96,6 +105,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseSerilogRequestLogging();
 
 app.UseCors("AllowFrontend");
 
