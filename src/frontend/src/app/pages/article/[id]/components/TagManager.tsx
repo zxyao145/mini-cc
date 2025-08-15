@@ -77,11 +77,11 @@ export default function TagManager({
         {tags.map((tag) => (
           <span
             key={tag.id}
-            className="inline-block bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold"
+            className={`inline-block bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold ${styles.tag}`}
           >
             <span className="pr-2">{tag.name}</span>
             <button
-              className="w-4"
+              className={`w-4 ${styles.removeBtn}`}
               onClick={() => handleRemoveTag(tag.id)}
               title="Remove tag"
             >

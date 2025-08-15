@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+
 html,
 body {
   max-width: 100vw;
@@ -9,7 +10,11 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /** Simple.css reset **/
+  display: block !important; /* 覆盖 Simple.css，恢复成普通文档流 */
 }
+
 
 body {
   color: #333;
@@ -106,3 +111,4 @@ button {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
 }
+

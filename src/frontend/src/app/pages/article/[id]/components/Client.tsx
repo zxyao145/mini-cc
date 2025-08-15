@@ -8,10 +8,23 @@ import HighlightManager from "@/app/pages/article/[id]/components/HighlightManag
 import HighlightList from "@/app/pages/article/[id]/components/HighlightList";
 
 import DOMPurify from "dompurify";
+//import Prism from 'prismjs';
+
+////导入tomorrow代码主题样式（按需引入）
+//import 'prismjs/themes/prism-tomorrow.css';
+
+////导入行号效果css、js文件（按需引入）
+//import "prismjs/plugins/line-numbers/prism-line-numbers.min.css";
+//import "prismjs/plugins/line-numbers/prism-line-numbers.min.js";
+
 
 import "./client.scss";
 
 export default function Client(params: { id: string }) {
+  //useEffect(() => {
+  //  Prism.highlightAll();
+  //}, []);
+
   const [loading, setLoading] = useState(false);
   const [article, setArticle] = useState<Article>();
 
