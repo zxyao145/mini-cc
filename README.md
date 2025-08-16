@@ -48,6 +48,14 @@ src/
     └── src/               # source file
 ```
 
+## Getting Started With Podman
+
+Navigate to the repository's root directory:
+
+```bash
+podman compose -f ./docker-compose.yaml up -d --build
+```
+
 ## Getting Started
 
 ### Prerequisites
@@ -71,7 +79,7 @@ src/
    ```json
    {
      "ConnectionStrings": {
-       "DefaultConnection": "Host=localhost;Database=ome_reader;Username=your_username;Password=your_password"
+       "DefaultConnection": "Host=localhost;Database=mini_cc;Username=your_username;Password=your_password"
      }
    }
    ```
