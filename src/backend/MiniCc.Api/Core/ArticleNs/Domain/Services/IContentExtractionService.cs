@@ -1,8 +1,9 @@
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects;
+using MiniCc.Api.Core.ArticleNs.Infrastructure.Service;
 
 namespace MiniCc.Api.Core.ArticleNs.Domain.Services;
 
 public interface IContentExtractionService
 {
-    Task<Content> ExtractContentAsync(string url, string originalContent);
+    Task<ReadabilityResult> ExtractContentAsync(string url, string originalContent);
 }

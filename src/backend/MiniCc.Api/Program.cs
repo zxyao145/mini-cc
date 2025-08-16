@@ -96,6 +96,9 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddOptions<ReadabilityApiOptions>()
+    .Bind(builder.Configuration.GetSection("ReadabilityApi"));
+
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())

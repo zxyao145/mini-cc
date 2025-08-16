@@ -1,6 +1,7 @@
 using ContentHandler;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects;
+using MiniCc.Api.Core.ArticleNs.Infrastructure.Service;
 
 namespace MiniCc.Api.Core.ArticleNs.Domain.Services;
 
@@ -27,7 +28,13 @@ public class ArticleDomainService : IArticleDomainService
             throw new InvalidOperationException($"Failed to fetch content from URL: {url}");
         }
 
-        var content = await _contentExtractionService.ExtractContentAsync(url, fetchResult.OriginalContent);
+        var readabilityResult = await _contentExtractionService.ExtractContentAsync(url, fetchResult.OriginalContent);
+
+        var content = Content.Create(
+           fetchResult.OriginalContent,
+           readabilityResult.Content ?? string.Empty,
+           readabilityResult.Length
+        );
 
         return Article.Create(
             urlValue,
@@ -48,7 +55,13 @@ public class ArticleDomainService : IArticleDomainService
         string imageUrl)
     {
         var urlValue = Url.Create(url);
-        var content = await _contentExtractionService.ExtractContentAsync(url, originalContent);
+        var readabilityResult = await _contentExtractionService.ExtractContentAsync(url, originalContent);
+
+        var content = Content.Create(
+           originalContent,
+           readabilityResult.Content ?? string.Empty,
+           readabilityResult.Length
+        );
 
         return Article.Create(
             urlValue,

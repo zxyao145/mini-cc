@@ -17,11 +17,17 @@ public class Content : ValueObject
 
     public static Content Create(string originalContent, string readableContent)
     {
+        var length = readableContent?.Length ?? 0;
+
+        return Create(originalContent, readableContent ?? "", length);
+    }
+
+    public static Content Create(string originalContent, string readableContent, int length)
+    {
         if (string.IsNullOrEmpty(originalContent))
             throw new ArgumentException("Original content cannot be null or empty", nameof(originalContent));
 
         var cleanReadableContent = readableContent ?? string.Empty;
-        var length = cleanReadableContent.Length;
 
         return new Content(originalContent, cleanReadableContent, length);
     }

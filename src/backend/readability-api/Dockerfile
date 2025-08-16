@@ -8,8 +8,7 @@ ENV PORT=5002
 WORKDIR /app
 
   # 复制 package 文件
-COPY package*.json ./
-COPY server.js ./
+COPY ./ ./
 
 RUN npm ci --only=production && npm cache clean --force 
 

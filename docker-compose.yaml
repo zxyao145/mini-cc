@@ -25,6 +25,8 @@ services:
       context: ./src/backend/readability-api/
       dockerfile: ./Dockerfile
     container_name: readability_api
+    environment:
+      IMAGE_PROXY_SECRET: "my-secret-key-123!@#"
     # ports:
     #   - "5002:5002" 
     depends_on:
@@ -60,6 +62,21 @@ services:
     depends_on:
       - minicc-api
   
+  image-proxy:
+    build:
+      context: ./src/image-proxy
+      dockerfile: ./Dockerfile
+    image: image-proxy
+    container_name: image-proxy
+    environment:
+      IMAGE_PROXY_SECRET: "my-secret-key-123!@#"
+    depends_on:
+      - minicc-api
+    volumes:
+      - image-proxy-data:/temp/cache/image-proxy
+    ports:
+      - "5050:8080"
+
   lb:
     build:
       context: ./src/lb/ng
@@ -71,6 +88,8 @@ services:
     depends_on:
       - minicc-api
       - minicc-web
+      - image-proxy
 
 volumes:
   pgdata:
+  image-proxy-data:
