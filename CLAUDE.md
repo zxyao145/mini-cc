@@ -37,7 +37,6 @@ pnpm dev                   # Build extension for Chrome
 ### Clean Architecture Layers
 ```
 src/backend/MiniCc.Api/Core/
-├── {Domain}/Api/           # Controllers
 ├── {Domain}/Application/   # CQRS handlers, DTOs
 ├── {Domain}/Domain/        # Entities, value objects
 └── {Domain}/Infrastructure/# Repositories, configurations
@@ -75,104 +74,188 @@ DELETE /api/articles/{id}/tags    # Remove tag
 POST   /api/articles/{id}/highlights  # Add highlight
 ```
 
-### Development Commands
+## Development Commands
+
+### Backend
 ```bash
-# Backend
+# Build and run
 dotnet build                    # Build solution
+dotnet run                      # Start API in development
 dotnet ef migrations add <name> # Add migration
 dotnet ef database update       # Apply migrations
 
-# Frontend  
-pnpm build                      # Production build
-pnpm lint                       # ESLint check
+# Testing
+dotnet test                     # Run all tests
+dotnet test --logger "console;verbosity=detailed"  # Detailed test output
 
-# Extension
-pnpm build                      # Chrome extension bundle
+# Single test project
+dotnet test test/backend/MiniCc.Api.Test/MiniCc.Api.Test.csproj
 ```
 
-### Environment Setup
-- **Database**: `MiniCC_Db` connection string
-- **Readability**: `MiniCC_ReadabilityApi` (default: http://127.0.0.1:5002)
+### Frontend  
+```bash
+# Development
+pnpm install                   # Install dependencies
+pnpm dev                       # Start development server (http://localhost:3000)
+pnpm dev:debug                 # Next.js debug mode
+pnpm dev:https                 # HTTPS development
+
+# Production
+pnpm build                     # Production build
+pnpm start                     # Start production server
+pnpm lint                      # ESLint check
+```
+
+### Web Extension
+```bash
+pnpm install                   # Install dependencies
+pnpm dev                       # Development build with watch
+pnpm build                     # Production build
+pnpm lint                      # ESLint check
+```
+
+### Docker Development
+```bash
+# Using Podman (aliased as docker)
+./docker-build.sh              # Build all service images
+./docker-run.sh                # Start full stack with docker-compose
+
+# Manual compose
+podman compose -f ./docker-compose.yaml up -d --build
+podman compose -f ./docker-compose.yaml down
+```
+
+## Environment Setup
+
+### Database Configuration
+- **Connection String**: `MiniCC_Db` environment variable
+- **Default**: `Host=localhost;Database=mini_cc;Username=postgres;Password=postgres`
+- **Docker**: Uses PostgreSQL 16 with Chinese text search (zhparser)
+
+### External Services
+- **Readability API**: `MiniCC_ReadabilityApi` (default: http://127.0.0.1:5002)
+- **Image Proxy**: Runs on port 5050 with secret key authentication
 - **CORS**: Configured for localhost:3000, localhost:5000
 
-## Checkpoint 记录
+### Authentication
+- **Cookie Authentication**: 30-minute sessions with sliding expiration
+- **API Key Authentication**: Header-based for programmatic access
+- **Encryption**: AES encryption for sensitive data
 
-### 当前检查点 (2025-08-15)
-项目: MiniCC (Mini Cut Collection)  
-时间: 2025-08-15 14:30:00 +0800  
-里程碑: Article Detail Page Optimization Complete  
-Git提交: [最新提交]
+## Clean Architecture Implementation
 
-#### 技术状态
-- **代码质量**: 优秀 (9.5/10) ⭐⭐⭐⭐⭐
-- **架构健康**: 极佳 (9.5/10) ⭐⭐⭐⭐⭐  
-- **安全评分**: 良好 (8/10) ⭐⭐⭐⭐
-- **性能评分**: 优秀 (8.5/10) ⭐⭐⭐⭐⭐
-- **开发活跃度**: 高
+### Domain Layer
+- **Aggregate Roots**: Article, Tag, Highlight, User
+- **Value Objects**: Url, Content, TagColor
+- **Domain Events**: ArticleEvents, HighlightEvents, TagEvents
+- **Domain Services**: IArticleDomainService, IContentExtractionService
 
-#### 最新成就 (本周期)
-- **代码高亮完成**: Prism.js集成，支持多种编程语言语法高亮
-- **用户体验优化**: 复制代码功能，暗黑模式支持，响应式设计
-- **性能优化**: 懒加载，代码分割，Tree Shaking
-- **无障碍性**: 键盘导航，屏幕阅读器支持，WCAG合规
+### Application Layer
+- **Commands**: SaveArticle, DeleteArticle, AddHighlight, etc.
+- **Queries**: GetArticleById, GetHighlights, etc.
+- **DTOs**: ArticleDto, HighlightDto, TagDto
+- **Validation**: FluentValidation integration
 
-#### 架构质量现状
-- **Clean Architecture**: ✅ 完美实现 (Domain/Application/Infrastructure/API)
-- **CQRS + MediatR**: ✅ 规范实现，命令查询分离
-- **DDD模式**: ✅ 领域驱动设计，聚合根完整
-- **微服务就绪**: ✅ 松耦合，容器化部署
+### Infrastructure Layer
+- **Repositories**: Generic repository with EF Core
+- **Entity Configurations**: Fluent API configurations
+- **External Services**: Readability API integration
 
-#### 技术栈评估
-- **Backend**: .NET 9 + EF Core 9 + PostgreSQL 16 ✅
-- **Frontend**: Next.js 15 + React 19 + TypeScript ✅
-- **Infrastructure**: Docker + Nginx + Node.js ✅
-- **认证**: Cookie + API Key双重机制 ✅
+### API Layer
+- **Controllers**: RESTful endpoints with attribute routing
+- **Authentication**: Dual authentication schemes
+- **Documentation**: OpenAPI/Swagger and Scalar UI
 
-#### 关键改进识别
-**🔴 高优先级**:
-1. **测试覆盖率**: 缺失单元测试和集成测试
-2. **安全强化**: 速率限制、CSP头部、HTTPS强制
+## Testing
 
-**🟡 中优先级**:
-3. **性能监控**: APM集成、结构化日志
-4. **缓存策略**: Redis缓存层实现
-5. **API文档**: OpenAPI规范完善
+### Test Structure
+```
+test/
+├── backend/
+│   ├── ContentHandler.Test/    # Content extraction tests
+│   └── MiniCc.Api.Test/        # API unit/integration tests
+```
 
-#### 下阶段路线图
-**Week 1-2**: 测试框架 + 单元测试
-**Week 3-4**: 安全强化 + 性能监控  
-**Month 2**: CI/CD + 生产部署优化
+### Testing Framework
+- **xUnit**: Test framework
+- **Moq**: Mocking library
+- **FluentAssertions**: Assertion library
+- **EF Core InMemory**: Database testing
 
-### 历史检查点 (2025-07-19)
-项目: MiniCC (Mini Cut Collection)
-时间: 2025-07-19 14:00:00 +0800
-里程碑: Clean Architecture Implementation Complete
+### Running Tests
+```bash
+# All tests
+dotnet test
 
-#### 技术状态
-- 代码质量: 优秀 (9/10)
-- 架构健康: 极佳 (9/10)
-- 开发活跃度: 高
+# Specific project
+dotnet test test/backend/MiniCc.Api.Test/
 
-#### 本阶段重大成就
-- **架构重构完成**: 完整Clean Architecture实现
-  - Domain层: DDD实体设计
-  - Application层: CQRS模式，MediatR集成
-  - Infrastructure层: Repository模式
-  - API层: 控制器重构，依赖注入优化
-- **删除遗留代码**: 移除42个过时文件
-- **新增特性**: 75个新文件，架构现代化
-- **文件变更**: 130个文件，6319行变更
+# With coverage
+dotnet test --collect:"XPlat Code Coverage"
+```
 
-#### 架构质量评估
-- **分层清晰**: ✅ 四层架构完美分离
-- **依赖倒置**: ✅ SOLID原则严格遵循
-- **测试友好**: ✅ 高度可测试架构
-- **扩展性**: ✅ 易于功能扩展
+## Docker Services
 
-#### 建议行动
-1. 添加单元测试和集成测试
-2. 性能基准测试
-3. CI/CD流水线配置
-4. API文档自动生成
+### Service Architecture
+- **db**: PostgreSQL 16 with zhparser for Chinese search
+- **readability-api**: Node.js content extraction service
+- **minicc-api**: ASP.NET Core backend
+- **minicc-web**: Next.js frontend
+- **image-proxy**: Image proxy service for secure image loading
+- **lb**: Nginx load balancer (port 5000)
 
-Git提交: fe466ea
+### Service Communication
+- **Internal**: Services communicate via Docker network
+- **External**: All external traffic through nginx (port 5000)
+- **Database**: Persistent volume for data storage
+
+## Code Quality Standards
+
+### Backend Standards
+- **C#**: Modern C# with nullable reference types
+- **Clean Architecture**: Strict separation of concerns
+- **Dependency Injection**: Constructor injection pattern
+- **Logging**: Serilog with structured logging
+- **Validation**: FluentValidation for request validation
+
+### Frontend Standards
+- **TypeScript**: Strict type checking
+- **React**: Functional components with hooks
+- **Styling**: Tailwind CSS with dark mode support
+- **Performance**: Code splitting and lazy loading
+- **Accessibility**: WCAG compliant components
+
+### Security Practices
+- **Input Validation**: All user input validated
+- **XSS Protection**: Content sanitization with DOMPurify
+- **CORS**: Restricted to trusted origins
+- **Authentication**: Secure cookie handling
+- **Secrets**: Environment variable configuration
+
+## Performance Considerations
+
+### Database Optimization
+- **Full-Text Search**: PostgreSQL tsvector for content search
+- **Chinese Support**: zhparser for Chinese text segmentation
+- **Indexing**: Proper indexes on frequently queried fields
+- **Connection Pooling**: EF Core connection management
+
+### Frontend Optimization
+- **Code Splitting**: Next.js automatic code splitting
+- **Image Optimization**: Lazy loading and proxy service
+- **Caching**: Browser and CDN caching strategies
+- **Bundle Analysis**: Regular bundle size monitoring
+
+## Troubleshooting
+
+### Common Issues
+- **Database Migrations**: Run `dotnet ef database update` after schema changes
+- **Port Conflicts**: Ensure ports 3000, 5000, 5050 are available
+- **Docker Issues**: Use `podman` instead of `docker` if configured
+- **CORS Problems**: Verify frontend URL in CORS configuration
+
+### Development Tips
+- **Hot Reload**: Both backend and frontend support hot reload
+- **Debugging**: Use `pnpm dev:debug` for frontend debugging
+- **Database**: Use pgAdmin or DBeaver for database management
+- **API Testing**: Use Scalar UI at http://localhost:5000/scalar
