@@ -1,6 +1,6 @@
 # MiniCC (Mini Cut Collection) - Read Later Application
 
-Omnivore minimum implementation, built with ASP.NET Core and Next.js.
+[Omnivore](https://github.com/omnivore-app/omnivore) minimum implementation, built with ASP.NET Core and Next.js.
 
 ## Features
 
@@ -227,3 +227,5 @@ All entities include created/updated timestamps and proper relationships.
 ## License
 
 This project is licensed under the MIT License.
+
+Imageproxy and Readability JS were copied from [Omnivore](https://github.com/omnivore-app/omnivore) with minor modifications
