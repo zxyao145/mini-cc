@@ -81,20 +81,6 @@ public class ArticlesController : ApiControllerBase
         return Ok(result.Value);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<ArticleDto>> SaveArticle([FromBody] SaveArticleCommand command)
-    {
-        var result = await _mediator.Send(command);
-
-        if (result.IsFailure)
-        {
-            _logger.LogError("Error saving article: {Error}", result.Error);
-            return BadRequest(result.Error);
-        }
-
-        return CreatedAtAction(nameof(GetArticle), new { id = result.Value.Id }, result.Value);
-    }
-
     [DisableRequestSizeLimit]
     [HttpPost("content")]
     public async Task<ActionResult<ArticleDto>> SaveArticleContent([FromBody] SaveArticleContentCommand command)

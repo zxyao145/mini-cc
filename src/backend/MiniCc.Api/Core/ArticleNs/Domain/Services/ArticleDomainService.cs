@@ -1,75 +1,23 @@
-using ContentHandler;
+using HtmlAgilityPack;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects;
-using MiniCc.Api.Core.ArticleNs.Infrastructure.Service;
+using MiniCc.Api.Infra;
 
 namespace MiniCc.Api.Core.ArticleNs.Domain.Services;
 
-public class ArticleDomainService : IArticleDomainService
+public class ArticleDomainService(ImageProxyService imageProxyService) : IArticleDomainService
 {
-    private readonly IContentFetchService _contentFetchService;
-    private readonly IContentExtractionService _contentExtractionService;
-
-    public ArticleDomainService(
-        IContentFetchService contentFetchService,
-        IContentExtractionService contentExtractionService)
+    public Article CreateArticleFromContent(string url, string originalContent, string readableContent,
+        string title, string author, string summary, string imageUrl)
     {
-        _contentFetchService = contentFetchService;
-        _contentExtractionService = contentExtractionService;
-    }
+        if (string.IsNullOrWhiteSpace(readableContent))
+            throw new ArgumentException("Readable content cannot be empty", nameof(readableContent));
 
-    public async Task<Article> CreateArticleFromUrlAsync(string url)
-    {
-        var urlValue = Url.Create(url);
+        var document = new HtmlDocument();
+        document.LoadHtml(readableContent);
+        var length = (HtmlEntity.DeEntitize(document.DocumentNode.InnerText) ?? "").Length;
+        var content = Content.Create(originalContent, imageProxyService.RewriteImages(readableContent), length);
 
-        var fetchResult = await _contentFetchService.FetchContentAsync(url);
-        if (fetchResult == null)
-        {
-            throw new InvalidOperationException($"Failed to fetch content from URL: {url}");
-        }
-
-        var readabilityResult = await _contentExtractionService.ExtractContentAsync(url, fetchResult.OriginalContent);
-
-        var content = Content.Create(
-           fetchResult.OriginalContent,
-           readabilityResult.Content ?? string.Empty,
-           readabilityResult.Length
-        );
-
-        return Article.Create(
-            urlValue,
-            fetchResult.Title ?? "Untitled",
-            fetchResult.Author ?? string.Empty,
-            content,
-            fetchResult.Summary ?? string.Empty,
-            string.Empty
-        );
-    }
-
-    public async Task<Article> CreateArticleFromContentAsync(
-        string url,
-        string originalContent,
-        string title,
-        string author,
-        string summary,
-        string imageUrl)
-    {
-        var urlValue = Url.Create(url);
-        var readabilityResult = await _contentExtractionService.ExtractContentAsync(url, originalContent);
-
-        var content = Content.Create(
-           originalContent,
-           readabilityResult.Content ?? string.Empty,
-           readabilityResult.Length
-        );
-
-        return Article.Create(
-            urlValue,
-            title,
-            author,
-            content,
-            summary,
-            imageUrl
-        );
+        return Article.Create(Url.Create(url), title, author, content, summary, imageProxyService.GetUrl(imageUrl));
     }
 }

@@ -1,78 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type KeyboardEvent } from "react";
 import "./HomeHeader.scss";
 
-import {
-  useFloating,
-  autoUpdate,
-  offset,
-  flip,
-  shift,
-  useInteractions,
-  useHover,
-  FloatingPortal,
-  FloatingOverlay,
-  FloatingFocusManager,
-  useClick,
-  useDismiss,
-} from "@floating-ui/react";
-import AddArticleForm from "./AddArticleForm";
-import {  LayoutGrid, List, Plus, RotateCw, Search, X } from "lucide-react";
-
-const Modal = ({ isOpen, onClose, children }: any) => {
-  const { refs, context } = useFloating({
-    open: isOpen,
-    onOpenChange: onClose,
-  });
-
-  const click = useClick(context);
-  const dismiss = useDismiss(context, { outsidePressEvent: "mousedown" });
-
-  const { getReferenceProps, getFloatingProps } = useInteractions([
-    click,
-    dismiss,
-  ]);
-
-  return (
-    <FloatingPortal>
-      {isOpen && (
-        <FloatingOverlay
-          className="bg-gray-100 flex justify-center items-start pt-25"
-          style={{ zIndex: 2000 }}
-          lockScroll
-        >
-          <FloatingFocusManager context={context}>
-            <div
-              ref={refs.setFloating}
-              className="bg-white rounded-lg shadow-lg p-4 max-w-md w-full"
-              {...getFloatingProps()}
-            >
-              <section className="mb-3 flex items-center font-bold">
-                <div className="flex flex-grow-1 text-xl">Add Article</div>
-                <button
-                  onClick={onClose}
-                  className="p-3 text-gray-500 hover:text-black"
-                >
-                  <X size={20} />
-                </button>
-              </section>
-              <section className="mb-3">{children}</section>
-            </div>
-          </FloatingFocusManager>
-        </FloatingOverlay>
-      )}
-    </FloatingPortal>
-  );
-};
-
+import { LayoutGrid, List, Search } from "lucide-react";
 
 type ArticleStyle = "grid" | "list";
 
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
-  onAdd: (url: string) => Promise<void>;
   onStyleChange: (value: ArticleStyle) => void;
   placeholder?: string;
 }
@@ -80,7 +17,6 @@ interface SearchBarProps {
 export default function SearchBar({
   value,
   onChange,
-  onAdd,
   onStyleChange,
   placeholder = "Search...",
 }: SearchBarProps) {
@@ -112,11 +48,8 @@ export default function SearchBar({
     setLocalValue("");
     onChange("");
   };
-  // modal
-  const [open, setOpen] = useState(false);
-
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const handleKeyDown = (e: any) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       buttonRef.current?.click();
     }
@@ -165,14 +98,6 @@ export default function SearchBar({
         role="group"
       >
         <button
-          onClick={() => setOpen(true)}
-          type="button"
-          // className="rounded-s-lg px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          className="rounded-s-lg btn btn-primary"
-        >
-          <Plus size={18} />
-        </button>
-        <button
           type="button"
           // className="rounded-e-lg px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           onClick={() => setGrid(!isGrid)}
@@ -181,14 +106,6 @@ export default function SearchBar({
           {isGrid ? <LayoutGrid size={18} /> : <List size={18} />}
         </button>
       </div>
-      <Modal isOpen={open} onClose={() => setOpen(false)}>
-        <AddArticleForm
-          onAdd={async (url: string) => {
-            await onAdd(url);
-            setOpen(false);
-          }}
-        />
-      </Modal>
     </div>
   );
 }

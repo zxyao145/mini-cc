@@ -4,7 +4,7 @@
 
 ## Features
 
-- **Save Articles**: Save web pages from URLs with automatic content extraction
+- **Save Articles**: Save the current page through the Chrome extension; read and manage saved articles on the website
 - **Search**: Full-text search across saved articles
 - **Tagging**: Organize articles with custom tags and colors
 - **Highlighting**: Add highlights and notes to article content
@@ -17,7 +17,11 @@
 - **ASP.NET Core 9.0** - Web API framework
 - **Entity Framework Core** - ORM for database operations
 - **PostgreSQL** - Primary database
-- **HtmlAgilityPack** - Web scraping and content extraction
+- **HtmlAgilityPack** - HTML image URL rewriting
+
+### Chrome Extension
+- **@mozilla/readability** - Extract article content from the loaded page
+- **DOMPurify** - Sanitize extracted HTML
 
 ### Frontend
 - **Next.js 15** - React framework with App Router
@@ -67,7 +71,7 @@ podman compose -f ./docker-compose.yaml up -d --build
 
 1. Navigate to the backend directory:
    ```bash
-   cd backend/MiniCc.Api
+   cd src/backend/MiniCc.Api
    ```
 
 2. Install Entity Framework tools (if not already installed):
@@ -75,14 +79,13 @@ podman compose -f ./docker-compose.yaml up -d --build
    dotnet tool install --global dotnet-ef
    ```
 
-3. Update the connection string in `appsettings.json`:
-   ```json
-   {
-     "ConnectionStrings": {
-       "DefaultConnection": "Host=localhost;Database=mini_cc;Username=your_username;Password=your_password"
-     }
-   }
+3. Configure the database and image proxy in the API environment:
+   ```bash
+   export MiniCC_Db="Host=127.0.0.1;Database=mini_cc;Username=postgres;Password=your_password"
+   export ImageProxy__ProxyUrl="http://localhost:5050"
+   export ImageProxy__SignatureKey="your-image-proxy-secret"
    ```
+   Run imageproxy with the same signing key. In Compose, set `IMAGE_PROXY_SECRET`; both services receive it. The default proxy URL `/imageProxy` routes through nginx. No page extraction service is needed.
 
 4. Create and run database migrations:
    ```bash
@@ -100,7 +103,7 @@ The API will be available at `http://localhost:5000`.
 
 1. Navigate to the frontend directory:
    ```bash
-   cd frontend
+   cd src/frontend
    ```
 
 2. Install dependencies:
@@ -125,7 +128,7 @@ The frontend will be available at `http://localhost:3000`.
 1. Navigate to the web-extension directory:
 
    ```bash
-   cd web-extension
+   cd src/web-extension
    ```
 
 2. Install dependencies:
@@ -134,20 +137,22 @@ The frontend will be available at `http://localhost:3000`.
    pnpm install
    ```
 
-3. Run the development server:
+3. Build the extension:
 
    ```bash
-   pnpm dev
+   pnpm build
    ```
 
-The web extension will be available at Chrome web extension.
+4. Open `chrome://extensions/`, enable Developer mode, and load `src/web-extension/dist` as an unpacked extension. Set the API URL and an API key in the extension Settings. Reload the extension and article tabs after rebuilding.
+
+The extension extracts and sanitizes the current page, then sends the original HTML, readable HTML, and metadata to the API. The API stores the article and signs image URLs; it does not fetch the source page. Existing saved articles remain unchanged.
 
 ## API Endpoints
 
 ### Articles
 - `GET /api/articles` - Get all articles (with pagination and search)
 - `GET /api/articles/{id}` - Get specific article
-- `POST /api/articles` - Save new article from URL
+- `POST /api/articles/content` - Save extracted article HTML and metadata from the Chrome extension
 - `PUT /api/articles/{id}` - Update article
 - `DELETE /api/articles/{id}` - Delete article
 - `POST /api/articles/{id}/favorite` - Toggle favorite status
@@ -236,4 +241,4 @@ All entities include created/updated timestamps and proper relationships.
 
 This project is licensed under the MIT License.
 
-Imageproxy and Readability JS were copied from [Omnivore](https://github.com/omnivore-app/omnivore) with minor modifications
+Imageproxy was copied from [Omnivore](https://github.com/omnivore-app/omnivore) with minor modifications. Article extraction uses the official [Mozilla Readability](https://github.com/mozilla/readability) package in the Chrome extension.

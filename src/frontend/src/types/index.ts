@@ -53,10 +53,6 @@ export interface Highlight {
   articleId: string;
 }
 
-export interface SaveArticleRequest {
-  url: string;
-}
-
 export interface AddTagRequest {
   name: string;
   color?: string;

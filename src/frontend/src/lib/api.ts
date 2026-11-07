@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Article, SaveArticleRequest, AddTagRequest, Highlight, Tag, TagWithArticleCount, TagWithArticles, LoginRequest, User, ApiKey, UpdateUserRequest, UpdatePasswordRequest, CreateApiKeyRequest, UpdateApiKeyRequest } from '@/types';
+import { Article, AddTagRequest, Highlight, Tag, TagWithArticleCount, TagWithArticles, LoginRequest, User, ApiKey, UpdateUserRequest, UpdatePasswordRequest, CreateApiKeyRequest, UpdateApiKeyRequest } from '@/types';
 
 axios.defaults.withCredentials = true;
 
@@ -29,11 +29,6 @@ export const articleApi = {
 
   async getArticleById(id: string): Promise<Article> {
     const response = await api.get(`/articles/${id}`);
-    return response.data;
-  },
-
-  async saveArticle(url: string): Promise<Article> {
-    const response = await api.post('/articles', { url } as SaveArticleRequest);
     return response.data;
   },
 

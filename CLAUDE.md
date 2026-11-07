@@ -22,7 +22,7 @@ pnpm dev                   # Start Next.js (http://localhost:3000)
 
 # Web Extension (src/web-extension/)
 pnpm install
-pnpm dev                   # Build extension for Chrome
+pnpm build                 # Build extension; load dist/ in Chrome
 ```
 
 ## Architecture Overview
@@ -30,7 +30,7 @@ pnpm dev                   # Build extension for Chrome
 ### Microservices Architecture
 - **API**: ASP.NET Core 9.0 with Clean Architecture (CQRS + DDD)
 - **Frontend**: Next.js 15 App Router with TypeScript
-- **Content Service**: Node.js readability extraction
+- **Chrome Extension**: Mozilla Readability + DOMPurify extract the loaded page; the website handles reading and management
 - **Database**: PostgreSQL 16 with Chinese text search
 - **Proxy**: Nginx routing (localhost:5000)
 
@@ -64,7 +64,7 @@ src/backend/MiniCc.Api/Core/
 ### API Structure
 ```
 GET    /api/articles              # List with pagination/search
-POST   /api/articles              # Save from URL
+POST   /api/articles/content      # Save extracted HTML from the extension
 GET    /api/articles/{id}         # Get single article
 PUT    /api/articles/{id}         # Update metadata
 DELETE /api/articles/{id}         # Delete article
@@ -112,6 +112,8 @@ pnpm install                   # Install dependencies
 pnpm dev                       # Development build with watch
 pnpm build                     # Production build
 pnpm lint                      # ESLint check
+pnpm test                      # Extraction and background messaging tests
+pnpm typecheck                 # TypeScript check
 ```
 
 ### Docker Development
@@ -133,8 +135,8 @@ podman compose -f ./docker-compose.yaml down
 - **Docker**: Uses PostgreSQL 16 with Chinese text search (zhparser)
 
 ### External Services
-- **Readability API**: `MiniCC_ReadabilityApi` (default: http://127.0.0.1:5002)
-- **Image Proxy**: Runs on port 5050 with secret key authentication
+- **Image Proxy**: Runs on port 5050 with secret key authentication. Set API `ImageProxy__SignatureKey` to the same imageproxy signing key and `ImageProxy__ProxyUrl` to `/imageProxy` (nginx) or `http://localhost:5050` (manual local setup). Compose shares `IMAGE_PROXY_SECRET` between both services.
+- **Article collection**: Chrome only, via `POST /api/articles/content` with required `originalContent`, `readableContent`, URL and title. No backend page fetching or extraction service.
 - **CORS**: Configured for localhost:3000, localhost:5000
 
 ### Authentication
@@ -148,10 +150,10 @@ podman compose -f ./docker-compose.yaml down
 - **Aggregate Roots**: Article, Tag, Highlight, User
 - **Value Objects**: Url, Content, TagColor
 - **Domain Events**: ArticleEvents, HighlightEvents, TagEvents
-- **Domain Services**: IArticleDomainService, IContentExtractionService
+- **Domain Services**: IArticleDomainService
 
 ### Application Layer
-- **Commands**: SaveArticle, DeleteArticle, AddHighlight, etc.
+- **Commands**: SaveArticleContent, DeleteArticle, AddHighlight, etc.
 - **Queries**: GetArticleById, GetHighlights, etc.
 - **DTOs**: ArticleDto, HighlightDto, TagDto
 - **Validation**: FluentValidation integration
@@ -159,7 +161,7 @@ podman compose -f ./docker-compose.yaml down
 ### Infrastructure Layer
 - **Repositories**: Generic repository with EF Core
 - **Entity Configurations**: Fluent API configurations
-- **External Services**: Readability API integration
+- **Image URLs**: Server-side HMAC signing and HTML image rewriting through ImageProxyService
 
 ### API Layer
 - **Controllers**: RESTful endpoints with attribute routing
@@ -172,8 +174,9 @@ podman compose -f ./docker-compose.yaml down
 ```
 test/
 ├── backend/
-│   ├── ContentHandler.Test/    # Content extraction tests
-│   └── MiniCc.Api.Test/        # API unit/integration tests
+│   └── MiniCc.Api.Test/        # API, article persistence, image signing tests
+
+src/web-extension/test/        # Real-DOM extraction and background messaging tests
 ```
 
 ### Testing Framework
@@ -198,7 +201,6 @@ dotnet test --collect:"XPlat Code Coverage"
 
 ### Service Architecture
 - **db**: PostgreSQL 16 with zhparser for Chinese search
-- **readability-api**: Node.js content extraction service
 - **minicc-api**: ASP.NET Core backend
 - **minicc-web**: Next.js frontend
 - **image-proxy**: Image proxy service for secure image loading

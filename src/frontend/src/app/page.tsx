@@ -30,15 +30,6 @@ export default function Home() {
   }, [searchTerm, loadArticles]);
 
 
-  const handleAddArticle = async (url: string) => {
-    try {
-      const newArticle = await articleApi.saveArticle(url);
-      setArticles([newArticle, ...articles]);
-    } catch (error) {
-      console.error("Failed to save article:", error);
-    }
-  };
-
   const handleDeleteArticle = async (id: string) => {
     try {
       await articleApi.deleteArticle(id);
@@ -60,7 +51,6 @@ export default function Home() {
         <SearchBar 
             value={searchTerm} 
             onChange={setSearchTerm} 
-            onAdd={handleAddArticle} 
             onStyleChange={setArticleStyle}
             placeholder="Search articles..." 
           />

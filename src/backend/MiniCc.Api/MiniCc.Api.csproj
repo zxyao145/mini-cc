@@ -51,9 +51,7 @@
 
     </ItemGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\ContentHandler\ContentHandler.csproj" />
-    </ItemGroup>
+
 
 
 

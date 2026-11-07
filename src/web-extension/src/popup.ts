@@ -1,5 +1,5 @@
 import './popup.scss';
-import { ContentFetchResult, ExtractedContent } from './types';
+import { DEFAULT_API_URL, type ExtractedContent, type SaveArticleResponse } from './types';
 
 class PopupManager {
   private statusEl: HTMLElement;
@@ -14,7 +14,8 @@ class PopupManager {
   private apiAkInput: HTMLInputElement;
   private saveSettingsBtn: HTMLButtonElement;
 
-  private apiUrl: string = 'http://localhost:5000';
+  private apiUrl: string = DEFAULT_API_URL;
+  private extractedContent: ExtractedContent | null = null;
   private ak: string = '';
 
   constructor() {
@@ -36,6 +37,7 @@ class PopupManager {
   private async init() {
     await this.loadSettings();
     this.bindEvents();
+    this.saveBtn.disabled = true;
     await this.extractContent();
   }
 
@@ -94,6 +96,7 @@ class PopupManager {
 
       const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractContent' });
       if (response.success) {
+        this.extractedContent = response.content;
         this.displayPreview(response.content);
         this.hideStatus();
         return response.content;
@@ -116,7 +119,7 @@ class PopupManager {
 
   private async saveArticle() {
     try {
-      const content = await this.extractContent();
+      const content = this.extractedContent ?? await this.extractContent();
       if (!content) {
         return;
       }
@@ -124,31 +127,18 @@ class PopupManager {
       this.showStatus('Saving article...', 'loading');
       this.saveBtn.disabled = true;
 
-      const payload: ContentFetchResult = {
-        url: content.url,
-        title: content.title,
-        originalContent: content.content,
-        author: content.author,
-        contentType: 'text/html'
-      };
-
-      const response = await fetch(`${this.apiUrl}/api/Articles/content`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          "X-Api-Key": this.ak,
-        },
-        body: JSON.stringify(payload),
+      const response: SaveArticleResponse = await chrome.runtime.sendMessage({
+        action: 'saveArticle',
+        content,
       });
 
-      if (response.ok) {
+      if (response.success) {
         this.showStatus('Article saved successfully!', 'success');
         setTimeout(() => {
           window.close();
         }, 2000);
       } else {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        throw new Error(response.error);
       }
     } catch (error) {
       this.showStatus(`Error saving article: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');

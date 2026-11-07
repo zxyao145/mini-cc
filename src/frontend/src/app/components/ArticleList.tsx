@@ -35,7 +35,7 @@ export default function ArticleList({
       <div className={styles.container}>
         <div className={styles.empty}>
           <h3>No articles found</h3>
-          <p>Start by saving your first article using the form above!</p>
+          <p>Save articles using the Chrome extension, then read and manage them here.</p>
         </div>
       </div>
     );

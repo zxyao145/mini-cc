@@ -176,13 +176,13 @@ public class ArticlesControllerTests
 
     #endregion
 
-    #region SaveArticle Tests
+    #region SaveArticleContent Tests
 
     [Fact]
-    public async Task SaveArticle_WithValidCommand_ShouldReturnCreatedResult()
+    public async Task SaveArticleContent_WithValidCommand_ShouldReturnCreatedResult()
     {
         // Arrange
-        var command = new SaveArticleCommand("https://example.com/article");
+        var command = new SaveArticleContentCommand("https://example.com/article", "<html>Original</html>", "<p>Readable</p>", "Title", "", "", "");
         var article = CreateTestArticleDto();
         var result = Result<ArticleDto>.Success(article);
 
@@ -191,7 +191,7 @@ public class ArticlesControllerTests
             .ReturnsAsync(result);
 
         // Act
-        var response = await _controller.SaveArticle(command);
+        var response = await _controller.SaveArticleContent(command);
 
         // Assert
         var createdResult = response.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
@@ -203,10 +203,10 @@ public class ArticlesControllerTests
     }
 
     [Fact]
-    public async Task SaveArticle_WithFailureResult_ShouldReturnBadRequest()
+    public async Task SaveArticleContent_WithFailureResult_ShouldReturnBadRequest()
     {
         // Arrange
-        var command = new SaveArticleCommand("https://example.com/article");
+        var command = new SaveArticleContentCommand("https://example.com/article", "<html>Original</html>", "<p>Readable</p>", "Title", "", "", "");
         var errorMessage = "Failed to save article";
         var result = Result<ArticleDto>.Failure(errorMessage);
 
@@ -215,7 +215,7 @@ public class ArticlesControllerTests
             .ReturnsAsync(result);
 
         // Act
-        var response = await _controller.SaveArticle(command);
+        var response = await _controller.SaveArticleContent(command);
 
         // Assert
         var badRequestResult = response.Result.Should().BeOfType<BadRequestObjectResult>().Subject;

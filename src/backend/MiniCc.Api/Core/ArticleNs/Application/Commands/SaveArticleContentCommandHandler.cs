@@ -35,10 +35,11 @@ public class SaveArticleContentCommandHandler : IRequestHandler<SaveArticleConte
                 return Result<ArticleDto>.Success(_mapper.Map<ArticleDto>(existingArticle));
             }
 
-            var article = await _articleDomainService
-                .CreateArticleFromContentAsync(
+            var article = _articleDomainService
+                .CreateArticleFromContent(
                 request.Url,
                 request.OriginalContent,
+                request.ReadableContent,
                 request.Title ?? "",
                 request.Author ?? "",
                 request.Summary ?? "",
