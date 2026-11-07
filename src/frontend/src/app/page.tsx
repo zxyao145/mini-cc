@@ -31,17 +31,13 @@ export default function Home() {
 
 
   const handleDeleteArticle = async (id: string) => {
-    try {
-      await articleApi.deleteArticle(id);
-      setArticles(articles.filter(article => article.id !== id));
-    } catch (error) {
-      console.error("Failed to delete article:", error);
-    }
+    await articleApi.deleteArticle(id);
+    setArticles(current => current.filter(article => article.id !== id));
   };
 
-  const handleUpdateArticle = (updatedArticle: Article) => {
-    setArticles(articles.map(article => 
-      article.id === updatedArticle.id ? updatedArticle : article
+  const handleUpdateArticle = (id: string, changes: Partial<Article>) => {
+    setArticles(current => current.map(article =>
+      article.id === id ? { ...article, ...changes } : article
     ));
   };
 
@@ -56,7 +52,11 @@ export default function Home() {
           />
       </header>
 
-      <main className={styles.main}>
+      <div className={styles.main}>
+        <div className={styles.sectionHeading}>
+          <h1>{searchTerm ? "Search results" : "All articles"}</h1>
+          <span className={styles.count} role="status">{loading ? "Loading…" : `${articles.length} article${articles.length === 1 ? "" : "s"}`}</span>
+        </div>
         <ArticleList 
           articles={articles} 
           loading={loading}
@@ -64,7 +64,7 @@ export default function Home() {
           onUpdate={handleUpdateArticle}
           articleStyle={articleStyle}
         />
-      </main>
+      </div>
     </div>
   );
 }

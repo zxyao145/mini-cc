@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "dev:debug": "next dev",
-    "dev:https": "next dev --turbopack --experimental-https",
+    "dev": "next dev --turbopack --port 4000",
+    "dev:debug": "next dev --port 4000",
+    "dev:https": "next dev --turbopack --experimental-https --port 4000",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Archive, Heart } from "lucide-react";
 import { ArticleSummary } from "@/types";
 import styles from "./ArticleSummaryCard.module.scss";
 
@@ -39,13 +40,13 @@ export default function ArticleSummaryCard({ article }: ArticleSummaryCardProps)
           </h3>
           <div className={styles.actions}>
             {article.isFavorite && (
-              <span className={styles.favoriteIcon} title="Favorite">
-                ♥
+              <span className={styles.favoriteIcon} title="Favorite" aria-label="Favorite">
+                <Heart size={16} fill="currentColor" aria-hidden="true" />
               </span>
             )}
             {article.isArchived && (
-              <span className={styles.archiveIcon} title="Archived">
-                📁
+              <span className={styles.archiveIcon} title="Archived" aria-label="Archived">
+                <Archive size={16} aria-hidden="true" />
               </span>
             )}
           </div>

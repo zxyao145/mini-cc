@@ -18,7 +18,7 @@ dotnet run                 # Start API (http://localhost:5000)
 
 # Frontend (src/frontend/)
 pnpm install
-pnpm dev                   # Start Next.js (http://localhost:3000)
+pnpm dev                   # Start Next.js (http://localhost:4000)
 
 # Web Extension (src/web-extension/)
 pnpm install
@@ -96,7 +96,7 @@ dotnet test test/backend/MiniCc.Api.Test/MiniCc.Api.Test.csproj
 ```bash
 # Development
 pnpm install                   # Install dependencies
-pnpm dev                       # Start development server (http://localhost:3000)
+pnpm dev                       # Start development server (http://localhost:4000)
 pnpm dev:debug                 # Next.js debug mode
 pnpm dev:https                 # HTTPS development
 
@@ -137,7 +137,7 @@ podman compose -f ./docker-compose.yaml down
 ### External Services
 - **Image Proxy**: Runs on port 5050 with secret key authentication. Set API `ImageProxy__SignatureKey` to the same imageproxy signing key and `ImageProxy__ProxyUrl` to `/imageProxy` (nginx) or `http://localhost:5050` (manual local setup). Compose shares `IMAGE_PROXY_SECRET` between both services.
 - **Article collection**: Chrome only, via `POST /api/articles/content` with required `originalContent`, `readableContent`, URL and title. No backend page fetching or extraction service.
-- **CORS**: Configured for localhost:3000, localhost:5000
+- **CORS**: Configured for localhost:4000, localhost:5000
 
 ### Authentication
 - **Cookie Authentication**: 30-minute sessions with sliding expiration
@@ -252,7 +252,7 @@ dotnet test --collect:"XPlat Code Coverage"
 
 ### Common Issues
 - **Database Migrations**: Run `dotnet ef database update` after schema changes
-- **Port Conflicts**: Ensure ports 3000, 5000, 5050 are available
+- **Port Conflicts**: Ensure ports 4000, 5000, 5050 are available
 - **Docker Issues**: Use `podman` instead of `docker` if configured
 - **CORS Problems**: Verify frontend URL in CORS configuration
 

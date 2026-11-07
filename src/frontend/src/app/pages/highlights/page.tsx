@@ -152,7 +152,7 @@ export default function HighlightsPage() {
   if (loading) {
     return (
       <div className={styles.container}>
-        <h1>HighLights</h1>
+        <h1 className="sr-only">Highlights</h1>
         <p>Loading highlights...</p>
       </div>
     );
@@ -161,7 +161,7 @@ export default function HighlightsPage() {
   if (error) {
     return (
       <div className={styles.container}>
-        <h1>HighLights</h1>
+        <h1 className="sr-only">Highlights</h1>
         <p className={styles.error}>{error}</p>
         <button onClick={loadHighlights} className={styles.retryButton}>
           Retry
@@ -173,11 +173,11 @@ export default function HighlightsPage() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>My HighLights</h1>
-        <p>All your saved highlights in one place</p>
+        <h1>All highlights</h1>
+        <span className={styles.count}>{highlights.length} highlight{highlights.length === 1 ? "" : "s"}</span>
       </header>
 
-      <main className={styles.main}>
+      <div className={styles.main}>
         {highlights.length === 0 ? (
           <div className={styles.empty}>
             <h2>No highlights yet</h2>
@@ -195,7 +195,7 @@ export default function HighlightsPage() {
             ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

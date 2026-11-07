@@ -77,7 +77,7 @@ export default function TagsPage() {
     return (
       <div className={styles.container}>
         <div className={styles.loading}>
-          <h1>Tags</h1>
+          <h1 className="sr-only">Tags</h1>
           <p>Loading tags...</p>
         </div>
       </div>
@@ -88,7 +88,7 @@ export default function TagsPage() {
     return (
       <div className={styles.container}>
         <div className={styles.error}>
-          <h1>Tags</h1>
+          <h1 className="sr-only">Tags</h1>
           <p>{error}</p>
           <button onClick={loadTags} className={styles.retryButton}>
             Retry
@@ -100,16 +100,14 @@ export default function TagsPage() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <h1>All Tags</h1>
-        <p>Organize your articles with tags</p>
-      </header>
+      <h1 className="sr-only">Tags</h1>
 
       <div className={styles.controls}>
         <div className={styles.searchContainer}>
           <input
             type="text"
             placeholder="Search tags..."
+            aria-label="Search tags"
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
             className={styles.searchInput}
@@ -122,7 +120,7 @@ export default function TagsPage() {
         </div>
       </div>
 
-      <main className={styles.main}>
+      <div className={styles.main}>
         {filteredTags.length === 0 ? (
           <div className={styles.empty}>
             <h2>No tags found</h2>
@@ -162,7 +160,7 @@ export default function TagsPage() {
             ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

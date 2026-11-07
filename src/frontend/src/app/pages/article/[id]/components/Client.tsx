@@ -1,5 +1,6 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
 import { articleApi } from "@/lib/api";
 import { Article, Tag, Highlight } from "@/types";
 import { useEffect, useState } from "react";
@@ -90,7 +91,7 @@ export default function Client(params: { id: string }) {
             className="visit-original-btn"
             title="访问原始页面"
           >
-            <span className="icon">🔗</span>
+            <ExternalLink size={16} aria-hidden="true" />
             <span className="text">访问原文</span>
           </a>
         </div>

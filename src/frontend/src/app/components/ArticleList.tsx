@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen } from "lucide-react";
 import ArticleCard from "./ArticleCard";
 import { Article } from "@/types";
 import styles from "./ArticleList.module.scss";
@@ -8,7 +9,7 @@ interface ArticleListProps {
   articles: Article[];
   loading: boolean;
   onDelete: (id: string) => Promise<void>;
-  onUpdate?: (article: Article) => void;
+  onUpdate?: (id: string, changes: Partial<Article>) => void;
   articleStyle: string;
 }
 
@@ -22,8 +23,8 @@ export default function ArticleList({
   if (loading) {
     return (
       <div className={styles.container}>
-        <div className={styles.loading}>
-          <div className={styles.spinner}></div>
+        <div className={styles.loading} role="status">
+          <div className={styles.spinner} aria-hidden="true"></div>
           <p>Loading articles...</p>
         </div>
       </div>
@@ -34,6 +35,7 @@ export default function ArticleList({
     return (
       <div className={styles.container}>
         <div className={styles.empty}>
+          <BookOpen size={32} strokeWidth={1.5} className={styles.emptyIcon} aria-hidden="true" />
           <h3>No articles found</h3>
           <p>Save articles using the Chrome extension, then read and manage them here.</p>
         </div>
@@ -53,6 +55,7 @@ export default function ArticleList({
           <ArticleCard
             key={article.id}
             article={article}
+            layout={articleStyle === "list" ? "list" : "grid"}
             onDelete={onDelete}
             onUpdate={onUpdate}
           />

@@ -1,4 +1,12 @@
 .article-detail {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 48px 40px;
+
+  @media (max-width: 600px) {
+    padding: 28px 20px;
+  }
+
   .article-header {
     margin-bottom: 2rem;
     padding-bottom: 1rem;
@@ -10,6 +18,7 @@
       h1 {
         font-size: 2rem;
         font-weight: 700;
+        line-height: 1.35;
         margin-bottom: 0.5rem;
       }
 

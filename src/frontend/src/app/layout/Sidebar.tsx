@@ -2,14 +2,20 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { BookOpen, Highlighter, Library, LogOut, PanelLeftClose, PanelLeftOpen, Settings, Tags } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./Sidebar.module.scss";
-import { House, Lightbulb, LogOut, Settings, Tags } from "lucide-react";
 
 interface SidebarProps {
   isOpen?: boolean;
   onToggle?: () => void;
 }
+
+const navItems = [
+  { href: "/", label: "Library", icon: Library },
+  { href: "/pages/highlights", label: "Highlights", icon: Highlighter },
+  { href: "/pages/tags", label: "Tags", icon: Tags },
+];
 
 export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const pathname = usePathname();
@@ -25,66 +31,47 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
     }
   };
 
-  const navItems = [
-    { href: "/", label: "Home", icon: <House size={20}/> },
-    // { href: "/pages/highlights", label: "HighLights", icon: "📝" },
-    { href: "/pages/highlights", label: "HighLights", icon: <Lightbulb size={20}/> },
-    { href: "/pages/tags", label: "Tags", icon: <Tags size={20}/> }
-  ];
-
   return (
-    <aside
-      className={`${styles.sidebar} ${isOpen ? styles.open : styles.closed}`}
-    >
+    <aside className={`${styles.sidebar} ${isOpen ? "" : styles.closed}`} aria-label="Sidebar">
       <div className={styles.header}>
-        {isOpen ? <h2 className={styles.title}>MiniCc</h2> : ""}
-
+        <Link href="/" className={styles.brand} aria-label="MiniCc library">
+          <span className={styles.brandMark}><BookOpen size={20} strokeWidth={1.8} aria-hidden="true" /></span>
+          <span className={styles.brandName}>MiniCc<span className={styles.brandDot}>.</span></span>
+        </Link>
         {onToggle && (
-          <button className={styles.toggle} onClick={onToggle}>
-            {isOpen ? "←" : "→"}
+          <button className={styles.toggle} onClick={onToggle} aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"} aria-expanded={isOpen} title={isOpen ? "Collapse sidebar" : "Expand sidebar"}>
+            {isOpen ? <PanelLeftClose size={18} aria-hidden="true" /> : <PanelLeftOpen size={18} aria-hidden="true" />}
           </button>
         )}
       </div>
 
-      <nav className={styles.nav}>
+      <nav className={styles.nav} aria-label="Main navigation">
+        <p className={styles.sectionLabel}>WORKSPACE</p>
         <ul className={styles.navList}>
-          {navItems.map((item) => (
-            <li key={item.href} className={styles.navItem}>
-              <Link
-                href={item.href}
-                className={`${styles.navLink} ${
-                  pathname === item.href ? styles.active : ""
-                }`}
-              >
-                <span className={styles.icon}>{item.icon}</span>
-                {isOpen && <span className={styles.label}>{item.label}</span>}
-              </Link>
-            </li>
-          ))}
+          {navItems.map(({ href, label, icon: Icon }) => {
+            const active = href === "/" ? pathname === "/" || pathname.startsWith("/pages/article/") : pathname.startsWith(href);
+            return (
+              <li key={href}>
+                <Link href={href} className={`${styles.navLink} ${active ? styles.active : ""}`} aria-label={label} aria-current={active ? "page" : undefined} title={label}>
+                  <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
+                  <span className={styles.label}>{label}</span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
       {user && (
         <div className={styles.userSection}>
-          {isOpen && (
-            <div className={styles.userInfo}>
-              <Link href="/pages/account" className={styles.accountLink}>
-                <span className={styles.userName}>{user.userName}</span>
-                <span className={styles.settingsIcon}>
-                  <Settings size={20} />
-                </span>
-              </Link>
-            </div>
-          )}
-          <button
-            onClick={handleLogout}
-            className={styles.logoutButton}
-            title={isOpen ? "退出登录" : "退出"}
-          >
-            <span className={styles.icon}>
-              <LogOut size={20} />
-            </span>
-            {isOpen && <span className={styles.label}>退出</span>}
+          <Link href="/pages/account" className={styles.accountLink} aria-label={`Account settings for ${user.userName}`} title="Account settings" aria-current={pathname === "/pages/account" ? "page" : undefined}>
+            <span className={styles.avatar} aria-hidden="true">{user.userName.slice(0, 1).toUpperCase()}</span>
+            <span className={styles.userInfo}><span className={styles.userName}>{user.userName}</span><span className={styles.userCaption}>Personal account</span></span>
+            <Settings size={17} className={styles.settingsIcon} aria-hidden="true" />
+          </Link>
+          <button onClick={handleLogout} className={styles.logoutButton} aria-label="Sign out" title="Sign out">
+            <LogOut size={18} strokeWidth={1.8} aria-hidden="true" />
+            <span className={styles.label}>Sign out</span>
           </button>
         </div>
       )}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
+import { Plus, X } from "lucide-react";
 import { Tag, AddTagRequest } from "@/types";
 import { articleApi } from "@/lib/api";
 import styles from "./TagManager.module.scss";
@@ -18,6 +19,7 @@ export default function TagManager({
   onTagsChange,
   compact = false,
 }: TagManagerProps) {
+  const tagInputId = useId();
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#3b82f6");
   const [isAdding, setIsAdding] = useState(false);
@@ -77,15 +79,16 @@ export default function TagManager({
         {tags.map((tag) => (
           <span
             key={tag.id}
-            className={`inline-block bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold ${styles.tag}`}
+            className={styles.tag}
           >
-            <span className="pr-2">{tag.name}</span>
+            <span className={styles.tagName}>{tag.name}</span>
             <button
-              className={`w-4 ${styles.removeBtn}`}
+              className={styles.removeBtn}
               onClick={() => handleRemoveTag(tag.id)}
-              title="Remove tag"
+              title={`Remove ${tag.name} tag`}
+              aria-label={`Remove ${tag.name} tag`}
             >
-              ×
+              <X size={12} aria-hidden="true" />
             </button>
           </span>
         ))}
@@ -95,8 +98,9 @@ export default function TagManager({
             onClick={() => setShowAddForm(true)}
             className={styles.addBtn}
             title="Add tag"
+            aria-expanded={showAddForm}
           >
-            + Add Tag
+            <Plus size={14} aria-hidden="true" /> Add tag
           </button>
         )}
       </div>
@@ -104,7 +108,10 @@ export default function TagManager({
       {showAddForm && (
         <form onSubmit={handleAddTag} className={styles.addForm}>
           <div className={styles.inputGroup}>
+            <label className={styles.inputLabel} htmlFor={tagInputId}>Tag name</label>
             <input
+              id={tagInputId}
+              autoFocus
               type="text"
               value={newTagName}
               onChange={(e) => setNewTagName(e.target.value)}
@@ -125,6 +132,8 @@ export default function TagManager({
                   }`}
                   style={{ backgroundColor: color }}
                   title={`Select ${color}`}
+                  aria-label={`Select ${color}`}
+                  aria-pressed={newTagColor === color}
                 />
               ))}
               <input
@@ -133,6 +142,7 @@ export default function TagManager({
                 onChange={(e) => setNewTagColor(e.target.value)}
                 className={styles.customColor}
                 title="Custom color"
+                aria-label="Custom tag color"
               />
             </div>
           </div>

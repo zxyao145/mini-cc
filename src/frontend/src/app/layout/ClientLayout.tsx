@@ -23,11 +23,12 @@ export default function ClientLayout({
       ) : (
         <ProtectedRoute>
           <div className={styles.layout}>
+            <a className="skip-link" href="#main-content">Skip to content</a>
             <Sidebar 
               isOpen={sidebarOpen} 
               onToggle={() => setSidebarOpen(!sidebarOpen)} 
             />
-            <main className={`${styles.content} ${sidebarOpen ? styles.sidebarOpen : styles.sidebarClosed}`}>
+            <main id="main-content" tabIndex={-1} className={`${styles.content} ${sidebarOpen ? styles.sidebarOpen : styles.sidebarClosed}`}>
               {children}
             </main>
           </div>
