@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import { PencilLine, Trash2 } from "lucide-react";
 import { highlightApi, articleApi } from "@/lib/api";
 import { Highlight } from "@/types";
 import styles from "./highlights.module.scss";
@@ -44,7 +45,7 @@ function HighlightCard({ highlight, onDelete, onUpdateNote }: HighlightCardProps
 
   return (
     <div className={styles.highlightCard}>
-      <div className={styles.highlightText} style={{ backgroundColor: highlight.color || '#ffeb3b' }}>
+      <div className={styles.highlightText} style={{ '--hl': highlight.color || '#ffeb3b' } as React.CSSProperties}>
         {highlight.text}
       </div>
       
@@ -79,6 +80,7 @@ function HighlightCard({ highlight, onDelete, onUpdateNote }: HighlightCardProps
               onClick={() => setIsEditing(true)}
               className={styles.editButton}
             >
+              <PencilLine size={14} aria-hidden="true" />
               {highlight.note ? 'Edit Note' : 'Add Note'}
             </button>
           </div>
@@ -99,8 +101,9 @@ function HighlightCard({ highlight, onDelete, onUpdateNote }: HighlightCardProps
           onClick={() => onDelete(highlight.id)}
           className={styles.deleteButton}
           title="Delete highlight"
+          aria-label="Delete highlight"
         >
-          ×
+          <Trash2 size={16} aria-hidden="true" />
         </button>
       </div>
     </div>

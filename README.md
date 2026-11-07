@@ -97,7 +97,7 @@ podman compose -f ./docker-compose.yaml up -d --build
    dotnet run
    ```
 
-The API will be available at `http://localhost:5000`.
+The API will be available at `http://localhost:5001`.
 
 ### Frontend Setup
 
@@ -113,7 +113,7 @@ The API will be available at `http://localhost:5000`.
 
 3. Update the API URL in `.env.local` if needed:
    ```
-   NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   NEXT_PUBLIC_API_URL=http://localhost:5001/api
    ```
 
 4. Run the development server:

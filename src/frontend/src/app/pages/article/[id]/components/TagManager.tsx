@@ -81,6 +81,7 @@ export default function TagManager({
             key={tag.id}
             className={styles.tag}
           >
+            <span className={styles.tagDot} style={{ backgroundColor: tag.color || "var(--text-muted)" }} aria-hidden="true" />
             <span className={styles.tagName}>{tag.name}</span>
             <button
               className={styles.removeBtn}

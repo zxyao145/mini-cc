@@ -14,7 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # Backend (src/backend/MiniCc.Api/)
 dotnet ef database update  # Apply migrations
-dotnet run                 # Start API (http://localhost:5000)
+dotnet run                 # Start API (http://localhost:5001)
 
 # Frontend (src/frontend/)
 pnpm install

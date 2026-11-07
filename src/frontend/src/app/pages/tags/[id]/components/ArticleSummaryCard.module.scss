@@ -3,18 +3,22 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
+  box-shadow: var(--card-shadow);
   overflow: hidden;
-  transition: all 0.2s ease;
+  transition: border-color var(--motion), box-shadow var(--motion);
   min-width: 0;
 
   &:hover {
-    border-color: var(--brand);
-    box-shadow: 0 4px 16px rgb(30 55 42 / 4%);
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-md);
   }
 
   &.archived {
-    opacity: 0.7;
     background: var(--surface-muted);
+
+    .title a {
+      color: var(--text-secondary);
+    }
   }
 }
 
@@ -73,23 +77,22 @@
 
 .favoriteIcon,
 .archiveIcon {
+  display: inline-flex;
   font-size: 13px;
-  opacity: 0.7;
 }
 
 .favoriteIcon {
-  color: var(--danger);
+  color: var(--favorite);
 }
 
 .archiveIcon {
-  color: #f39c12;
+  color: var(--text-muted);
 }
 
 .author {
   color: var(--text-secondary);
   font-size: 12px;
   margin: 0 0 0.5rem 0;
-  font-style: italic;
 }
 
 .summary {

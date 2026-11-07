@@ -16,10 +16,11 @@
   border: 1px solid var(--line-strong);
   border-radius: 8px;
   background: var(--surface);
+  box-shadow: var(--card-shadow);
   transition: border-color var(--motion), box-shadow var(--motion);
   &:focus-within {
     border-color: var(--brand);
-    box-shadow: 0 0 0 3px var(--brand-soft);
+    box-shadow: 0 0 0 3px var(--brand-ring);
   }
   input {
     flex: 1;
@@ -98,12 +99,12 @@
   }
   button:hover {
     color: var(--text-primary);
-    background: var(--line);
+    background: var(--surface-hover);
   }
   button[aria-pressed="true"] {
     color: var(--brand);
     background: var(--surface);
-    box-shadow: 0 1px 3px rgb(24 39 31 / 8%);
+    box-shadow: var(--shadow-sm);
   }
 }
 

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { TagWithArticles } from "@/types";
 import { tagApi } from "@/lib/api";
 import ArticleSummaryCard from "./ArticleSummaryCard";
@@ -93,14 +94,14 @@ export default function TagDetail({ tagId }: TagDetailProps) {
               onClick={() => router.back()}
               className={styles.backButton}
             >
-              ← Back to Tags
+              <ArrowLeft size={14} aria-hidden="true" /> Back to Tags
             </button>
             <button
               onClick={handleDeleteTag}
               className={styles.deleteButton}
               title="Delete tag"
             >
-              Delete Tag
+              <Trash2 size={14} aria-hidden="true" /> Delete Tag
             </button>
           </div>
         </div>

@@ -2,9 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFloating, autoUpdate, offset, flip, shift, arrow } from '@floating-ui/react';
+import { CircleCheck, Highlighter, Trash2, X } from 'lucide-react';
 import { articleApi } from '@/lib/api';
 import { Highlight } from '@/types';
 import styles from './HighlightManager.module.scss';
+
+const DEFAULT_HIGHLIGHT_COLOR = '#ffeb3b';
 
 interface HighlightManagerProps {
   articleId: string;
@@ -184,39 +187,20 @@ export default function HighlightManager({
           if (!range.collapsed) {
             const span = document.createElement('span');
             span.className = styles.highlight;
-            span.style.backgroundColor = highlight.color || '#ffeb3b';
-            span.style.padding = '2px 4px';
-            span.style.borderRadius = '3px';
-            span.style.cursor = 'pointer';
-            span.style.position = 'relative';
+            span.style.setProperty('--hl', highlight.color || DEFAULT_HIGHLIGHT_COLOR);
             span.setAttribute('data-highlight-id', highlight.id);
             span.title = highlight.note ? `Note: ${highlight.note}` : 'Click to delete highlight';
 
-            // Add note icon if note exists
-            if (highlight.note && highlight.note.trim()) {
-              const noteIcon = document.createElement('span');
-              noteIcon.className = styles.noteIcon;
-              noteIcon.innerHTML = '📝';
-              noteIcon.style.position = 'absolute';
-              noteIcon.style.top = '-8px';
-              noteIcon.style.right = '-8px';
-              noteIcon.style.fontSize = '12px';
-              noteIcon.style.background = 'white';
-              noteIcon.style.borderRadius = '50%';
-              noteIcon.style.width = '16px';
-              noteIcon.style.height = '16px';
-              noteIcon.style.display = 'flex';
-              noteIcon.style.alignItems = 'center';
-              noteIcon.style.justifyContent = 'center';
-              noteIcon.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)';
-              noteIcon.style.zIndex = '10';
-              noteIcon.style.pointerEvents = 'none';
-              
-              span.appendChild(noteIcon);
-            }
-
             try {
               range.surroundContents(span);
+              // Mark highlights that have a note. Appended after surroundContents, which
+              // clears the wrapper's children. The marker is empty so it adds no article text.
+              if (highlight.note && highlight.note.trim()) {
+                const noteIcon = document.createElement('span');
+                noteIcon.className = styles.noteIcon;
+                noteIcon.setAttribute('aria-hidden', 'true');
+                span.appendChild(noteIcon);
+              }
             } catch (e) {
               console.warn('Could not apply highlight:', e);
             }
@@ -342,7 +326,7 @@ export default function HighlightManager({
           const mergedNotes = allNotes.length > 0 ? allNotes.join('; ') : '';
           
           // 选择颜色（优先使用第一个相邻高亮的颜色）
-          const mergedColor = adjacentHighlights[0]?.color || '#ffeb3b';
+          const mergedColor = adjacentHighlights[0]?.color || DEFAULT_HIGHLIGHT_COLOR;
           
           console.log(`Merging highlights:`, {
             originalRanges: adjacentHighlights.map(h => `${h.startOffset}-${h.endOffset}`),
@@ -376,7 +360,7 @@ export default function HighlightManager({
           const newHighlight = await articleApi.addHighlight(articleId, {
             text: selectedText,
             note: '',
-            color: '#ffeb3b',
+            color: DEFAULT_HIGHLIGHT_COLOR,
             startOffset,
             endOffset
           });
@@ -409,31 +393,18 @@ export default function HighlightManager({
           style={tooltipStyles}
         >
           <button onClick={handleCreateHighlight} className={styles.highlightButton}>
-            💡 Highlight
+            <Highlighter size={15} aria-hidden="true" /> Highlight
           </button>
-          <button onClick={handleCancel} className={styles.cancelTooltipButton}>
-            ✕
+          <button onClick={handleCancel} className={styles.cancelTooltipButton} aria-label="Cancel" title="Cancel">
+            <X size={15} aria-hidden="true" />
           </button>
           <div ref={arrowRef} className={styles.tooltipArrow} />
         </div>
       )}
       
       {mergeNotification && (
-        <div 
-          className={styles.mergeNotification}
-          style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            background: '#4caf50',
-            color: 'white',
-            padding: '12px 16px',
-            borderRadius: '6px',
-            zIndex: 1002,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-          }}
-        >
-          ✅ {mergeNotification}
+        <div className={styles.mergeNotification} role="status">
+          <CircleCheck size={16} aria-hidden="true" /> {mergeNotification}
         </div>
       )}
       
@@ -452,7 +423,7 @@ export default function HighlightManager({
                 onClick={() => handleDeleteHighlight(clickedHighlight)}
                 className={styles.deleteButton}
               >
-                🗑️ Delete Highlight
+                <Trash2 size={15} aria-hidden="true" /> Delete Highlight
               </button>
               <button
                 onClick={() => setClickedHighlight(null)}

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { BookOpen } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import styles from './login.module.scss';
 
@@ -38,6 +39,10 @@ export default function LoginPage() {
   return (
     <div className={styles.container}>
       <div className={styles.loginBox}>
+        <div className={styles.brand}>
+          <span className={styles.brandMark}><BookOpen size={20} strokeWidth={1.8} aria-hidden="true" /></span>
+          <span>MiniCc<span className={styles.brandDot}>.</span></span>
+        </div>
         <h1 className={styles.title}>登录</h1>
         
         <form onSubmit={handleSubmit} className={styles.form}>
@@ -85,7 +90,7 @@ export default function LoginPage() {
             </label>
           </div>
 
-          {error && <div className={styles.error}>{error}</div>}
+          {error && <div className={styles.error} role="alert">{error}</div>}
 
           <button
             type="submit"

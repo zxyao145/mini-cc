@@ -26,7 +26,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
         alignItems: 'center', 
         height: '100vh',
         fontSize: '16px',
-        color: '#666'
+        color: 'var(--text-muted)'
       }}>
         加载中...
       </div>

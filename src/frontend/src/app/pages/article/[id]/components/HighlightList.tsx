@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ChevronDown, ChevronRight, PencilLine, Trash2 } from 'lucide-react';
 import { Highlight } from '@/types';
 import { articleApi, highlightApi } from '@/lib/api';
 import styles from './HighlightList.module.scss';
@@ -65,8 +66,8 @@ export default function HighlightList({ highlights, onHighlightsChange }: Highli
     <div className={styles.highlightList}>
       <div className={styles.header} onClick={() => setIsExpanded(!isExpanded)}>
         <h3>Highlights ({highlights.length})</h3>
-        <button className={styles.toggleButton}>
-          {isExpanded ? '▼' : '▶'}
+        <button className={styles.toggleButton} aria-expanded={isExpanded} aria-label={isExpanded ? 'Collapse highlights' : 'Expand highlights'}>
+          {isExpanded ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
         </button>
       </div>
       
@@ -76,11 +77,11 @@ export default function HighlightList({ highlights, onHighlightsChange }: Highli
             <div key={highlight.id} className={styles.highlightItem}>
               <div 
                 className={styles.highlightText}
-                style={{ backgroundColor: highlight.color || '#ffeb3b' }}
+                style={{ '--hl': highlight.color || '#ffeb3b' } as React.CSSProperties}
                 onClick={() => scrollToHighlight(highlight.id)}
                 title="Click to scroll to highlight"
               >
-                &quot;{highlight.text}&quot;
+                {highlight.text}
               </div>
               
               <div className={styles.highlightMeta}>
@@ -129,13 +130,13 @@ export default function HighlightList({ highlights, onHighlightsChange }: Highli
                   onClick={() => handleEditNote(highlight)}
                   className={styles.editButton}
                 >
-                  📝 {highlight.note ? 'Edit Note' : 'Add Note'}
+                  <PencilLine size={14} aria-hidden="true" /> {highlight.note ? 'Edit Note' : 'Add Note'}
                 </button>
                 <button
                   onClick={() => handleDeleteHighlight(highlight.id)}
                   className={styles.deleteButton}
                 >
-                  🗑️ Delete
+                  <Trash2 size={14} aria-hidden="true" /> Delete
                 </button>
               </div>
             </div>

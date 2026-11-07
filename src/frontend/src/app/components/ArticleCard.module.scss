@@ -5,10 +5,11 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+  box-shadow: var(--card-shadow);
   transition: border-color var(--motion), box-shadow var(--motion);
   &:hover {
     border-color: var(--line-strong);
-    box-shadow: 0 4px 16px rgb(30 55 42 / 4%);
+    box-shadow: var(--shadow-md);
   }
   &:focus-within {
     border-color: var(--line-strong);
@@ -176,7 +177,7 @@
   }
   &.deleteBtn:hover {
     background: var(--danger-soft);
-    color: var(--danger);
+    color: var(--danger-text);
   }
 }
 
