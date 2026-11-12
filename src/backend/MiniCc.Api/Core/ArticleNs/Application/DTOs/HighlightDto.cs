@@ -6,6 +6,7 @@ public class HighlightDto
     public string Text { get; set; } = string.Empty;
     public string Note { get; set; } = string.Empty;
     public string Color { get; set; } = string.Empty;
+    public MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.AnchorStatus AnchorStatus { get; set; }
     public int StartOffset { get; set; }
     public int EndOffset { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

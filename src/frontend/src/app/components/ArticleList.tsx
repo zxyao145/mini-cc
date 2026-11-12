@@ -2,15 +2,16 @@
 
 import { BookOpen } from "lucide-react";
 import ArticleCard from "./ArticleCard";
-import { Article } from "@/types";
+import { ArticleListItem } from "@/types";
 import styles from "./ArticleList.module.scss";
 
 interface ArticleListProps {
-  articles: Article[];
+  articles: ArticleListItem[];
   loading: boolean;
   onDelete: (id: string) => Promise<void>;
-  onUpdate?: (id: string, changes: Partial<Article>) => void;
+  onUpdate?: (id: string, changes: Partial<ArticleListItem>) => void;
   articleStyle: string;
+  selectionMode?: boolean; selected?: string[]; selectionDisabled?: boolean; onSelect?: (id: string) => void;
 }
 
 export default function ArticleList({
@@ -18,14 +19,14 @@ export default function ArticleList({
   loading,
   onDelete,
   onUpdate,
-  articleStyle,
+  articleStyle, selectionMode, selected, selectionDisabled, onSelect,
 }: ArticleListProps) {
   if (loading) {
     return (
       <div className={styles.container}>
         <div className={styles.loading} role="status">
           <div className={styles.spinner} aria-hidden="true"></div>
-          <p>Loading articles...</p>
+          <p>正在加载文章…</p>
         </div>
       </div>
     );
@@ -36,8 +37,8 @@ export default function ArticleList({
       <div className={styles.container}>
         <div className={styles.empty}>
           <BookOpen size={32} strokeWidth={1.5} className={styles.emptyIcon} aria-hidden="true" />
-          <h3>No articles found</h3>
-          <p>Save articles using the Chrome extension, then read and manage them here.</p>
+          <h3>没有找到文章</h3>
+          <p>使用浏览器插件保存文章，在这里阅读和管理。</p>
         </div>
       </div>
     );
@@ -55,6 +56,7 @@ export default function ArticleList({
           <ArticleCard
             key={article.id}
             article={article}
+            selectionMode={selectionMode} selected={selected?.includes(article.id)} selectionDisabled={selectionDisabled} onSelect={onSelect}
             layout={articleStyle === "list" ? "list" : "grid"}
             onDelete={onDelete}
             onUpdate={onUpdate}

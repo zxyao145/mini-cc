@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { PencilLine, Trash2 } from "lucide-react";
 import { highlightApi, articleApi } from "@/lib/api";
 import { Highlight } from "@/types";
+import { updateCachedArticle } from "@/lib/library-cache";
 import styles from "./highlights.module.scss";
 
 interface HighlightCardProps {
@@ -47,6 +48,7 @@ function HighlightCard({ highlight, onDelete, onUpdateNote }: HighlightCardProps
     <div className={styles.highlightCard}>
       <div className={styles.highlightText} style={{ '--hl': highlight.color || '#ffeb3b' } as React.CSSProperties}>
         {highlight.text}
+        {highlight.anchorStatus === "orphaned" && <p>原文位置已失效</p>}
       </div>
       
       <div className={styles.noteSection}>
@@ -133,7 +135,12 @@ export default function HighlightsPage() {
   const handleDeleteHighlight = async (highlightId: string) => {
     try {
       await highlightApi.deleteHighlight(highlightId);
-      setHighlights(highlights.filter(h => h.id !== highlightId));
+      setHighlights(current => {
+        const deleted = current.find(h => h.id === highlightId);
+        const remaining = current.filter(h => h.id !== highlightId);
+        if (deleted) updateCachedArticle(deleted.articleId, { highlightCount: remaining.filter(h => h.articleId === deleted.articleId).length });
+        return remaining;
+      });
     } catch (err) {
       console.error('Failed to delete highlight:', err);
     }

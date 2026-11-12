@@ -65,7 +65,7 @@ public class SaveArticleContentCommandHandlerTests
         result.Value.Id.Should().Be(existing.Id);
         existing.ReadableContent.Should().Be("old readable");
         _articles.Verify(r => r.AddAsync(It.IsAny<Article>(), It.IsAny<CancellationToken>()), Times.Never);
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -78,6 +78,36 @@ public class SaveArticleContentCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         _articles.Verify(r => r.AddAsync(It.IsAny<Article>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithCanonicalUrlInTrash_RestoresOriginalWithNotesAndState()
+    {
+        var command = new SaveArticleContentCommand("https://EXAMPLE.com/article/?utm_source=test#top", "new original", "new readable",
+            "New title", "", "", "");
+        var existing = _domainService.CreateArticleFromContent("https://example.com/article", "old original", "old readable", "Old title", "", "", "");
+        existing.SetFavorite(true);
+        existing.SetArchived(true);
+        existing.MarkRead(DateTimeOffset.UtcNow);
+        existing.ApplyProgress(new ReadingPosition(42, 3, .5, 70), "session", DateTimeOffset.UtcNow);
+        existing.AddHighlight(Highlight.Create(existing.Id, "old", "note", 0, 3));
+        existing.MoveToTrash(DateTimeOffset.UtcNow);
+        _articles.Setup(r => r.GetByUrlAsync("https://example.com/article", CancellationToken.None)).ReturnsAsync(existing);
+
+        var result = await CreateHandler().Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Id.Should().Be(existing.Id);
+        existing.DeletedAt.Should().BeNull();
+        existing.IsFavorite.Should().BeTrue();
+        existing.IsArchived.Should().BeTrue();
+        existing.ReadingStatus.Should().Be(ReadingStatus.Read);
+        existing.ProgressTextOffset.Should().Be(42);
+        existing.Highlights.Single().Note.Should().Be("note");
+        existing.ReadableContent.Should().Be("old readable");
+        existing.SavedFromExtensionAt.Should().NotBeNull();
+        _articles.Verify(r => r.AddAsync(It.IsAny<Article>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(CancellationToken.None), Times.Once);
     }
 
     private SaveArticleContentCommandHandler CreateHandler() => new(

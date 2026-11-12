@@ -1,0 +1,22 @@
+import { act } from 'react';
+import { createRoot, Root } from 'react-dom/client';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { articleApi, highlightApi } from '@/lib/api';
+import { Article, ArticleListItem, Highlight } from '@/types';
+import { clearLibraryCache, readLibraryCache, writeLibraryCache } from '@/lib/library-cache';
+import HighlightsPage from './page';
+vi.mock('@/lib/api', () => ({ articleApi: { getArticleById: vi.fn() }, highlightApi: { getHighlights: vi.fn(), deleteHighlight: vi.fn() } }));
+let root: Root, container: HTMLDivElement;
+beforeEach(() => { Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true }); clearLibraryCache(); vi.resetAllMocks(); container = document.createElement('div'); document.body.append(container); root = createRoot(container); });
+afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
+it('updates the cached article count after deleting a highlight from the global highlights page', async () => {
+  const rows = [{ id: 'a', highlightCount: 2, tags: [], deletedAt: null } as unknown as ArticleListItem];
+  writeLibraryCache('view=all', { items: rows, total: 1, nextCursor: null, savedAt: Date.now(), scrollY: 200, firstPageIds: ['a'] });
+  vi.mocked(articleApi.getArticleById).mockResolvedValue({ title: 'Article' } as Article);
+  vi.mocked(highlightApi.getHighlights).mockResolvedValue([{ id: 'h1', articleId: 'a', text: 'One', createdAt: '2026-11-08' }, { id: 'h2', articleId: 'a', text: 'Two', createdAt: '2026-11-08' }] as Highlight[]);
+  vi.mocked(highlightApi.deleteHighlight).mockResolvedValue();
+  await act(async () => root.render(<HighlightsPage />));
+  await act(async () => (container.querySelector('button[aria-label="Delete highlight"]') as HTMLButtonElement).click());
+  expect(highlightApi.deleteHighlight).toHaveBeenCalledWith('h1');
+  expect(readLibraryCache('view=all')?.items[0].highlightCount).toBe(1);
+});

@@ -47,3 +47,22 @@
     margin-bottom: 12px;
   }
 }
+
+.loadMore { display: flex; justify-content: center; padding: 24px 0;
+  button { display: flex; gap: 8px; align-items: center; min-height: 44px; padding: 10px 24px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--brand); font-size: 13px; }
+}
+.error { color: var(--danger-text); font-size: 13px; }
+.empty { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 64px 16px; color: var(--text-muted); text-align: center;
+  h2 { margin: 0; font-size: 18px; color: var(--text-secondary); }
+  p { margin: 0; font-size: 13px; }
+}
+.continue { margin-bottom: 24px;
+  h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 13px; color: var(--text-secondary); }
+  > div { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; }
+  a { display: flex; gap: 12px; align-items: center; flex: 0 0 230px; max-width: 85%; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--text-secondary); font-size: 13px; text-decoration: none; }
+  a span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  a span:last-child { color: var(--brand); margin-left: auto; }
+}
+.spinning { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 600px) { .sectionHeading { flex-wrap: wrap; gap: 6px; } }

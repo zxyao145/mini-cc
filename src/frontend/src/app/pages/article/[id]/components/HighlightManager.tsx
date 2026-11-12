@@ -3,8 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFloating, autoUpdate, offset, flip, shift, arrow } from '@floating-ui/react';
 import { CircleCheck, Highlighter, Trash2, X } from 'lucide-react';
-import { articleApi } from '@/lib/api';
+import { nearestAnchor } from '@/lib/highlight-anchor';
+import { articleApi, highlightApi } from '@/lib/api';
 import { Highlight } from '@/types';
+import { calculateTextOffset, getTextContent, textNodes } from '@/lib/text-offsets';
 import styles from './HighlightManager.module.scss';
 
 const DEFAULT_HIGHLIGHT_COLOR = '#ffeb3b';
@@ -130,6 +132,24 @@ export default function HighlightManager({
     };
   }, [hideTooltip, clickedHighlight, menuRefs, tooltipRefs]);
 
+  const latestHighlights = useRef({ highlights, onHighlightsChange });
+  latestHighlights.current = { highlights, onHighlightsChange };
+  useEffect(() => {
+    const content = document.querySelector('.readable-content') as HTMLElement | null;
+    if (!content) return;
+    let mounted = true;
+    const pending = highlights.filter(h => h.anchorStatus === 'pending');
+    const text = getTextContent(content);
+    if (pending.length) void Promise.allSettled(pending.map(async highlight => {
+      return highlightApi.anchor(highlight.id, nearestAnchor(text, highlight.text, highlight.startOffset));
+    })).then(results => {
+      if (!mounted) return;
+      const resolved = new Map(results.flatMap(result => result.status === 'fulfilled' ? [[result.value.id, result.value] as const] : []));
+      if (resolved.size) latestHighlights.current.onHighlightsChange(latestHighlights.current.highlights.map(h => resolved.has(h.id) ? { ...h, startOffset: resolved.get(h.id)!.startOffset, endOffset: resolved.get(h.id)!.endOffset, anchorStatus: resolved.get(h.id)!.anchorStatus } : h));
+    });
+    return () => { mounted = false; };
+  }, [articleId, highlights]);
+
   // Apply highlights to content
   useEffect(() => {
     const applyHighlights = () => {
@@ -149,30 +169,16 @@ export default function HighlightManager({
       // Apply new highlights
       if (highlights.length === 0) return;
 
-      const walker = document.createTreeWalker(
-        contentDiv,
-        NodeFilter.SHOW_TEXT
-      );
-
-      const textNodes: { node: Text; text: string; offset: number }[] = [];
-      let totalOffset = 0;
-      let node: Node | null;
-
-      while ((node = walker.nextNode())) {
-        const textNode = node as Text;
-        const text = textNode.textContent || '';
-        textNodes.push({ node: textNode, text, offset: totalOffset });
-        totalOffset += text.length;
-      }
+      const nodes = textNodes(contentDiv);
 
       // Sort highlights by start offset (reverse order for proper DOM manipulation)
-      const sortedHighlights = [...highlights].sort((a, b) => b.startOffset - a.startOffset);
+      const sortedHighlights = highlights.filter(h => !h.anchorStatus || h.anchorStatus === 'ok').sort((a, b) => b.startOffset - a.startOffset);
 
       sortedHighlights.forEach((highlight) => {
-        const startNode = textNodes.find(tn => 
+        const startNode = nodes.find(tn =>
           tn.offset <= highlight.startOffset && tn.offset + tn.text.length > highlight.startOffset
         );
-        const endNode = textNodes.find(tn => 
+        const endNode = nodes.find(tn =>
           tn.offset < highlight.endOffset && tn.offset + tn.text.length >= highlight.endOffset
         );
 
@@ -210,7 +216,10 @@ export default function HighlightManager({
     };
 
     // Apply highlights after a short delay to ensure DOM is ready
-    const timer = setTimeout(applyHighlights, 100);
+    const timer = setTimeout(() => {
+      applyHighlights();
+      document.querySelector('.readable-content')?.dispatchEvent(new Event('reader-highlights-rendered'));
+    }, 100);
     return () => clearTimeout(timer);
   }, [highlights]);
 
@@ -218,6 +227,7 @@ export default function HighlightManager({
     const tolerance = 5; // 允许5个字符的间隔也被视为相邻
     
     return highlights.filter(h => {
+      if (h.anchorStatus === 'pending' || h.anchorStatus === 'orphaned') return false;
       // 检查是否相邻或重叠
       return (
         // 新选择与现有高亮直接相邻
@@ -234,40 +244,6 @@ export default function HighlightManager({
         (h.startOffset <= startOffset && h.endOffset >= endOffset)
       );
     });
-  };
-
-  const calculateTextOffset = (contentDiv: HTMLElement, targetNode: Node, offset: number): number => {
-    const walker = document.createTreeWalker(
-      contentDiv,
-      NodeFilter.SHOW_TEXT
-    );
-
-    let textOffset = 0;
-    let node: Node | null;
-    
-    while ((node = walker.nextNode())) {
-      if (node === targetNode) {
-        return textOffset + offset;
-      }
-      textOffset += (node.textContent || '').length;
-    }
-    
-    return -1;
-  };
-
-  const getTextContent = (contentDiv: HTMLElement): string => {
-    // 获取纯文本内容，忽略HTML标签
-    const walker = document.createTreeWalker(
-      contentDiv,
-      NodeFilter.SHOW_TEXT
-    );
-
-    let textContent = '';
-    let node: Node | null;
-    while ((node = walker.nextNode())) {
-      textContent += node.textContent || '';
-    }
-    return textContent;
   };
 
   const handleDeleteHighlight = async (highlightId: string) => {

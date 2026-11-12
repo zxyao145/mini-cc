@@ -1,9 +1,10 @@
+import { ReaderPreferences } from "./reader-preferences";
 import axios from 'axios';
-import { Article, AddTagRequest, Highlight, Tag, TagWithArticleCount, TagWithArticles, LoginRequest, User, ApiKey, UpdateUserRequest, UpdatePasswordRequest, CreateApiKeyRequest, UpdateApiKeyRequest } from '@/types';
+import { Article, ArticleListItem, ArticleListPage, ArticleStatePatch, AddTagRequest, Highlight, Tag, TagWithArticleCount, LoginRequest, User, ApiKey, UpdateUserRequest, UpdatePasswordRequest, CreateApiKeyRequest, UpdateApiKeyRequest } from '@/types';
 
 axios.defaults.withCredentials = true;
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 console.debug("API_BASE_URL", API_BASE_URL);
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -14,16 +15,13 @@ const api = axios.create({
 });
 
 export const articleApi = {
-  async getArticles(page = 1, pageSize = 20, search?: string): Promise<Article[]> {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      pageSize: pageSize.toString(),
-    });
-    if (search) {
-      params.append('search', search);
-    }
-    
-    const response = await api.get(`/articles?${params}`);
+  async batch(ids: string[], action: import('./library-mutations').BatchAction, tagIds?: string[]): Promise<import('./library-mutations').BatchResult> {
+    return (await api.post('/articles/batch', { ids, action, tagIds })).data;
+  },
+  async emptyTrash(): Promise<{ purged: number }> { return (await api.delete('/trash')).data; },
+  async getLibrarySettings(): Promise<{ undoWindowSeconds: number; trashRetentionDays: number }> { return (await api.get('/settings/library')).data; },
+  async getArticles(params = new URLSearchParams(), signal?: AbortSignal): Promise<ArticleListPage> {
+    const response = await api.get(`/articles?${params}`, { signal });
     return response.data;
   },
 
@@ -41,13 +39,30 @@ export const articleApi = {
     await api.delete(`/articles/${id}`);
   },
 
-  async toggleFavorite(id: string): Promise<Article> {
-    const response = await api.post(`/articles/${id}/favorite`);
+  async updateState(id: string, patch: ArticleStatePatch): Promise<ArticleListItem> {
+    const response = await api.patch(`/articles/${id}/state`, patch);
     return response.data;
   },
 
-  async toggleArchive(id: string): Promise<Article> {
-    const response = await api.post(`/articles/${id}/archive`);
+  async saveProgress(id: string, request: import('./progress-writer').ProgressRequest, keepalive = false): Promise<import('./progress-writer').ProgressSaved> {
+    const response = await fetch(`${API_BASE_URL}/articles/${id}/progress`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      keepalive, body: JSON.stringify(request),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw { status: response.status, current: body.current };
+    }
+    return response.json();
+  },
+
+  async resetProgress(id: string, sessionId: string): Promise<import('./progress-writer').ProgressSaved> {
+    const response = await api.post(`/articles/${id}/progress/reset`, { sessionId });
+    return response.data;
+  },
+
+  async restoreArticle(id: string): Promise<ArticleListItem> {
+    const response = await api.post(`/articles/${id}/restore`);
     return response.data;
   },
 
@@ -81,18 +96,8 @@ export const tagApi = {
     return response.data;
   },
 
-  async getTagById(id: string): Promise<TagWithArticles> {
-    const response = await api.get(`/tags/${id}`);
-    return response.data;
-  },
-
-  async getTagArticles(id: string, page = 1, pageSize = 20): Promise<Article[]> {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      pageSize: pageSize.toString(),
-    });
-    
-    const response = await api.get(`/tags/${id}/articles?${params}`);
+  async getTagArticles(id: string, params = new URLSearchParams(), signal?: AbortSignal): Promise<ArticleListPage> {
+    const response = await api.get(`/tags/${id}/articles?${params}`, { signal });
     return response.data;
   },
 
@@ -102,6 +107,7 @@ export const tagApi = {
 };
 
 export const highlightApi = {
+  async anchor(id: string, anchor: import("./highlight-anchor").HighlightAnchor): Promise<Highlight> { return (await api.put(`/highlights/${id}/anchor`, anchor)).data; },
   async getHighlights(): Promise<Highlight[]> {
     const response = await api.get('/highlights');
     return response.data;
@@ -171,4 +177,19 @@ export const accessKeyApi = {
   async deleteApiKey(id: string): Promise<void> {
     await api.delete(`/apiKey/delete/${id}`);
   },
+};
+
+export const readerPreferencesApi = {
+  async get():Promise<ReaderPreferences> { return (await api.get("/account/reader-preferences")).data; },
+  async put(value:ReaderPreferences):Promise<ReaderPreferences> { return (await api.put("/account/reader-preferences",value)).data; },
+};
+
+export const feedApi = {
+  async list(): Promise<import('@/types').Feed[]> { return (await api.get('/feeds')).data; },
+  async preview(url: string): Promise<import('@/types').FeedPreview> { return (await api.post('/feeds/preview', { url })).data; },
+  async create(feedUrl: string, title: string, tagIds: string[]): Promise<{ feed: import('@/types').Feed; imported: number }> { return (await api.post('/feeds', { feedUrl, title, tagIds })).data; },
+  async edit(id: string, patch: { title?: string; tagIds?: string[]; paused?: boolean }): Promise<import('@/types').Feed> { return (await api.patch(`/feeds/${id}`, patch)).data; },
+  async refresh(id: string): Promise<{ imported: number; skipped: number; status: string; lastError: string | null }> { return (await api.post(`/feeds/${id}/refresh`)).data; },
+  async unsubscribe(id: string): Promise<void> { await api.delete(`/feeds/${id}`); },
+  async trash(id: string): Promise<{ trashed: number; skipped: number }> { return (await api.post(`/feeds/${id}/trash-articles`)).data; },
 };

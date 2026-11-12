@@ -23,6 +23,17 @@ public class HighlightsController : ApiControllerBase
         _logger = logger;
     }
 
+    public record AnchorRequest(int? StartOffset, int? EndOffset, bool Orphaned = false);
+    [HttpPut("{id:guid}/anchor")]
+    public async Task<IActionResult> Anchor(Guid id, AnchorRequest request, CancellationToken ct)
+    {
+        var command = new UpdateHighlightAnchor(id, request.StartOffset, request.EndOffset, request.Orphaned);
+        var validation = new UpdateHighlightAnchorValidator().Validate(command);
+        if (!validation.IsValid) return BadRequest(new { error = validation.ToString() });
+        var result = await _mediator.Send(command, ct);
+        return result.IsFailure ? NotFound(new { error = result.Error }) : Ok(result.Value);
+    }
+
     /// <summary>
     /// 获取所有高亮列表
     /// </summary>

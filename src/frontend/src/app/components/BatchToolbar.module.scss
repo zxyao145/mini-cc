@@ -1,0 +1,10 @@
+.bar { position: sticky; top: var(--app-header-offset, 0px); z-index: 25; border: 1px solid #b9d3c7; border-radius: 12px; padding: 12px; margin: 12px 0 20px; background: #f0f7f2; box-shadow: 0 3px 12px #203d2710; color: #264638;
+  button { min-height: 44px; padding: 8px 12px; border: 1px solid #ceded3; border-radius: 7px; background: #fff; font: inherit; color: inherit; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  p { margin: 8px 0; }
+}
+.summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; strong { font-size: 15px; } span { margin-right: auto; } }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-size: 13px; }
+.tags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; border: 1px solid #ceded3; border-radius: 8px; max-height: 220px; overflow: auto;
+  label { min-height: 44px; display: flex; align-items: center; gap: 8px; } }
+@media(max-width:767px) { .bar { padding: 8px; border-radius: 8px; } .summary { gap: 4px; } .summary span { flex-basis: calc(100% - 90px); } .actions button { flex-grow: 1; } }

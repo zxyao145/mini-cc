@@ -13,37 +13,39 @@ public class ArticleRepository : IArticleRepository
         _context = context;
     }
 
+    // Called inside the progress transaction: PostgreSQL holds this row lock until commit.
+    public Task<Article?> GetByIdForProgressUpdateAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _context.Articles.FromSqlInterpolated($"SELECT * FROM \"Articles\" WHERE \"Id\" = {id} AND \"DeletedAt\" IS NULL FOR UPDATE")
+            .SingleOrDefaultAsync(cancellationToken);
+
     public async Task<Article?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _context.Articles
             .Include(a => a.Tags)
             .Include(a => a.Highlights)
+            .Include(a => a.FeedEntries).ThenInclude(e => e.Feed)
+            .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
+    }
+
+    public async Task<Article?> GetByIdIncludingDeletedAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _context.Articles.IgnoreQueryFilters()
+            .Include(a => a.Tags)
+            .Include(a => a.Highlights)
+            .Include(a => a.FeedEntries).ThenInclude(e => e.Feed)
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
     }
 
     public async Task<Article?> GetByUrlAsync(string url, CancellationToken cancellationToken = default)
     {
-        return await _context.Articles
-            .FirstOrDefaultAsync(a => a.Url.Value == url, cancellationToken);
-    }
-
-    public async Task<IEnumerable<Article>> GetAllAsync(int page, int pageSize, string? search = null, CancellationToken cancellationToken = default)
-    {
-        var query = _context.Articles
+        return await _context.Articles.FromSqlInterpolated($"SELECT * FROM \"Articles\" WHERE \"NormalizedUrl\" = {url} ORDER BY \"CreatedAt\", \"Id\" LIMIT 1 FOR UPDATE").IgnoreQueryFilters()
             .Include(a => a.Tags)
             .Include(a => a.Highlights)
-            .AsQueryable();
-
-        if (!string.IsNullOrEmpty(search))
-        {
-            query = query.Where(a => a.SearchVector.Matches(search));
-        }
-
-        return await query
-            .OrderByDescending(a => a.CreatedAt)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(cancellationToken);
+            .Include(a => a.FeedEntries).ThenInclude(e => e.Feed)
+            .Where(a => a.NormalizedUrl == url)
+            .OrderBy(a => a.CreatedAt)
+            .ThenBy(a => a.Id)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<Article> AddAsync(Article article, CancellationToken cancellationToken = default)

@@ -24,80 +24,25 @@ public class ArticlesControllerTests
         _controller = new ArticlesController(_mediatorMock.Object, _loggerMock.Object);
     }
 
-    #region GetArticles Tests
-
     [Fact]
-    public async Task GetArticles_WithValidParameters_ShouldReturnOkResult()
+    public async Task GetArticles_ReturnsPageAndPassesFilters()
     {
-        // Arrange
-        var articles = new List<ArticleDto> { CreateTestArticleDto() };
-        var result = Result<IEnumerable<ArticleDto>>.Success(articles);
-
-        _mediatorMock
-            .Setup(m => m.Send(It.IsAny<GetArticlesQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(result);
-
-        // Act
-        var response = await _controller.GetArticles(1, 20, "test");
-
-        // Assert
-        var okResult = response.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().Be(articles);
-
-        _mediatorMock.Verify(m => m.Send(
-            It.Is<GetArticlesQuery>(q => q.Page == 1 && q.PageSize == 20 && q.Search == "test"),
-            It.IsAny<CancellationToken>()), Times.Once);
+        var request = new ArticleListRequest { View = "favorites", Q = "test" };
+        var page = new ArticleListPage([], 126, null);
+        _mediatorMock.Setup(m => m.Send(It.Is<GetArticleListQuery>(q => q.Request == request), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<ArticleListPage>.Success(page));
+        var response = await _controller.GetArticles(request);
+        response.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(page);
     }
 
     [Fact]
-    public async Task GetArticles_WithFailureResult_ShouldReturnBadRequest()
+    public async Task GetArticles_InvalidRequestReturnsBadRequest()
     {
-        // Arrange
-        var errorMessage = "Database error";
-        var result = Result<IEnumerable<ArticleDto>>.Failure(errorMessage);
-
-        _mediatorMock
-            .Setup(m => m.Send(It.IsAny<GetArticlesQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(result);
-
-        // Act
-        var response = await _controller.GetArticles();
-
-        // Assert
-        var badRequestResult = response.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequestResult.Value.Should().Be(errorMessage);
-
-        _loggerMock.Verify(
-            logger => logger.Log(
-                LogLevel.Error,
-                It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Error getting articles")),
-                null,
-                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
-            Times.Once);
+        _mediatorMock.Setup(m => m.Send(It.IsAny<GetArticleListQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<ArticleListPage>.Failure("Invalid view"));
+        (await _controller.GetArticles(new())).Result.Should().BeOfType<BadRequestObjectResult>();
     }
 
-    [Fact]
-    public async Task GetArticles_WithDefaultParameters_ShouldUseDefaultValues()
-    {
-        // Arrange
-        var articles = new List<ArticleDto>();
-        var result = Result<IEnumerable<ArticleDto>>.Success(articles);
-
-        _mediatorMock
-            .Setup(m => m.Send(It.IsAny<GetArticlesQuery>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(result);
-
-        // Act
-        await _controller.GetArticles();
-
-        // Assert
-        _mediatorMock.Verify(m => m.Send(
-            It.Is<GetArticlesQuery>(q => q.Page == 1 && q.PageSize == 20 && q.Search == null),
-            It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    #endregion
 
     #region GetArticle Tests
 
@@ -282,53 +227,48 @@ public class ArticlesControllerTests
 
     #endregion
 
-    #region ToggleFavorite Tests
-
     [Fact]
-    public async Task ToggleFavorite_WithValidId_ShouldReturnOkResult()
+    public async Task UpdateState_SendsExplicitValuesAndReturnsArticle()
     {
-        // Arrange
-        var articleId = Guid.NewGuid();
-        var article = CreateTestArticleDto();
-        var result = Result<ArticleDto>.Success(article);
+        var id = Guid.NewGuid();
+        var command = new UpdateArticleStateCommand { IsFavorite = false, ReadingStatus = "read" };
+        var article = new ArticleListItemDto { Id = Guid.NewGuid() };
+        _mediatorMock.Setup(m => m.Send(command, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<ArticleListItemDto>.Success(article));
 
-        _mediatorMock
-            .Setup(m => m.Send(It.IsAny<ToggleFavoriteCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(result);
+        var response = await _controller.UpdateState(id, command);
 
-        // Act
-        var response = await _controller.ToggleFavorite(articleId);
-
-        // Assert
-        var okResult = response.Result.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().Be(article);
-
-        _mediatorMock.Verify(m => m.Send(
-            It.Is<ToggleFavoriteCommand>(c => c.ArticleId == articleId),
-            It.IsAny<CancellationToken>()), Times.Once);
+        command.ArticleId.Should().Be(id);
+        response.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(article);
     }
 
     [Fact]
-    public async Task ToggleFavorite_WithNotFoundError_ShouldReturnNotFound()
+    public async Task UpdateState_MissingArticleReturnsNotFound()
     {
-        // Arrange
-        var articleId = Guid.NewGuid();
-        var errorMessage = "Article not found";
-        var result = Result<ArticleDto>.Failure(errorMessage);
-
-        _mediatorMock
-            .Setup(m => m.Send(It.IsAny<ToggleFavoriteCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(result);
-
-        // Act
-        var response = await _controller.ToggleFavorite(articleId);
-
-        // Assert
-        var notFoundResult = response.Result.Should().BeOfType<NotFoundObjectResult>().Subject;
-        notFoundResult.Value.Should().Be(errorMessage);
+        _mediatorMock.Setup(m => m.Send(It.IsAny<UpdateArticleStateCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<ArticleListItemDto>.Failure("article not found"));
+        var response = await _controller.UpdateState(Guid.NewGuid(), new() { IsArchived = true });
+        response.Result.Should().BeOfType<NotFoundObjectResult>();
     }
 
-    #endregion
+    [Fact]
+    public async Task UpdateState_ValidationFailureReturnsBadRequest()
+    {
+        _mediatorMock.Setup(m => m.Send(It.IsAny<UpdateArticleStateCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new FluentValidation.ValidationException("State patch is empty."));
+        var response = await _controller.UpdateState(Guid.NewGuid(), new());
+        response.Result.Should().BeOfType<BadRequestObjectResult>();
+    }
+
+    [Fact]
+    public async Task RestoreArticle_ReturnsRestoredArticle()
+    {
+        var article = new ArticleListItemDto { Id = Guid.NewGuid() };
+        _mediatorMock.Setup(m => m.Send(It.Is<RestoreArticleCommand>(c => c.ArticleId == article.Id), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result<ArticleListItemDto>.Success(article));
+        var response = await _controller.RestoreArticle(article.Id);
+        response.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(article);
+    }
 
     #region DeleteArticle Tests
 

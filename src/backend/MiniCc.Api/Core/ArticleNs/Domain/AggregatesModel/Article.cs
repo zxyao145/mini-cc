@@ -1,5 +1,6 @@
 ﻿using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects;
 using MiniCc.Api.Core.ArticleNs.Domain.Events;
+using MiniCc.Api.Core.ArticleNs.Domain.Services;
 using MiniCc.Api.Core.TagNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.TagNs.Domain.Events;
 using MiniCc.Api.Shared.Data.Common;
@@ -24,10 +25,24 @@ public class Article : AggregateRoot
     public DateTimeOffset? ReadAt { get; private set; }
     public bool IsArchived { get; private set; }
     public bool IsFavorite { get; private set; }
+    public ReadingStatus ReadingStatus { get; private set; }
+    public DateTimeOffset? LastReadAt { get; private set; }
+    public int? ProgressTextOffset { get; private set; }
+    public int? ProgressBlockIndex { get; private set; }
+    public double? ProgressBlockRatio { get; private set; }
+    public double? ProgressPercent { get; private set; }
+    public DateTimeOffset? ProgressUpdatedAt { get; private set; }
+    public string? ProgressSessionId { get; private set; }
+    public DateTimeOffset? DeletedAt { get; private set; }
+    public DateTimeOffset? PublishedAt { get; private set; }
+    public string NormalizedUrl { get; private set; } = "";
+    public ContentKind ContentKind { get; private set; }
+    public DateTimeOffset? SavedFromExtensionAt { get; private set; }
 
     [JsonIgnore]
     public NpgsqlTsVector SearchVector { get; private set; } = default!;
 
+    public virtual ICollection<MiniCc.Api.Core.FeedNs.Domain.FeedEntry> FeedEntries { get; set; } = new List<MiniCc.Api.Core.FeedNs.Domain.FeedEntry>();
     public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();
     public virtual ICollection<Highlight> Highlights { get; set; } = new List<Highlight>();
 
@@ -35,6 +50,7 @@ public class Article : AggregateRoot
                    string summary, string imageUrl) : base(id)
     {
         Url = url;
+        NormalizedUrl = UrlNormalizer.Normalize(url.Value);
         Title = title;
         Author = author;
         ReadableContent = content.ReadableContent;
@@ -77,26 +93,80 @@ public class Article : AggregateRoot
         AddDomainEvent(new ArticleUpdatedEvent(Id, Title));
     }
 
-    public void MarkAsRead()
+    public void SetFavorite(bool favorite)
     {
-        if (ReadAt == null)
-        {
-            ReadAt = DateTimeOffset.UtcNow;
-            AddDomainEvent(new ArticleReadEvent(Id, Title));
-        }
-    }
-
-    public void ToggleFavorite()
-    {
-        IsFavorite = !IsFavorite;
+        if (IsFavorite == favorite) return;
+        IsFavorite = favorite;
         AddDomainEvent(new ArticleFavoritedEvent(Id, Title, IsFavorite));
     }
 
-    public void ToggleArchive()
+    public void SetArchived(bool archived)
     {
-        IsArchived = !IsArchived;
+        if (IsArchived == archived) return;
+        IsArchived = archived;
         AddDomainEvent(new ArticleArchivedEvent(Id, Title, IsArchived));
     }
+
+    public void MarkRead(DateTimeOffset now)
+    {
+        ReadingStatus = ReadingStatus.Read;
+        if (ReadAt != null) return;
+        ReadAt = now;
+        AddDomainEvent(new ArticleReadEvent(Id, Title));
+    }
+
+    public void MarkUnread()
+    {
+        ReadingStatus = ReadingStatus.Unread;
+        ReadAt = null;
+    }
+
+    public void ApplyProgress(ReadingPosition position, string sessionId, DateTimeOffset now)
+    {
+        ProgressTextOffset = position.TextOffset;
+        ProgressBlockIndex = position.BlockIndex;
+        ProgressBlockRatio = position.BlockRatio;
+        ProgressPercent = position.Percent;
+        ProgressSessionId = sessionId;
+        ProgressUpdatedAt = now;
+        LastReadAt = now;
+        if (ReadingStatus == ReadingStatus.Unread) ReadingStatus = ReadingStatus.Reading;
+    }
+
+    public void ResetProgress(string? sessionId, DateTimeOffset now)
+    {
+        ProgressTextOffset = null;
+        ProgressBlockIndex = null;
+        ProgressBlockRatio = null;
+        ProgressPercent = null;
+        ProgressSessionId = sessionId;
+        ProgressUpdatedAt = now;
+    }
+
+    public void MoveToTrash(DateTimeOffset now) => DeletedAt ??= now;
+
+    public void Restore() => DeletedAt = null;
+
+    public void ReplaceContent(Content content, ContentKind kind)
+    {
+        OriginalContent = content.OriginalContent;
+        ReadableContent = content.ReadableContent;
+        Length = content.Length;
+        ContentKind = kind;
+    }
+
+    public void SetFeedContent(ContentKind kind, DateTimeOffset? publishedAt)
+    {
+        ContentKind = kind;
+        PublishedAt = publishedAt;
+    }
+
+    public void BackfillNormalizedUrl()
+    {
+        if (NormalizedUrl.Length == 0) NormalizedUrl = UrlNormalizer.Normalize(Url.Value);
+    }
+
+    public void MarkSavedFromExtension(DateTimeOffset now) => SavedFromExtensionAt ??= now;
 
     public void AddTag(Tag tag)
     {

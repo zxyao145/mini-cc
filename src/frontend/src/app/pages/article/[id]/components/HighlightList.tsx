@@ -82,6 +82,7 @@ export default function HighlightList({ highlights, onHighlightsChange }: Highli
                 title="Click to scroll to highlight"
               >
                 {highlight.text}
+                {highlight.anchorStatus === "orphaned" && <small> · 原文位置已失效</small>}
               </div>
               
               <div className={styles.highlightMeta}>

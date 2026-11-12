@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore;
 using MiniCc.Api.Core.ApiKeys.Domain.AggregatesModel;
 using MiniCc.Api.Core.ApiKeys.Infrastructure.Repositories;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
@@ -35,6 +36,10 @@ public class UnitOfWork : IUnitOfWork
     {
         return await _context.SaveChangesAsync(cancellationToken);
     }
+
+    // One transaction-scoped guard across feed imports, plugin saves and purge. Personal-scale writes are short.
+    public Task LockArticleCreationAsync(CancellationToken cancellationToken = default) =>
+        _context.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(70453125)", cancellationToken);
 
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {

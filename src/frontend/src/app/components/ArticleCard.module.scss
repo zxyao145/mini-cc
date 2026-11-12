@@ -1,4 +1,5 @@
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -231,3 +232,17 @@
     border-radius: 11px 11px 0 0;
   }
 }
+
+.readingState { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--text-muted); font-size: 12px;
+  > span { display: flex; align-items: center; gap: 5px; }
+  .archiveLabel { margin-left: 0; }
+}
+.unreadDot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }
+
+.selection { position: absolute; left: 8px; top: 8px; z-index: 2; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: #fffffff2; border: 1px solid #d2ddd5; border-radius: 8px; opacity: 0; cursor: pointer;
+ input { width: 20px; height: 20px; accent-color: #2e654d; cursor: pointer; } }
+.card:hover .selection, .card:focus-within .selection, .selectionVisible { opacity: 1; }
+.trashInfo { font-size: 12px; color: #6f6458; margin: 8px 0; }
+@media (hover: none) { .selection { display: none; } .selectionVisible { display: flex; opacity: 1; } }
+
+.actions[hidden] { display: none; }
