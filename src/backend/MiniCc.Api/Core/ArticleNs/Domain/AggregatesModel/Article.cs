@@ -37,6 +37,7 @@ public class Article : AggregateRoot
     public DateTimeOffset? PublishedAt { get; private set; }
     public string NormalizedUrl { get; private set; } = "";
     public ContentKind ContentKind { get; private set; }
+    public int ContentRevision { get; private set; }
     public DateTimeOffset? SavedFromExtensionAt { get; private set; }
 
     [JsonIgnore]
@@ -99,6 +100,17 @@ public class Article : AggregateRoot
         if (string.IsNullOrWhiteSpace(ImageUrl)) ImageUrl = imageUrl;
     }
 
+    public void RefreshMetadata(string title, string author, string summary, string imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+            throw new ArgumentException("Title cannot be null or empty", nameof(title));
+
+        Title = title.Trim();
+        if (!string.IsNullOrWhiteSpace(author)) Author = author;
+        if (!string.IsNullOrWhiteSpace(summary)) Summary = summary;
+        if (!string.IsNullOrWhiteSpace(imageUrl)) ImageUrl = imageUrl;
+    }
+
     public void SetFavorite(bool favorite)
     {
         if (IsFavorite == favorite) return;
@@ -159,6 +171,7 @@ public class Article : AggregateRoot
         ReadableContent = content.ReadableContent;
         Length = content.Length;
         ContentKind = kind;
+        ContentRevision++;
     }
 
     public void SetFeedContent(ContentKind kind, DateTimeOffset? publishedAt)

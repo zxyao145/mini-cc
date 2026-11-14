@@ -146,7 +146,10 @@ public class ArticlesController : ApiControllerBase
 
     [HttpPost("{id}/progress/reset")]
     public async Task<ActionResult<ProgressSaveDto>> ResetProgress(Guid id, [FromBody] ResetProgressRequest request) =>
-        await SaveProgress(new UpdateProgressCommand { ArticleId = id, SessionId = request.SessionId, Reset = true });
+        await SaveProgress(new UpdateProgressCommand
+        {
+            ArticleId = id, SessionId = request.SessionId, ContentRevision = request.ContentRevision, Reset = true
+        });
 
     private async Task<ActionResult<ProgressSaveDto>> SaveProgress(UpdateProgressCommand command)
     {
@@ -234,10 +237,11 @@ public class ArticlesController : ApiControllerBase
     }
 
     [HttpPost("{id}/highlights")]
-    public async Task<ActionResult<HighlightDto>> AddHighlight(Guid id, [FromBody] AddHighlightCommand command)
+    public async Task<ActionResult<HighlightDto>> AddHighlight(Guid id, [FromBody] AddHighlightCommand command,
+        CancellationToken cancellationToken = default)
     {
         command.ArticleId = id;
-        var result = await _mediator.Send(command);
+        var result = await _mediator.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -248,6 +252,8 @@ public class ArticlesController : ApiControllerBase
             return BadRequest(result.Error);
         }
 
-        return Ok(result.Value);
+        if (result.Value.ConflictingRevision is int revision)
+            return Conflict(new { current = new { contentRevision = revision } });
+        return Ok(result.Value.Highlight);
     }
 }

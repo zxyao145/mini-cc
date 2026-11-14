@@ -56,8 +56,9 @@ export default function Client(params: { id: string }) {
   const isLink = article?.contentKind === 'link';
   const patchArticle = useCallback((changes: Partial<Article>) => setArticle(current => current ? {
     ...current, ...changes,
-    // List/progress acknowledgements cannot change the kind of the body currently rendered.
+    // List/progress acknowledgements cannot change the version or kind of the body currently rendered.
     contentKind: changes.readableContent === undefined ? current.contentKind : changes.contentKind ?? current.contentKind,
+    contentRevision: changes.readableContent === undefined ? current.contentRevision : changes.contentRevision ?? current.contentRevision,
   } : current), []);
   const progress = useReadingProgress(isLink ? undefined : article, contentRef, patchArticle);
   const { preferences, beforeChange } = useReaderPreferences();
@@ -75,7 +76,7 @@ export default function Client(params: { id: string }) {
     try {
       await progress.withStateChange(async () => {
         const updated = await articleApi.updateState(article.id, patch);
-        progress.observeContentKind(updated.contentKind);
+        progress.observeContent({ contentKind: updated.contentKind });
         patchArticle(updated); updateCachedArticle(article.id, updated);
       }, patch.readingStatus === "unread");
     } catch { setActionError("文章状态更新失败，请重试。"); }
@@ -151,7 +152,7 @@ export default function Client(params: { id: string }) {
     <main className={`${styles.reader} reader article-detail${toc.headings.length ? ` ${styles.hasToc}` : ""}`} style={readerPreferenceStyle(preferences)} data-reader-theme={preferences.theme === "system" ? theme : preferences.theme}>
       <ReaderToolbar article={article} pending={pending} syncStatus={progress.syncStatus} onBack={back} onState={changeState} onReset={isLink ? undefined : reset} onDelete={remove} extra={isLink ? undefined : <><ReaderSettings /><ReaderTocButton toc={toc} /></>} />
       {actionError && <p className={styles.actionError} role="alert">{actionError}</p>}
-      {progress.contentChanged && <div className={styles.conflict} role="alert"><span>正文已补全，请刷新后继续阅读。旧正文的进度已暂停同步。</span><Button variant="secondary" size="sm" onClick={() => { sessionStorage.removeItem(`progress:${article.id}`); window.location.reload(); }}>刷新正文</Button></div>}
+      {progress.contentChanged && <div className={styles.conflict} role="alert"><span>正文已更新，请刷新后继续阅读。旧正文的进度已暂停同步。</span><Button variant="secondary" size="sm" onClick={() => { sessionStorage.removeItem(`progress:${article.id}`); window.location.reload(); }}>刷新正文</Button></div>}
       {!progress.contentChanged && progress.conflict && <div className={styles.conflict} role="alert">
         <span>已在其他设备读到 {Math.round(progress.conflict.percent || 0)}%</span>
         <Button variant="secondary" size="sm" onClick={() => progress.chooseConflict(true)}>跳转</Button>
@@ -198,6 +199,9 @@ export default function Client(params: { id: string }) {
       <div className={styles.articleContent}>
         <HighlightManager
           articleId={article.id}
+          bodyStale={progress.contentChanged}
+          contentRevision={article.contentRevision}
+          onContentChanged={progress.observeContent}
           highlights={article.highlights || []}
           onHighlightsChange={handleHighlightsChange}
         />

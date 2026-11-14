@@ -23,15 +23,18 @@ public class HighlightsController : ApiControllerBase
         _logger = logger;
     }
 
-    public record AnchorRequest(int? StartOffset, int? EndOffset, bool Orphaned = false);
+    public record AnchorRequest(int? StartOffset, int? EndOffset, bool Orphaned = false, int? ContentRevision = null);
     [HttpPut("{id:guid}/anchor")]
     public async Task<IActionResult> Anchor(Guid id, AnchorRequest request, CancellationToken ct)
     {
-        var command = new UpdateHighlightAnchor(id, request.StartOffset, request.EndOffset, request.Orphaned);
+        var command = new UpdateHighlightAnchor(id, request.StartOffset, request.EndOffset, request.Orphaned, request.ContentRevision);
         var validation = new UpdateHighlightAnchorValidator().Validate(command);
         if (!validation.IsValid) return BadRequest(new { error = validation.ToString() });
         var result = await _mediator.Send(command, ct);
-        return result.IsFailure ? NotFound(new { error = result.Error }) : Ok(result.Value);
+        if (result.IsFailure) return NotFound(new { error = result.Error });
+        if (result.Value.ConflictingRevision is int revision)
+            return Conflict(new { current = new { contentRevision = revision } });
+        return Ok(result.Value.Highlight);
     }
 
     /// <summary>

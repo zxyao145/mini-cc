@@ -24,6 +24,7 @@ export interface Article {
     publishedAt: string | null;
     normalizedUrl: string;
     contentKind: 'full' | 'summaryOnly' | 'link';
+    contentRevision: number;
     savedFromExtensionAt: string | null;
     isArchived: boolean;
     isFavorite: boolean;

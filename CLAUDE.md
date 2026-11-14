@@ -20,9 +20,12 @@ dotnet run                 # Start API (http://localhost:5001)
 pnpm install
 pnpm dev                   # Start Next.js (http://localhost:4000)
 
+# Content Handler SDK (src/content-handler/)
+pnpm install
+
 # Web Extension (src/web-extension/)
 pnpm install
-pnpm build                 # Build extension; load dist/ in Chrome
+pnpm build                 # Build extension, then load dist/ in Chrome
 ```
 
 ## Architecture Overview
@@ -30,7 +33,7 @@ pnpm build                 # Build extension; load dist/ in Chrome
 ### Microservices Architecture
 - **API**: ASP.NET Core 9.0 with Clean Architecture (CQRS + DDD)
 - **Frontend**: Next.js 15 App Router with TypeScript
-- **Chrome Extension**: Mozilla Readability + DOMPurify extract the loaded page; the website handles reading and management
+- **Chrome Extension**: The TypeScript content-handler SDK extracts the loaded page with site-specific DOM handling, Mozilla Readability and DOMPurify. The website handles reading and management.
 - **Database**: PostgreSQL 16 with Chinese text search
 - **Proxy**: Nginx routing (localhost:5000)
 
@@ -89,7 +92,7 @@ POST   /api/articles/{id}/highlights  # Add highlight
 ### Library State (P0)
 - Apply `M1_LibraryStateModel` before using the state API. Startup `DbSeeder` idempotently normalizes legacy URLs, including trashed articles.
 - Canonical URLs use standard escaped `Uri.AbsoluteUri` serialization, preserving encoded delimiters and the canonical root slash. Internal `NormalizedUrl` uses PostgreSQL `text` because normalization can expand an accepted 2000-character original URL; the external article URL API limit remains 2000. M3 also uses text for stored Article.Url and ImageUrl to preserve expanded feed-entry and cover URLs. Existing extension URL/image URL input limits remain 2000. Its nonunique hash index supports full-value equality without B-tree key-size limits or truncated keys.
-- Article and highlight global query filters hide trash; restoration and URL matching explicitly include it. Extension saves restore the oldest canonical URL match and retain existing full content, tags, highlights, notes, and state.
+- Article and highlight global query filters hide trash; restoration and URL matching explicitly include it. Extension saves restore the oldest canonical URL match and preserve tags, notes and library state. Saving an article refreshes metadata and replaces a changed full body. Apply `M4_ContentRevision` before deploying this version.
 - Favorite/archive/read toggle routes were removed. Use `PATCH /api/articles/{id}/state` with explicit values; `readingStatus` accepts `unread` or `read`. JSON enum values use camel case.
 - `Library:TrashRetentionDays` defaults to 30 (1–365); `Library:UndoWindowSeconds` defaults to 10 (3–60). Both validate on startup and support normal environment overrides such as `Library__TrashRetentionDays`.
 - State and restoration return `ArticleListItemDto`; detail and extension-save responses keep `ArticleDto`. Progress HTTP endpoints are documented under P2 below; trash cleanup is documented under P4 below.
@@ -105,13 +108,13 @@ POST   /api/articles/{id}/highlights  # Add highlight
 
 
 ### Reading Progress (P2)
-- `PUT /api/articles/{id}/progress` accepts `{ textOffset, blockIndex, blockRatio, percent, sessionId, baseUpdatedAt }`. It returns `{ progressUpdatedAt, readingStatus, lastReadAt, contentKind }`, 409 `{ current: { textOffset, blockIndex, blockRatio, percent, progressUpdatedAt } }` for a stale different-session base, 400 for invalid ranges/session, and 404 for missing/trashed articles.
-- `POST /api/articles/{id}/progress/reset` accepts `{ sessionId }`, clears only the position, preserves reading/archive/favorite state, and returns a new server version plus the body `contentKind` read under the same row lock. Both save/reset session IDs accept at most 64 characters, matching storage. Detail responses expose nullable `progress { textOffset, blockIndex, blockRatio, percent, updatedAt }`, `feeds` (distinct source IDs/titles), and `savedFromExtension`; flat progress fields, version, and session remain available even after reset.
+- `PUT /api/articles/{id}/progress` accepts `{ textOffset, blockIndex, blockRatio, percent, sessionId, baseUpdatedAt, contentRevision? }`. It returns `{ progressUpdatedAt, readingStatus, lastReadAt, contentKind, contentRevision }`. A stale different-session base or mismatched revision returns 409 with `{ current: { textOffset, blockIndex, blockRatio, percent, progressUpdatedAt, contentRevision } }`. Invalid input returns 400 and missing or trashed articles return 404.
+- `POST /api/articles/{id}/progress/reset` accepts `{ sessionId, contentRevision? }`, clears only the position and returns the new progress version, content kind and revision read under the article lock. A mismatched revision returns the same 409 snapshot as a progress save. Both endpoints accept session IDs up to 64 characters. Article details expose `contentRevision`, nullable `progress { textOffset, blockIndex, blockRatio, percent, updatedAt }`, distinct source IDs and titles in `feeds`, and `savedFromExtension`. Flat progress fields, version and session remain available after reset.
 - `UpdateProgressCommandHandler` owns an existing `IUnitOfWork` transaction and reads through `GetByIdForProgressUpdateAsync` (`SELECT … FOR UPDATE`) before checking/applying/saving. Different sessions cannot both accept the same stale base; unrelated state writes have no article-wide concurrency token. Server versions use PostgreSQL microsecond precision and strictly increase.
 - `lib/text-offsets.ts` provides UTF-16 offsets shared with highlights. `lib/reading-position.ts` enumerates innermost/atomic blocks plus anonymous inline runs; empty/image-only blocks have no text anchor and are ignored. Positions use a viewport 20% anchor and text-based percentages. `useReaderBlocks` recomputes offsets after body/highlight rendering; resize reads geometry only.
 - The reader starts at the saved anchor (or top), corrects image movement for two seconds until user intent, and saves only after visible, active scrolling reaches 2% or block 2 and dwells for three seconds. Programmatic restoration cannot start reading; real input takes precedence over restoration and block-ref replacement preserves dwell. The memoized `ReadableContent` prevents status renders from replacing highlighted DOM. Decorations are tested to preserve concatenated article text.
 - `useReadingProgress` uses one page session and `ProgressWriter` serializes/coalesces PUTs, reset, and explicit state acknowledgements. Before marking unread, already-qualified pending progress must finish successfully; an unresolved failure/conflict blocks that action, and the hook cancels old dwell and requires fresh scrolling afterward. Saves start at most every five seconds; hidden/pagehide/unmount flushes use credentialed JSON `fetch` with `keepalive`. A queued later position stays persisted while an earlier request finishes, then flushes in order. Browser termination can stop that continuation; stored pending data is retried on reopening with its original base and the new page session.
-- Failed progress lives in `sessionStorage` at `progress:{id}` and retries after 2/5/15/30 seconds while visible. Network/5xx failures remain “进度暂未同步”; only a successful acknowledgement clears the matching pending data. A 409 pauses automatic writes until “跳转” (discard pending and restore server anchor) or “留在这里” (explicitly adopt server base). Visibility restoration fetches detail before resuming retries, checks current visibility when that request finishes, compares full server fractional precision, and never silently rebases failed data.
+- Failed progress lives in `sessionStorage` at `progress:{id}` with the loaded body revision and retries after 2/5/15/30 seconds while visible. A same-body 409 pauses automatic writes until “跳转” restores the server anchor or “留在这里” adopts the server base. Visibility and focus revalidate the body before resuming retries. When the revision changes, the reader discards stale pending coordinates, pauses progress and highlight re-anchoring, and shows “刷新正文”.
 - Reader actions merge acknowledged list metadata into detail without losing body/highlights, then patch library caches. Read/unread, favorite, archive, reset, deletion, back navigation, a text progress bar, synchronization status, and a dismissible end prompt are available. The sticky toolbar/conflict choices measure the mobile application header and toolbar heights; mobile actions retain44px touch targets. No automatic completion; reader preferences/settings and the table of contents are documented under P3 below.
 - `e2e/reading-progress.spec.ts` creates and soft-deletes only its own temporary long articles. It covers active dwell/open-only, desktop/mobile/24px geometry restoration, independent state/reset, two sessions/conflict choices, failed-save recovery, and the end prompt. The original 65-article library fixture is retained.
 
@@ -168,15 +171,28 @@ pnpm lint                      # ESLint check
 pnpm test                      # Vitest + happy-dom component regressions
 ```
 
-### Web Extension
+### Content Handler SDK
+
+Run from `src/content-handler`. The SDK takes a `Document` and clones it before site-specific DOM handling. It preserves the original HTML and uses a caller-supplied fetch for URL hooks. Markdown extraction is synchronous.
+
 ```bash
-pnpm install                   # Install dependencies
+pnpm install
+pnpm test                      # jsdom extraction and URL handler tests
+pnpm typecheck
+pnpm lint
+```
+
+### Web Extension
+
+The extension links to `@minicc/content-handler` through `link:../content-handler`. Run `pnpm install` in both packages. See the [extension setup](src/web-extension/README.md#installation) for the pnpm 12 install option.
+
+```bash
+pnpm install
 pnpm dev                       # Development build with watch
 pnpm build                     # Production build
-pnpm lint                      # ESLint check
-pnpm test                      # Vitest + happy-dom component regressions
-pnpm test                      # Extraction and background messaging tests
-pnpm typecheck                 # TypeScript check
+pnpm lint
+pnpm test                      # Popup, background and clipboard tests
+pnpm typecheck
 ```
 
 ### Docker Development
@@ -237,16 +253,16 @@ podman compose -f ./docker-compose.yaml down
 - `FeedParser` uses Syndication with DTD ignored and no XML resolver, RSS2/Atom content precedence (Atom text/default content and summaries are HTML-encoded for literal rendering while OriginalContent stays raw), valid http/https links, nullable malformed dates, ttl/syndication intervals, safe Unicode field limits, summary classification, HtmlSanitizer and signed image rewriting. Feed/site/entry/link/content and nested XHTML xml:base values inherit in order; empty bases inherit rather than reset. Content without an explicit base keeps the entry URL fallback. `feeds` HttpClient follows at most five redirects. A linked 20-second deadline includes streamed body reading; byte counting aborts above 10MB. Byte decoding honors BOM first, then explicit HTTP charset, then XML declaration/default before string conversion. HTML discovery follows one alternate RSS/Atom link.
 - `FeedRefreshWorker` ticks every 60 seconds, atomically claims at most four due rows using SKIP LOCKED and a five-minute lease plus ownership token, then runs independent scopes concurrently. Completion locks and rechecks current status/ownership/expiry before importing or changing metadata; acknowledged pause/unsubscribe revokes in-flight work. Success/304 clears failures; supplied 304 ETag/LastModified headers replace stored validators while omitted ones are retained; 429/503 honors Retry-After and failures back off 30 minutes to 24 hours. Caller cancellation propagates and conditionally releases only its own lease.
 - Imports are one transaction per feed with a feed-row lock, and a short shared transaction advisory guard for canonical article creation across feeds and plugin saves. Same-feed entry writes serialize before identity lookup; no swallowed unique exception can poison a transaction. Existing article content/tags/state are never changed by feed updates, and trash is never restored. Every permanent-deletion path dismisses linked entries through ArticlePurger.
-- Plugin SummaryOnly→Full saves lock the earliest canonical article, preserve state/tags/notes, replace content once, reset progress with a strictly newer microsecond version and mark all highlights Pending. Full saves only set SavedFromExtensionAt when absent (and restore trash when needed). `PUT /api/highlights/{id}/anchor` accepts offsets or `{ orphaned: true }`, updates Pending only, and returns the acknowledged HighlightDto. Reader UTF-16 text matching chooses the closest occurrence; only acknowledged Ok anchors render, and orphan notes remain visible. List-metadata patches keep the loaded body and its content kind together. A state response reporting completion immediately pauses old-body work; reset acknowledgements include the locked row body kind, which is checked before adopting a new version/session (an unprovable kind requires refresh). A captured loaded kind also protects the 409/Stay path. An open summary reader detects replacement on visibility refresh or conflict choice and pauses obsolete coordinates until the user reloads the full body. Persisted failed progress records its content kind; reopening Full discards a pending SummaryOnly position instead of allowing a 409/Stay action to rebase coordinates from the replaced body.
+- Saving a feed summary through the extension replaces its body and fills missing metadata. The reader matches Pending highlights against the refreshed body using UTF-16 text offsets. `PUT /api/highlights/{id}/anchor` applies offsets or `{ orphaned: true }` to Pending highlights and accepts `contentRevision`. Creating a highlight accepts the same optional revision. Both highlight operations return 409 with the current revision when it differs from the loaded body. Orphaned notes remain visible.
 - `FeedsProvider` loads after authentication, refreshes every five minutes and after subscription/library mutations. `/pages/feeds` supplies two-step preview/confirmation, default tags, editing, pause/resume, manual refresh and confirmed unsubscribe/trash actions. A scanned `ArticleFeedMapping : IRegister` supplies feed metadata to the injected ArticleDto mapper; detail, extension-save and metadata-update responses share it. Explicit `source=extension` plus `feedId` is an AND filter in both URL parsing and the backend. Choosing RSS in the library exposes a per-feed selector with an all-feeds option; changing it preserves view/search/tags/status/dates/sort. Library feed filters/source projections remain body-free; reader source metadata and the summary banner use the same article state and caches.
 - Verification: backend tests include real PostgreSQL storage/concurrent imports, plugin races, stale leases, pause/unsubscribe during fetch, 304/backoff, Unicode boundaries and real HTTP API status/state preservation; fetch tests include a real fast-header/stalled-body 20-second deadline. `e2e/feeds.spec.ts` uses unique mock run URLs, returned article IDs and finally cleanup so the 65-article baseline remains intact. Final P5 verification: actual .NET 9 + PostgreSQL backend 327/327, frontend 89/89, TypeScript exit 0, EF model alignment, real HTTP lifecycle and isolated production `next build --no-lint` exit 0. Scoped `eslint src e2e --ignore-pattern src/app/pages/account/page.tsx` passed with the existing ArticleCard image warning. The complete 42-case Chromium suite (38 prior + 4 P5) passed at 1280×800 and 375×812 in 2.2 minutes. Parent screenshot review verified source text, resolved/orphaned notes, bounded desktop navigation and the 126px mobile header. The 65 original active article IDs remained intact. P5 phase review and final whole-branch review are approved; final correction-wave evidence follows below. Evidence is recorded in the P5 implementation report.
 
 ### Saved Links and Markdown Copy
 - `ContentKind.Link = 2` serializes as `"link"` and stores empty original and readable content. The existing schema supports it.
-- `POST /api/articles/link` requires an HTTP(S) URL and title. The saved address is the page's original `document.URL`. The existing `UrlNormalizer` handles deduplication, keeping YouTube playlist parameters distinct. Link saves restore existing matches and preserve their content, metadata, and state. Full content saves upgrade `Link` and `SummaryOnly` matches, fill empty author, summary, and cover fields, and preserve tags, notes, and library state.
+- `POST /api/articles/link` requires an HTTP(S) URL and title. The saved address is the page's original `document.URL`. The existing `UrlNormalizer` handles deduplication, keeping YouTube playlist parameters distinct. Link saves restore existing matches and preserve their content, metadata, and state. Full content saves upgrade `Link` and `SummaryOnly` and fill missing metadata. Re-saving a `Full` article refreshes the title and any nonempty author, summary and cover. A changed body after image-proxy rewriting increments `contentRevision`, resets progress with a strictly newer version, and marks highlights Pending. An identical body keeps progress, highlights and the revision.
 - Link details show the domain, save date, available cover and summary, and an original-page button. Reading progress saves, resets, and new highlights on links return 400.
 - The popup shows both `Save Article` and `Save Link`; the user chooses. Extraction returns `PageChoices { suggested, article, link }`: classification only picks the highlighted primary button, and `Save Article` is disabled when Readability finds no content. Settings open from the top-right gear icon.
-- After in-page navigation changes the URL beyond the fragment, classification, link extraction, and Markdown skip head metadata and JSON-LD. A link uses the current document title and can derive a fallback cover from a YouTube watch or Shorts video ID. A Chrome test of a YouTube video-to-video navigation observed the previous video's `og:title` in the same document after navigation. The destination showed a sign-in challenge and set `document.title` to `YouTube`. The `hqdefault.jpg` fallback displayed without visible letterboxing in the tested desktop and mobile library cards.
+- After an in-page navigation changes the URL beyond the fragment, extraction skips stale head metadata. The YouTube popup requests oEmbed for supported video, Shorts and playlist links with a five-second deadline. It uses the extracted metadata and the watch/Shorts thumbnail fallback when oEmbed is unavailable.
 - `Copy Markdown` writes YAML front matter and the converted article or one Markdown link to the clipboard. It includes `title`, `url`, the local `date`, and any available `author` and page `tags`. Article conversion uses Readability, DOMPurify, `turndown`, and `turndown-plugin-gfm`. The extension declares `clipboardWrite`.
 
 ## Testing
@@ -257,7 +273,8 @@ test/
 ├── backend/
 │   └── MiniCc.Api.Test/        # API, article persistence, image signing tests
 
-src/web-extension/test/        # Real-DOM extraction and background messaging tests
+src/content-handler/test/       # Site fixtures and SDK regressions
+src/web-extension/test/        # Popup, background and clipboard tests
 ```
 
 ### Testing Framework

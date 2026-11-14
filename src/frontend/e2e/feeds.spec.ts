@@ -120,7 +120,7 @@ test('plugin completes an open summary, preserves notes and state, then resolves
   const upgraded = await page.request.post('/api/articles/content', { data: { url: summary.url, title: 'Full body', originalContent: body, readableContent: body } });
   expect(upgraded.status()).toBe(201); const detail = await upgraded.json(); expect(detail.highlights.every((h: { anchorStatus: string }) => h.anchorStatus === 'pending')).toBe(true);
   await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-  await expect(page.getByText('正文已补全，请刷新后继续阅读。旧正文的进度已暂停同步。')).toBeVisible();
+  await expect(page.getByText('正文已更新，请刷新后继续阅读。旧正文的进度已暂停同步。')).toBeVisible();
   await page.getByRole('button', { name: '刷新正文', exact: true }).click(); await expect(page.locator('.readable-content')).toContainText('New Temporary full body.');
   await expect(page.locator('.reader-summary-banner')).toHaveCount(0);
   await expect(page.locator('[data-highlight-id]')).toHaveCount(1);
@@ -154,14 +154,14 @@ test('unseen completion during reset or state change keeps the loaded summary pa
       await page.route(resetPath, async route => { await upgrade(); await route.continue(); });
       const acknowledgement = page.waitForResponse(response => response.url().endsWith(`/articles/${summary.id}/progress/reset`));
       await page.getByRole('button', { name: '从头阅读', exact: true }).click();
-      const reset = await acknowledgement; expect(reset.ok()).toBe(true); expect((await reset.json()).contentKind).toBe('full');
+      const reset = await acknowledgement; expect(reset.status()).toBe(409); expect((await reset.json()).current.contentRevision).toBeGreaterThan(0);
       await page.unroute(resetPath);
     } else {
       await upgrade();
       await page.getByRole('button', { name: '加入收藏', exact: true }).click();
       await expect(page.getByRole('button', { name: '取消收藏', exact: true })).toBeVisible();
     }
-    await expect(page.getByText('正文已补全，请刷新后继续阅读。旧正文的进度已暂停同步。')).toBeVisible();
+    await expect(page.getByText('正文已更新，请刷新后继续阅读。旧正文的进度已暂停同步。')).toBeVisible();
     await expect(page.locator('.reader-summary-banner')).toBeVisible();
     await expect(page.locator('.readable-content')).toHaveText(oldText!);
     await expect(page.getByRole('button', { name: '留在这里', exact: true })).toHaveCount(0);

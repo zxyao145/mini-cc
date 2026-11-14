@@ -1,6 +1,6 @@
+import { assertHttpPageUrl, mergeOverrides, preHandleUrl, type ExtractedPage, type PageChoices } from '@minicc/content-handler';
 import { copyText } from './clipboard';
-import { assertHttpPageUrl } from './page-meta';
-import { DEFAULT_API_URL, type ExtractedPage, type PageChoices, type SavePageResponse } from './types';
+import { DEFAULT_API_URL, type SavePageResponse } from './types';
 
 type PageKind = ExtractedPage['kind'];
 const PAGE_KINDS: PageKind[] = ['article', 'link'];
@@ -113,8 +113,10 @@ class PopupManager {
 
       const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractContent' });
       if (response.success) {
-        this.choices = response.content;
-        this.displayPreview(response.content);
+        const choices: PageChoices = response.content;
+        const overrides = await preHandleUrl(choices.link.url, { fetch: (...args) => fetch(...args) });
+        this.choices = overrides ? mergeOverrides(choices, overrides) : choices;
+        this.displayPreview(this.choices);
         this.hideStatus();
       } else {
         throw new Error(response.error || 'Failed to extract content');

@@ -1,8 +1,8 @@
 import { isArticlePage } from './classify-page';
 import { extractArticle } from './extract-article';
 import { assertHttpPageUrl, extractImageUrl, isMetaTrusted, metaContent, pageAuthor, pageTitle, youtubeVideoId } from './page-meta';
-import { parseReadable } from './readable';
-import { ARTICLE_LIMITS, type LinkPage, type PageChoices } from './types';
+import { applyOverrides, readDocument } from './prepare';
+import { ARTICLE_LIMITS, type LinkPage, type PageChoices, type SiteHandler } from './types';
 
 function extractLink(document: Document, metaTrusted: boolean): LinkPage {
   const url = document.URL;
@@ -32,14 +32,15 @@ function extractLink(document: Document, metaTrusted: boolean): LinkPage {
   };
 }
 
-export function extractPage(document: Document, loadedUrl: string): PageChoices {
+export function extractPage(document: Document, loadedUrl: string, handlers?: readonly SiteHandler[]): PageChoices {
   assertHttpPageUrl(document.URL);
 
   const metaTrusted = isMetaTrusted(loadedUrl, document.URL);
-  const link = extractLink(document, metaTrusted);
-  const readable = parseReadable(document);
+  const fallbackLink = extractLink(document, metaTrusted);
+  const { readable, overrides } = readDocument(document, 'save', handlers);
+  const link = applyOverrides(fallbackLink, overrides);
   if (!readable) return { suggested: 'link', article: null, link };
 
-  const suggested = isArticlePage(document, readable, metaTrusted) ? 'article' : 'link';
-  return { suggested, article: extractArticle(document, readable), link };
+  const suggested = overrides.suggested ?? (isArticlePage(document, readable, metaTrusted) ? 'article' : 'link');
+  return { suggested, article: applyOverrides(extractArticle(document, readable), overrides), link };
 }

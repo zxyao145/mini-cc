@@ -182,6 +182,7 @@ public class LibraryPostgresTests(PostgresFixture fixture)
         legacy.Single(a => a.Id == readId).ReadingStatus.Should().Be(ReadingStatus.Read);
         legacy.Single(a => a.Id == unreadId).ReadingStatus.Should().Be(ReadingStatus.Unread);
         legacy.Should().OnlyContain(a => a.SavedFromExtensionAt == a.CreatedAt && a.NormalizedUrl == "");
+        legacy.Should().OnlyContain(a => a.ContentRevision == 0);
         var seeder = new DbSeeder(db);
         await seeder.InitAsync();
         await seeder.InitAsync();

@@ -51,7 +51,7 @@ public partial class LibraryApiTests(PostgresFixture fixture)
     }
 
     [Fact]
-    public async Task ExtensionSave_RestoresCanonicalMatchAndPreservesContentNotesTagsAndProgress()
+    public async Task ExtensionResave_TrashedFull_RestoresAndReplaces()
     {
         var article = await fixture.SeedArticleAsync(a =>
         {
@@ -80,15 +80,135 @@ public partial class LibraryApiTests(PostgresFixture fixture)
         json.GetProperty("deletedAt").ValueKind.Should().Be(JsonValueKind.Null);
         json.GetProperty("savedFromExtensionAt").ValueKind.Should().Be(JsonValueKind.String);
         json.GetProperty("readingStatus").GetString().Should().Be("read");
-        json.GetProperty("progressTextOffset").GetInt32().Should().Be(17);
+        json.GetProperty("progress").ValueKind.Should().Be(JsonValueKind.Null);
+        json.GetProperty("progressUpdatedAt").GetDateTimeOffset().Should().BeAfter(article.ProgressUpdatedAt!.Value);
         json.GetProperty("isFavorite").GetBoolean().Should().BeTrue();
         json.GetProperty("isArchived").GetBoolean().Should().BeTrue();
-        json.GetProperty("title").GetString().Should().Be("Title");
-        json.GetProperty("readableContent").GetString().Should().Be("readable");
+        json.GetProperty("title").GetString().Should().Be("Replacement title");
+        json.GetProperty("readableContent").GetString().Should().Be("replacement readable");
+        json.GetProperty("contentRevision").GetInt32().Should().Be(article.ContentRevision + 1);
         json.GetProperty("tags").GetArrayLength().Should().Be(1);
         json.GetProperty("highlights")[0].GetProperty("note").GetString().Should().Be("retained note");
+        json.GetProperty("highlights")[0].GetProperty("anchorStatus").GetString().Should().Be("pending");
         await using var db = fixture.CreateContext();
         (await db.Articles.CountAsync(a => a.NormalizedUrl == article.NormalizedUrl)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ExtensionResave_FullWithNewBody_ReplacesContentAndPreservesState()
+    {
+        using var factory = CreateFactory();
+        using var client = AuthenticatedClient(factory);
+        var url = $"https://example.com/{Guid.NewGuid()}";
+        const string savePath = "/api/articles/content";
+        var saved = await client.PostAsJsonAsync(savePath, new { url, title = "First", originalContent = "first original", readableContent = "first body" });
+        saved.StatusCode.Should().Be(HttpStatusCode.Created);
+        var original = await saved.Content.ReadFromJsonAsync<JsonElement>();
+        var id = original.GetProperty("id").GetGuid();
+        var detailPath = $"/api/articles/{id}";
+        var tag = Tag.Create(Guid.NewGuid().ToString());
+        await using (var db = fixture.CreateContext())
+        {
+            var article = await db.Articles.SingleAsync(a => a.Id == id);
+            db.Tags.Add(tag);
+            article.AddTag(tag);
+            db.Highlights.Add(Highlight.Create(id, "first", "keep note", 0, 5));
+            article.SetFavorite(true);
+            await db.SaveChangesAsync();
+        }
+        var progress = await client.PutAsJsonAsync(detailPath + "/progress", new { sessionId = "old", textOffset = 5 });
+        progress.StatusCode.Should().Be(HttpStatusCode.OK);
+        var version = (await progress.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("progressUpdatedAt").GetDateTimeOffset();
+
+        var replaced = await client.PostAsJsonAsync(savePath, new { url, title = "Second", originalContent = "second original", readableContent = "second body" });
+        replaced.StatusCode.Should().Be(HttpStatusCode.Created);
+        (await replaced.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid().Should().Be(id);
+        var detail = await client.GetFromJsonAsync<JsonElement>(detailPath);
+        detail.GetProperty("title").GetString().Should().Be("Second");
+        detail.GetProperty("readableContent").GetString().Should().Be("second body");
+        detail.GetProperty("contentRevision").GetInt32().Should().Be(original.GetProperty("contentRevision").GetInt32() + 1);
+        detail.GetProperty("savedFromExtensionAt").GetDateTimeOffset().Should().Be(original.GetProperty("savedFromExtensionAt").GetDateTimeOffset());
+        detail.GetProperty("readingStatus").GetString().Should().Be("reading");
+        detail.GetProperty("isFavorite").GetBoolean().Should().BeTrue();
+        detail.GetProperty("tags")[0].GetProperty("id").GetGuid().Should().Be(tag.Id);
+        detail.GetProperty("highlights")[0].GetProperty("anchorStatus").GetString().Should().Be("pending");
+        detail.GetProperty("highlights")[0].GetProperty("note").GetString().Should().Be("keep note");
+        detail.GetProperty("progress").ValueKind.Should().Be(JsonValueKind.Null);
+        detail.GetProperty("progressUpdatedAt").GetDateTimeOffset().Should().BeAfter(version);
+    }
+
+    [Fact]
+    public async Task LinkSave_OnExistingFull_LeavesBodyAndRevisionUnchanged()
+    {
+        var article = await fixture.SeedArticleAsync();
+        using var factory = CreateFactory();
+        using var client = AuthenticatedClient(factory);
+
+        var response = await client.PostAsJsonAsync("/api/articles/link", new { url = article.Url.Value, title = "Link title" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var detail = await client.GetFromJsonAsync<JsonElement>($"/api/articles/{article.Id}");
+        detail.GetProperty("contentKind").GetString().Should().Be("full");
+        detail.GetProperty("contentRevision").GetInt32().Should().Be(article.ContentRevision);
+        detail.GetProperty("readableContent").GetString().Should().Be(article.ReadableContent);
+        detail.GetProperty("title").GetString().Should().Be(article.Title);
+    }
+
+    [Fact]
+    public async Task FullResave_WaitsForProgressLockAndResetsWithNewerVersion()
+    {
+        var article = await fixture.SeedArticleAsync();
+        using var factory = CreateFactory();
+        using var client = AuthenticatedClient(factory);
+        await using var progress = fixture.CreateContext();
+        await using var tx = await progress.Database.BeginTransactionAsync();
+        var future = DateTimeOffset.UtcNow.AddMinutes(1);
+        var newer = future.AddTicks(-future.Ticks % 10);
+        await progress.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"Articles\" SET \"ProgressUpdatedAt\" = {newer}, \"ProgressSessionId\" = 'reader', \"ProgressTextOffset\" = 8 WHERE \"Id\" = {article.Id}");
+
+        var saving = client.PostAsJsonAsync("/api/articles/content", new
+        {
+            url = article.Url.Value, title = "Replacement", originalContent = "full", readableContent = "full"
+        });
+        try { await WaitForArticleLockAsync(); }
+        finally { await tx.CommitAsync(); }
+
+        var response = await saving;
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var detail = await response.Content.ReadFromJsonAsync<JsonElement>();
+        detail.GetProperty("progressUpdatedAt").GetDateTimeOffset().Should().Be(newer.AddTicks(10));
+        detail.GetProperty("progressTextOffset").ValueKind.Should().Be(JsonValueKind.Null);
+        detail.GetProperty("contentRevision").GetInt32().Should().Be(article.ContentRevision + 1);
+    }
+
+    [Fact]
+    public async Task FullResave_InvalidatesAnchorCommittedWhileWaitingForArticleLock()
+    {
+        var article = await fixture.SeedArticleAsync(a =>
+        {
+            var highlight = Highlight.Create(a.Id, "readable", "keep note", 0, 8);
+            highlight.AnchorStatus = AnchorStatus.Pending;
+            a.AddHighlight(highlight);
+        });
+        var highlightId = article.Highlights.Single().Id;
+        using var factory = CreateFactory();
+        using var client = AuthenticatedClient(factory);
+        await using var anchoring = fixture.CreateContext();
+        await using var tx = await anchoring.Database.BeginTransactionAsync();
+        await anchoring.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM \"Articles\" WHERE \"Id\" = {article.Id} FOR UPDATE");
+        await anchoring.Highlights.Where(h => h.Id == highlightId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(h => h.AnchorStatus, AnchorStatus.Ok));
+
+        var saving = client.PostAsJsonAsync("/api/articles/content", new
+        {
+            url = article.Url.Value, title = "Replacement", originalContent = "full", readableContent = "full"
+        });
+        try { await WaitForArticleLockAsync(); }
+        finally { await tx.CommitAsync(); }
+
+        (await saving).StatusCode.Should().Be(HttpStatusCode.Created);
+        var detail = await client.GetFromJsonAsync<JsonElement>($"/api/articles/{article.Id}");
+        detail.GetProperty("highlights")[0].GetProperty("anchorStatus").GetString().Should().Be("pending");
     }
 
     [Theory]
@@ -242,6 +362,124 @@ public partial class LibraryApiTests(PostgresFixture fixture)
     }
 
     [Fact]
+    public async Task Progress_ResponsesCarryContentRevisionFromLockedRow()
+    {
+        using var factory = CreateFactory();
+        using var client = AuthenticatedClient(factory);
+        var article = await fixture.SeedArticleAsync();
+        var path = $"/api/articles/{article.Id}";
+
+        var detail = await client.GetFromJsonAsync<JsonElement>(path);
+        detail.GetProperty("contentRevision").GetInt32().Should().Be(article.ContentRevision);
+
+        var save = await client.PutAsJsonAsync(path + "/progress", new { sessionId = "one", textOffset = 10, article.ContentRevision });
+        save.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await save.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("contentRevision").GetInt32().Should().Be(article.ContentRevision);
+
+        var reset = await client.PostAsJsonAsync(path + "/progress/reset", new { sessionId = "one", article.ContentRevision });
+        reset.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await reset.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("contentRevision").GetInt32().Should().Be(article.ContentRevision);
+
+        var conflict = await client.PutAsJsonAsync(path + "/progress", new { sessionId = "two", textOffset = 15 });
+        conflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await conflict.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("current").GetProperty("contentRevision")
+            .GetInt32().Should().Be(article.ContentRevision);
+    }
+
+    [Fact]
+    public async Task Progress_StaleRevisionCannotWriteOrResetEvenInTheSameSession()
+    {
+        using var factory = CreateFactory();
+        using var client = AuthenticatedClient(factory);
+        var article = await fixture.SeedArticleAsync(a => a.ApplyProgress(new ReadingPosition(10, 2, .5, 42), "one", DateTimeOffset.UtcNow));
+        var path = $"/api/articles/{article.Id}";
+        var contentRevision = article.ContentRevision - 1;
+
+        var save = await client.PutAsJsonAsync(path + "/progress", new { sessionId = "one", textOffset = 90, contentRevision });
+        var reset = await client.PostAsJsonAsync(path + "/progress/reset", new { sessionId = "one", contentRevision });
+        foreach (var response in new[] { save, reset })
+        {
+            response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            var current = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("current");
+            current.GetProperty("contentRevision").GetInt32().Should().Be(article.ContentRevision);
+            current.GetProperty("textOffset").GetInt32().Should().Be(10);
+        }
+        var detail = await client.GetFromJsonAsync<JsonElement>(path);
+        detail.GetProperty("progress").GetProperty("textOffset").GetInt32().Should().Be(10);
+    }
+
+    [Fact]
+    public async Task HighlightAnchor_RejectsStaleRevisionAndKeepsHighlightPending()
+    {
+        using var factory = CreateFactory();
+        using var client = AuthenticatedClient(factory);
+        var article = await fixture.SeedArticleAsync(a => a.AddHighlight(Highlight.Create(a.Id, "text", "keep note", 0, 4)));
+        var highlight = article.Highlights.Single();
+        await using (var db = fixture.CreateContext())
+        {
+            await db.Highlights.Where(h => h.Id == highlight.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(h => h.AnchorStatus, AnchorStatus.Pending));
+        }
+        var path = $"/api/highlights/{highlight.Id}/anchor";
+
+        var stale = await client.PutAsJsonAsync(path, new { startOffset = 8, endOffset = 12, contentRevision = article.ContentRevision - 1 });
+        stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await stale.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("current").GetProperty("contentRevision")
+            .GetInt32().Should().Be(article.ContentRevision);
+        var detail = await client.GetFromJsonAsync<JsonElement>($"/api/articles/{article.Id}");
+        detail.GetProperty("highlights")[0].GetProperty("anchorStatus").GetString().Should().Be("pending");
+
+        var fresh = await client.PutAsJsonAsync(path, new { startOffset = 2, endOffset = 6, contentRevision = article.ContentRevision });
+        fresh.StatusCode.Should().Be(HttpStatusCode.OK);
+        var anchored = await fresh.Content.ReadFromJsonAsync<JsonElement>();
+        anchored.GetProperty("anchorStatus").GetString().Should().Be("ok");
+        anchored.GetProperty("startOffset").GetInt32().Should().Be(2);
+        anchored.GetProperty("note").GetString().Should().Be("keep note");
+    }
+
+    [Fact]
+    public async Task HighlightCreate_RejectsStaleRevisionAndPreservesExistingNote()
+    {
+        using var factory = CreateFactory();
+        using var client = AuthenticatedClient(factory);
+        var article = await fixture.SeedArticleAsync();
+        var detailPath = $"/api/articles/{article.Id}";
+        var existing = await client.PostAsJsonAsync(detailPath + "/highlights", new
+        {
+            text = "readable", note = "keep note", startOffset = 0, endOffset = 8
+        });
+        existing.StatusCode.Should().Be(HttpStatusCode.OK);
+        var replaced = await client.PostAsJsonAsync("/api/articles/content", new
+        {
+            url = article.Url.Value, title = "Replacement", originalContent = "new body", readableContent = "new body"
+        });
+        replaced.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var stale = await client.PostAsJsonAsync(detailPath + "/highlights", new
+        {
+            text = "readable", note = "new note", startOffset = 0, endOffset = 8, article.ContentRevision
+        });
+        stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var revision = (await stale.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("current")
+            .GetProperty("contentRevision").GetInt32();
+        revision.Should().Be(article.ContentRevision + 1);
+        var detail = await client.GetFromJsonAsync<JsonElement>(detailPath);
+        var highlights = detail.GetProperty("highlights");
+        highlights.GetArrayLength().Should().Be(1);
+        highlights[0].GetProperty("note").GetString().Should().Be("keep note");
+        highlights[0].GetProperty("anchorStatus").GetString().Should().Be("pending");
+
+        var fresh = await client.PostAsJsonAsync(detailPath + "/highlights", new
+        {
+            text = "new body", note = "new note", startOffset = 0, endOffset = 8, contentRevision = revision
+        });
+        fresh.StatusCode.Should().Be(HttpStatusCode.OK);
+        var acknowledged = await fresh.Content.ReadFromJsonAsync<JsonElement>();
+        acknowledged.GetProperty("note").GetString().Should().Be("new note");
+        acknowledged.GetProperty("anchorStatus").GetString().Should().Be("ok");
+    }
+
+    [Fact]
     public async Task ReaderPreferences_RealHttpRequiresLoginValidatesFullObjectAndPersists()
     {
         using var factory = CreateFactory();
@@ -288,6 +526,22 @@ public partial class LibraryApiTests(PostgresFixture fixture)
         await using var db = fixture.CreateContext();
         (await db.Articles.AnyAsync(a => a.Id == active.Id)).Should().BeTrue();
         (await db.Articles.IgnoreQueryFilters().AnyAsync(a => a.Id == moreTrash.Id)).Should().BeFalse();
+    }
+
+    private async Task WaitForArticleLockAsync()
+    {
+        await using var monitor = fixture.CreateContext();
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            var waiting = await monitor.Database.SqlQueryRaw<bool>("""
+                SELECT EXISTS (SELECT 1 FROM pg_stat_activity
+                WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE '%Articles%') AS "Value"
+                """).SingleAsync();
+            if (waiting) return;
+            await Task.Delay(20);
+        }
+
+        throw new TimeoutException("The save did not reach the held PostgreSQL article lock.");
     }
 
     private WebApplicationFactory<ArticlesController> CreateFactory() => new WebApplicationFactory<ArticlesController>()

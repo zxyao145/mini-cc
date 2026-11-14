@@ -29,6 +29,7 @@ public class ArticleDto
     public DateTimeOffset? PublishedAt { get; set; }
     public string NormalizedUrl { get; set; } = "";
     public ContentKind ContentKind { get; set; }
+    public int ContentRevision { get; set; }
     public DateTimeOffset? SavedFromExtensionAt { get; set; }
     public ArticleProgressDto? Progress => ProgressBlockIndex.HasValue
         ? new(ProgressTextOffset, ProgressBlockIndex.Value, ProgressBlockRatio ?? 0, ProgressPercent ?? 0, ProgressUpdatedAt) : null;

@@ -1,8 +1,8 @@
 import { ReadingPosition } from './reading-position';
-export interface ProgressSnapshot extends Partial<ReadingPosition> { progressUpdatedAt: string | null; }
-export interface ProgressSaved { contentKind?: 'full' | 'summaryOnly'; progressUpdatedAt: string; readingStatus: 'unread' | 'reading' | 'read'; lastReadAt: string | null; }
+export interface ProgressSnapshot extends Partial<ReadingPosition> { progressUpdatedAt: string | null; contentRevision?: number; }
+export interface ProgressSaved { contentKind?: 'full' | 'summaryOnly'; contentRevision?: number; progressUpdatedAt: string; readingStatus: 'unread' | 'reading' | 'read'; lastReadAt: string | null; }
 export interface PendingProgress { position: ReadingPosition; baseUpdatedAt: string | null; }
-export interface ProgressRequest extends ReadingPosition { sessionId: string; baseUpdatedAt: string | null; }
+export interface ProgressRequest extends ReadingPosition { sessionId: string; baseUpdatedAt: string | null; contentRevision?: number; }
 export type SyncStatus = 'synced' | 'saving' | 'unsynced';
 interface WriterCallbacks {
   send: (request: ProgressRequest, keepalive: boolean) => Promise<ProgressSaved>;
@@ -22,6 +22,7 @@ export class ProgressWriter {
   private retry = 0;
   private retryDelay: number | null = null;
   private visible = true;
+  private stopped = false;
   private resetting = false;
   private changingState = false;
   private status: SyncStatus = 'synced';
@@ -36,7 +37,7 @@ export class ProgressWriter {
       this.timer = setTimeout(() => { void this.flush(); }, delay);
   }
   queue(position: ReadingPosition) {
-    if (this.resetting) return;
+    if (this.stopped || this.resetting) return;
     this.pending = { position, baseUpdatedAt: this.pending ? this.pending.baseUpdatedAt : this.baseUpdatedAt };
     this.callbacks.persist(this.pending);
     if (this.status !== 'unsynced') this.changed('saving');
@@ -48,7 +49,14 @@ export class ProgressWriter {
     else this.schedule(0);
   }
   showConflict(current: ProgressSnapshot) { this.conflict = current; this.clearTimer(); this.changed('unsynced'); }
+  stop(current: ProgressSnapshot) {
+    this.stopped = true;
+    this.pending = null;
+    this.callbacks.persist(null);
+    this.showConflict(current);
+  }
   resolveConflict(current: ProgressSnapshot, jump: boolean) {
+    if (this.stopped) return;
     this.baseUpdatedAt = current.progressUpdatedAt;
     this.conflict = null; this.retry = 0; this.retryDelay = null;
     if (jump) this.pending = null;
@@ -60,7 +68,7 @@ export class ProgressWriter {
   async flush(keepalive = false): Promise<void> {
     this.clearTimer();
     if (this.inFlight) { await this.inFlight; if (keepalive) await this.flush(true); return; }
-    if (!this.pending || this.conflict || this.resetting || this.changingState || (!this.visible && !keepalive)) return;
+    if (this.stopped || !this.pending || this.conflict || this.resetting || this.changingState || (!this.visible && !keepalive)) return;
     const pending = this.pending;
     this.pending = null;
     this.lastStartedAt = Date.now();
@@ -68,6 +76,7 @@ export class ProgressWriter {
     this.inFlight = (async () => {
       try {
         const result = await this.callbacks.send({ ...pending.position, sessionId: this.sessionId, baseUpdatedAt: pending.baseUpdatedAt }, keepalive);
+        if (this.stopped) return;
         this.baseUpdatedAt = result.progressUpdatedAt;
         this.retry = 0; this.retryDelay = null;
         if (this.pending) this.pending.baseUpdatedAt = this.baseUpdatedAt;
@@ -75,6 +84,7 @@ export class ProgressWriter {
         this.callbacks.onSaved(result, pending.position);
         this.changed(this.pending ? 'saving' : 'synced');
       } catch (error) {
+        if (this.stopped) return;
         this.pending ||= pending;
         this.callbacks.persist(this.pending);
         const failure = error as { status?: number; current?: ProgressSnapshot };
@@ -109,13 +119,16 @@ export class ProgressWriter {
     }
   }
   async reset(): Promise<void> {
+    if (this.stopped) throw new Error('正文已更新，请刷新后继续');
     this.resetting = true; this.clearTimer(); this.pending = null; this.conflict = null;
     this.callbacks.persist(null);
-    await this.inFlight;
-    // A failed earlier PUT must not remain queued behind this reset.
-    this.pending = null; this.conflict = null; this.callbacks.persist(null); this.changed('saving');
     try {
+      await this.inFlight;
+      if (this.stopped) throw new Error('正文已更新，请刷新后继续');
+      // A failed earlier PUT must not remain queued behind this reset.
+      this.pending = null; this.conflict = null; this.callbacks.persist(null); this.changed('saving');
       const result = await this.callbacks.reset(this.sessionId);
+      if (this.stopped) throw new Error('正文已更新，请刷新后继续');
       this.baseUpdatedAt = result.progressUpdatedAt; this.retry = 0; this.retryDelay = null;
       this.callbacks.onSaved(result, null); this.changed('synced');
     } catch (error) { this.changed('unsynced'); throw error; }

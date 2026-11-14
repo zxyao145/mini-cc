@@ -334,6 +334,42 @@ public class ArticleTests
     }
 
     [Fact]
+    public void ReplaceContent_IncrementsContentRevision()
+    {
+        var article = CreateTestArticle();
+        var initialRevision = article.ContentRevision;
+        article.ReplaceContent(Content.Create("summary", "summary"), ContentKind.SummaryOnly);
+        article.ReplaceContent(Content.Create("full", "full"), ContentKind.Full);
+
+        article.ContentRevision.Should().Be(initialRevision + 2);
+    }
+
+    [Fact]
+    public void RefreshMetadata_ReplacesTitleAndOnlyNonEmptyOptionalFields()
+    {
+        var article = Article.CreateLink(Url.Create("https://example.com"), "Old", "A", "S", "https://x/i.png");
+        article.ClearDomainEvents();
+
+        article.RefreshMetadata(" New ", "  ", "S2", "");
+
+        article.Title.Should().Be("New");
+        article.Author.Should().Be("A");
+        article.Summary.Should().Be("S2");
+        article.ImageUrl.Should().Be("https://x/i.png");
+        article.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void RefreshMetadata_RejectsEmptyTitle()
+    {
+        var article = CreateTestArticle();
+
+        Action refresh = () => article.RefreshMetadata("  ", "", "", "");
+
+        refresh.Should().Throw<ArgumentException>().WithParameterName("title");
+    }
+
+    [Fact]
     public void AddTag_WithNewTag_ShouldAddTagAndAddEvent()
     {
         // Arrange

@@ -38,20 +38,20 @@ public class SaveArticleContentCommandHandler : IRequestHandler<SaveArticleConte
             {
                 existingArticle.Restore();
                 existingArticle.MarkSavedFromExtension(DateTimeOffset.UtcNow);
-                if (existingArticle.ContentKind != ContentKind.Full)
+                var replacement = _articleDomainService.CreateArticleFromContent(request.Url, request.OriginalContent,
+                    request.ReadableContent, request.Title ?? existingArticle.Title, request.Author ?? "", request.Summary ?? "", request.ImageUrl ?? "");
+                var wasFull = existingArticle.ContentKind == ContentKind.Full;
+                if (!wasFull || replacement.ReadableContent != existingArticle.ReadableContent)
                 {
-                    var replacement = _articleDomainService.CreateArticleFromContent(request.Url, request.OriginalContent,
-                        request.ReadableContent, request.Title ?? existingArticle.Title, request.Author ?? "", request.Summary ?? "", request.ImageUrl ?? "");
                     existingArticle.ReplaceContent(Content.Create(replacement.OriginalContent, replacement.ReadableContent, replacement.Length), ContentKind.Full);
-                    existingArticle.FillMissingMetadata(replacement.Author, replacement.Summary, replacement.ImageUrl);
-                    var clock = DateTimeOffset.UtcNow;
-                    var version = new DateTimeOffset(clock.Ticks - clock.Ticks % 10, TimeSpan.Zero);
-                    if (existingArticle.ProgressUpdatedAt >= version) version = existingArticle.ProgressUpdatedAt.Value.AddTicks(10);
-                    existingArticle.ResetProgress(null, version);
+                    existingArticle.ResetProgress(null, NextProgressVersion(existingArticle));
                     foreach (var highlight in existingArticle.Highlights) highlight.AnchorStatus = AnchorStatus.Pending;
                 }
+                if (wasFull) existingArticle.RefreshMetadata(replacement.Title, replacement.Author, replacement.Summary, replacement.ImageUrl);
+                else existingArticle.FillMissingMetadata(replacement.Author, replacement.Summary, replacement.ImageUrl);
+
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await _unitOfWork.CommitTransactionAsync(cancellationToken);
+                await _unitOfWork.CommitTransactionAsync(cancellationToken);
                 return Result<ArticleDto>.Success(_mapper.Map<ArticleDto>(existingArticle));
             }
 
@@ -83,5 +83,12 @@ public class SaveArticleContentCommandHandler : IRequestHandler<SaveArticleConte
             _logger.LogError(ex, "Error saving article from URL: {Url}", request.Url);
             return Result<ArticleDto>.Failure($"Failed to save article: {ex.Message}");
         }
+    }
+
+    private static DateTimeOffset NextProgressVersion(Article article)
+    {
+        var clock = DateTimeOffset.UtcNow;
+        var version = clock.AddTicks(-clock.Ticks % 10);
+        return article.ProgressUpdatedAt >= version ? article.ProgressUpdatedAt.Value.AddTicks(10) : version;
     }
 }

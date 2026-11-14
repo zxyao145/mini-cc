@@ -34,9 +34,16 @@ export function pageAuthor(document: Document): string {
 
 export function extractImageUrl(document: Document): string {
   const image = document.querySelector<HTMLMetaElement>('meta[property="og:image"], meta[name="twitter:image"]')?.content;
-  if (!image) return '';
+  return image ? validImageUrl(image, document.baseURI) : '';
+}
+
+export function hostMatches(url: URL, domain: string): boolean {
+  return url.hostname === domain || url.hostname.endsWith('.' + domain);
+}
+
+export function validImageUrl(raw: string, baseUrl: string): string {
   try {
-    const url = new URL(image, document.baseURI);
+    const url = new URL(raw, baseUrl);
     return ['http:', 'https:'].includes(url.protocol) && url.href.length <= ARTICLE_LIMITS.url ? url.href : '';
   } catch {
     // Optional page metadata may contain an invalid URL.
@@ -45,7 +52,7 @@ export function extractImageUrl(document: Document): string {
 }
 
 export function youtubeVideoId(url: URL): string | null {
-  if (!['youtube.com', 'www.youtube.com', 'm.youtube.com'].includes(url.hostname)) return null;
+  if (!hostMatches(url, 'youtube.com')) return null;
 
   const id = url.pathname === '/watch'
     ? url.searchParams.get('v')
