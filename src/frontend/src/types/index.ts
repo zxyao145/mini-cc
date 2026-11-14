@@ -23,7 +23,7 @@ export interface Article {
     deletedAt: string | null;
     publishedAt: string | null;
     normalizedUrl: string;
-    contentKind: 'full' | 'summaryOnly';
+    contentKind: 'full' | 'summaryOnly' | 'link';
     savedFromExtensionAt: string | null;
     isArchived: boolean;
     isFavorite: boolean;

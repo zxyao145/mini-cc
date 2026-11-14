@@ -38,11 +38,12 @@ public class SaveArticleContentCommandHandler : IRequestHandler<SaveArticleConte
             {
                 existingArticle.Restore();
                 existingArticle.MarkSavedFromExtension(DateTimeOffset.UtcNow);
-                if (existingArticle.ContentKind == ContentKind.SummaryOnly)
+                if (existingArticle.ContentKind != ContentKind.Full)
                 {
                     var replacement = _articleDomainService.CreateArticleFromContent(request.Url, request.OriginalContent,
                         request.ReadableContent, request.Title ?? existingArticle.Title, request.Author ?? "", request.Summary ?? "", request.ImageUrl ?? "");
                     existingArticle.ReplaceContent(Content.Create(replacement.OriginalContent, replacement.ReadableContent, replacement.Length), ContentKind.Full);
+                    existingArticle.FillMissingMetadata(replacement.Author, replacement.Summary, replacement.ImageUrl);
                     var clock = DateTimeOffset.UtcNow;
                     var version = new DateTimeOffset(clock.Ticks - clock.Ticks % 10, TimeSpan.Zero);
                     if (existingArticle.ProgressUpdatedAt >= version) version = existingArticle.ProgressUpdatedAt.Value.AddTicks(10);

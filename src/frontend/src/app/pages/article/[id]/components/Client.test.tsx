@@ -89,3 +89,46 @@ it('pauses unseen summary replacement before adopting a full-body reset acknowle
   expect(container.querySelector('.readable-content')?.textContent).toBe('Old summary body');
   expect(container.querySelector('.reader-summary-banner')).not.toBeNull();
 });
+
+it('renders a link without reader chrome or progress traffic when a state update reports full', async () => {
+  const link = {
+    id: 'link', title: 'Video title', url: 'https://www.youtube.com/watch?v=abc', author: '',
+    readableContent: '', summary: 'Video description', imageUrl: 'https://img.example/cover.jpg',
+    createdAt: '2026-11-13T00:00:00Z', contentKind: 'link', tags: [], feeds: [], highlights: [],
+    readingStatus: 'unread', isArchived: false, isFavorite: false,
+  } as unknown as Article;
+  const updated = {
+    id: 'link', title: 'Video title', url: link.url, readingStatus: 'read', contentKind: 'full',
+    isFavorite: false, isArchived: false, tags: [], feeds: [], highlightCount: 0, savedFromExtension: true,
+  } as unknown as ArticleListItem;
+  vi.mocked(articleApi.getArticleById).mockResolvedValue(link);
+  vi.mocked(articleApi.updateState).mockResolvedValue(updated);
+
+  await act(async () => root.render(<Client id="link" />));
+  expect(articleApi.updateState).not.toHaveBeenCalled();
+  await act(async () => container.querySelector<HTMLButtonElement>('button[aria-label="标记已读"]')!.click());
+
+  expect(articleApi.updateState).toHaveBeenCalledWith('link', { readingStatus: 'read' });
+  expect(container.querySelector('button[aria-label="标记未读"]')).not.toBeNull();
+  expect(container.querySelector('[role="progressbar"]')).toBeNull();
+  expect(container.querySelector('button[aria-label="从头阅读"]')).toBeNull();
+  expect(container.querySelector('button[aria-label="阅读设置"]')).toBeNull();
+  expect(container.querySelector('button[aria-label="目录"]')).toBeNull();
+  expect(container.querySelector('.reader-body-row')).toBeNull();
+  expect(container.querySelector('.readable-content')).toBeNull();
+  expect(container.textContent).not.toContain('Remove reader highlight');
+  const visit = container.querySelector<HTMLAnchorElement>('a.visit-original-btn.primary')!;
+  expect(visit.href).toBe(link.url);
+  expect(visit.target).toBe('_blank');
+  expect(visit.rel).toBe('noopener noreferrer');
+  expect(container.textContent).toContain('Video description');
+  expect(container.textContent).toContain('youtube.com');
+  expect(container.textContent).toContain('保存于');
+  expect(container.querySelector('img[src="https://img.example/cover.jpg"]')).not.toBeNull();
+
+  document.dispatchEvent(new Event('visibilitychange'));
+  await act(async () => { await Promise.resolve(); });
+  expect(articleApi.getArticleById).toHaveBeenCalledTimes(1);
+  expect(articleApi.saveProgress).not.toHaveBeenCalled();
+  expect(articleApi.resetProgress).not.toHaveBeenCalled();
+});

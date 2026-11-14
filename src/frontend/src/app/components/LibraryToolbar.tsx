@@ -8,6 +8,20 @@ import { TagWithArticleCount } from '@/types';
 import styles from './LibraryToolbar.module.scss';
 
 export const statusLabels = { unread: '未读', reading: '阅读中', read: '已读' };
+// Customizable select opens its list below the trigger; other browsers keep the native popup.
+// Turbopack in Next 15.3 cannot parse ::picker(select), so these rules bypass the CSS module pipeline.
+const field = `.${styles.select}`;
+const pickerCss = `@supports (appearance: base-select) {
+  ${field} select, ${field} select::picker(select) { appearance: base-select; }
+  ${field} select { line-height: normal; }
+  ${field} select::picker-icon { display: none; }
+  ${field} select::picker(select) { margin-block: 6px; max-width: min(320px, calc(100vw - 32px)); padding: 4px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow-lg); }
+  ${field} option { display: flex; align-items: center; gap: 12px; min-height: 36px; padding: 6px 10px; border-radius: 6px; color: var(--text-secondary); font-size: 13px; white-space: normal; overflow-wrap: anywhere; }
+  ${field} option:hover, ${field} option:focus-visible { background: var(--surface-hover); outline: 0; }
+  ${field} option:checked { color: var(--brand); background: var(--brand-soft); }
+  ${field} option::checkmark { order: 1; margin-left: auto; }
+  @media (max-width: 600px) { ${field} option { min-height: 44px; } }
+}`;
 interface Props {
   query: LibraryQuery; onChange: (query: LibraryQuery, replace: boolean) => void;
   articleStyle: string; onStyleChange: (style: 'grid' | 'list') => void; onSelect?: () => void;
@@ -99,6 +113,7 @@ export default function LibraryToolbar({ query: incomingQuery, onChange, article
   return <div ref={toolbar} className={styles.toolbar} onKeyDown={event => {
     if (event.key === 'Escape') { const detail = (event.target as HTMLElement).closest('details'); detail?.removeAttribute('open'); detail?.querySelector('summary')?.focus(); }
   }}>
+    <style href="library-select-picker" precedence="default">{pickerCss}</style>
     <div className={styles.top}>
       <form className={styles.search} role="search" onSubmit={event => { event.preventDefault(); publish({ q: searchValue.current }, true); }}>
         <label className="sr-only" htmlFor="library-search">搜索文章</label><Search size={18} aria-hidden="true" />

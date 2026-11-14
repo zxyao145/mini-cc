@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
-import { extractArticle } from '../src/extract-article.ts';
+import { extractPage } from '../src/extract-page.ts';
 
 function page(extra = '') {
   const paragraphs = Array.from({ length: 12 }, () =>
@@ -15,9 +15,16 @@ function page(extra = '') {
     </article></body></html>`, { url: 'https://example.com/posts/story' });
 }
 
+function articleFrom(document: Document) {
+  const { suggested, article } = extractPage(document, document.URL);
+  assert.equal(suggested, 'article');
+  assert.ok(article);
+  return article;
+}
+
 test('extracts article metadata and readable HTML with absolute resource URLs', () => {
   const dom = page();
-  const article = extractArticle(dom.window.document);
+  const article = articleFrom(dom.window.document);
 
   assert.equal(article.url, 'https://example.com/posts/story');
   assert.equal(article.title, 'Browser extraction');
@@ -35,7 +42,7 @@ test('leaves the source page unchanged and preserves original HTML', () => {
   const dom = page();
   const before = dom.window.document.documentElement.outerHTML;
 
-  const article = extractArticle(dom.window.document);
+  const article = articleFrom(dom.window.document);
 
   assert.equal(dom.window.document.documentElement.outerHTML, before);
   assert.equal(article.originalContent, before);
@@ -45,15 +52,24 @@ test('leaves the source page unchanged and preserves original HTML', () => {
 test('sanitizes executable HTML from the extracted article', () => {
   const dom = page('<img src="/bad.png" onerror="alert(1)"><a href="javascript:alert(1)">unsafe</a><script>alert(1)</script>');
 
-  const article = extractArticle(dom.window.document);
+  const article = articleFrom(dom.window.document);
 
   assert.doesNotMatch(article.readableContent, /onerror|javascript:|<script/i);
   dom.window.close();
 });
 
-test('rejects empty pages', () => {
-  const dom = new JSDOM('<html><body></body></html>', { url: 'https://example.com/' });
-
-  assert.throws(() => extractArticle(dom.window.document), /readable article/i);
-  dom.window.close();
+test('uses the first cover meta tag in document order', () => {
+  for (const [first, expected] of [
+    ['/twitter.png', 'https://example.com/twitter.png'],
+    ['javascript:alert(1)', ''],
+  ]) {
+    const dom = new JSDOM(`<title>Cover</title>
+      <meta name="twitter:image" content="${first}"><meta property="og:image" content="/og.png">
+      <article><p>${'An article about choosing a cover in the original order. '.repeat(16)}</p></article>`, { url: 'https://example.com/post' });
+    try {
+      assert.equal(articleFrom(dom.window.document).imageUrl, expected);
+    } finally {
+      dom.window.close();
+    }
+  }
 });

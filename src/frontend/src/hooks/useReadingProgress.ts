@@ -34,6 +34,7 @@ function storedProgress(id: string, contentKind: Article['contentKind']): Pendin
 }
 
 export function useReadingProgress(article: Article | undefined, contentRef: RefObject<HTMLElement | null>, onArticleChange: (changes: Partial<Article>) => void) {
+  const articleId = article?.id;
   const layout = useReaderBlocks(contentRef, article?.readableContent);
   const writer = useRef<ProgressWriter | null>(null);
   const latest = useRef({article,onArticleChange}); latest.current = {article,onArticleChange};
@@ -53,16 +54,17 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
   const restoredId = useRef<string | null>(null);
   const dwell = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const observeContentKind = useCallback((kind: Article['contentKind'] | undefined, current?: ProgressSnapshot) => {
-    if (loadedKind.current !== 'summaryOnly' || kind !== 'full') return false;
-    staleContent.current = true; setContentChanged(true); clearTimeout(dwell.current);
     const known = latest.current.article;
-    writer.current?.showConflict(current ?? (known ? snapshotOf(known) : { progressUpdatedAt: null }));
+    if (!known || loadedKind.current !== 'summaryOnly' || kind !== 'full') return false;
+    staleContent.current = true; setContentChanged(true); clearTimeout(dwell.current);
+    writer.current?.showConflict(current ?? snapshotOf(known));
     return true;
   }, []);
   const programmatic = useRef(false);
   const layoutChange = useRef(0);
   const layoutAnchor = useRef<ReadingPosition | null>(null);
   const preserveLayout = useCallback(() => {
+    if (!articleId) return;
     const anchor = layoutAnchor.current || readPosition(layout.blocks,layout.totalTextLength);
     if (!anchor) return;
     layoutAnchor.current=anchor;
@@ -74,7 +76,7 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
       setPercent(anchor.percent);
       requestAnimationFrame(()=>{if(revision===layoutChange.current){programmatic.current=false;layoutAnchor.current=null;}});
     }));
-  },[layout]);
+  },[articleId,layout]);
   const restore = useCallback((position: ReadingPosition | null) => {
     restoration.current = position;
     correctingUntil.current = Date.now()+2000;
@@ -90,6 +92,7 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
     const id = article.id;
     userScrolled.current=false;intent.current=0;clearTimeout(dwell.current);
     staleContent.current=false;setContentChanged(false);loadedKind.current=article.contentKind;
+    setSyncStatus('synced');setConflict(null);setAtEnd(false);
     const pending = storedProgress(id, article.contentKind);
     initialAnchor.current = pending?.position || positionOf(article);
     const instance = new ProgressWriter(crypto.randomUUID(),article.progressUpdatedAt,{
@@ -99,7 +102,7 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
         // This kind comes from the same locked transaction as the reset acknowledgement.
         // An upgrade after an acknowledged summary reset still invalidates its version on the server.
         if (article.contentKind === 'summaryOnly' && result.contentKind !== 'summaryOnly') {
-          observeContentKind('full', { progressUpdatedAt: result.progressUpdatedAt });
+          if (mounted) observeContentKind('full', { progressUpdatedAt: result.progressUpdatedAt });
           throw new Error('正文已更新，请刷新后继续');
         }
         return result;
@@ -136,7 +139,8 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
     const pagehide=()=>{instance.setVisible(false);void instance.flush(true);};
     document.addEventListener('visibilitychange',visibility);window.addEventListener('pagehide',pagehide);
     return ()=>{
-      mounted=false;clearTimeout(dwell.current);instance.setVisible(false);void instance.flush(true);
+      mounted=false;layoutChange.current+=1;layoutAnchor.current=null;programmatic.current=false;
+      clearTimeout(dwell.current);instance.setVisible(false);void instance.flush(true);
       document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pagehide',pagehide);
       if(writer.current===instance)writer.current=null;
     };
@@ -151,7 +155,7 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
   },[article,layout.blocks,restore]);
 
   useEffect(()=>{
-    if(!layout.blocks.length)return;
+    if(!articleId || !layout.blocks.length)return;
     const measure=()=>{
       const current=readPosition(layout.blocks,layout.totalTextLength);
       if(!current)return;
@@ -187,7 +191,7 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
     window.addEventListener('keydown',key);window.addEventListener('pointerdown',pointer);
     const content=contentRef.current;content?.addEventListener('load',image,true);
     return()=>{clearTimeout(dwell.current);window.removeEventListener('scroll',scroll);window.removeEventListener('resize',measure);window.removeEventListener('wheel',active);window.removeEventListener('touchmove',active);window.removeEventListener('keydown',key);window.removeEventListener('pointerdown',pointer);content?.removeEventListener('load',image,true);};
-  },[layout,contentRef,restore]);
+  },[articleId,layout,contentRef,restore]);
 
   const chooseConflict=async(jump:boolean)=>{
     if(!conflict || staleContent.current)return;
@@ -210,5 +214,8 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
     try { if(writer.current)await writer.current.withStateChange(action,unread);else await action(); }
     finally {if(unread){markingUnread.current=false;clearTimeout(dwell.current);userScrolled.current=false;intent.current=0;}}
   };
-  return {observeContentKind,contentChanged,syncStatus,conflict,percent,atEnd,chooseConflict,reset,withStateChange,preserveLayout};
+  const progress = articleId
+    ? {contentChanged,syncStatus,conflict,percent,atEnd}
+    : {contentChanged:false,syncStatus:'synced' as const,conflict:null,percent:0,atEnd:false};
+  return {observeContentKind,...progress,chooseConflict,reset,withStateChange,preserveLayout};
 }

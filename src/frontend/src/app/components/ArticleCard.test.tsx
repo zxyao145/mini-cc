@@ -66,3 +66,17 @@ it('marks an article read using returned list state without replacing its conten
   expect(onUpdate).toHaveBeenCalledWith('a', updated);
   expect(container.textContent).toContain('已读');
 });
+
+it.each([
+  { contentKind: 'link', showsBadge: true, url: 'https://www.example.com', source: 'example.com' },
+  { contentKind: 'full', showsBadge: false, url: '', source: 'Saved article' },
+] as const)('shows a 链接 badge only for $contentKind items', async ({ contentKind, showsBadge, url, source }) => {
+  const article = {
+    id: 'article-id', title: 'Title', url, createdAt: '2026-11-08T00:00:00Z',
+    readingStatus: 'unread', tags: [], isArchived: false, isFavorite: false, contentKind,
+    highlightCount: 0, feeds: [], savedFromExtension: true,
+  } as unknown as import('@/types').ArticleListItem;
+  await act(async () => root.render(<ArticleCard article={article} onDelete={async () => {}} />));
+  expect(container.textContent?.includes('链接')).toBe(showsBadge);
+  expect(container.textContent).toContain(source);
+});

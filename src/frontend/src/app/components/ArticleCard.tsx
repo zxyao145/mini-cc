@@ -6,6 +6,7 @@ import { Article, ArticleListItem, Tag } from "@/types";
 import { useToast } from "@/contexts/ToastContext";
 import { notifyLibraryMutation } from "@/lib/library-mutations";
 import { articleApi } from "@/lib/api";
+import { articleHostname } from "@/lib/article-source";
 import TagManager from "../pages/article/[id]/components/TagManager";
 import styles from "./ArticleCard.module.scss";
 import Link from "next/link";
@@ -88,8 +89,7 @@ export default function ArticleCard({ article, onDelete, onUpdate, layout = "gri
     onUpdate?.(article.id, { tags: newTags });
   };
 
-  let source = "Saved article";
-  try { source = new URL(currentArticle.url).hostname.replace(/^www\./, ""); } catch { /* Older saved articles may have no URL. */ }
+  const source = articleHostname(currentArticle.url) ?? "Saved article";
 
   const favoriteLabel = currentArticle.isFavorite ? "取消收藏" : "加入收藏";
   const archiveLabel = currentArticle.isArchived ? "移回收件箱" : "归档文章";
@@ -116,6 +116,7 @@ export default function ArticleCard({ article, onDelete, onUpdate, layout = "gri
         <div className={styles.readingState}>
           {currentArticle.readingStatus === "unread" ? <span><span className={styles.unreadDot} aria-hidden="true" />未读</span> : currentArticle.readingStatus === "reading" ? <span>已读 {Math.round(currentArticle.progressPercent || 0)}%</span> : <span>已读{currentArticle.readAt ? ` · ${new Date(currentArticle.readAt).toLocaleDateString("zh-CN", { month: "long", day: "numeric" })}` : ""}</span>}
           {currentArticle.contentKind === "summaryOnly" && <span className={styles.archiveLabel}>仅摘要</span>}
+          {currentArticle.contentKind === "link" && <span className={styles.archiveLabel}>链接</span>}
         </div>
         {currentArticle.deletedAt && <p className={styles.trashInfo}>删除于 {new Date(currentArticle.deletedAt).toLocaleDateString("zh-CN")} · {Math.max(0, toast.trashRetentionDays - Math.floor((Date.now() - Date.parse(currentArticle.deletedAt)) / 86400000))} 天后永久删除</p>}
         {currentArticle.author && <p className={styles.author}>by {currentArticle.author}</p>}

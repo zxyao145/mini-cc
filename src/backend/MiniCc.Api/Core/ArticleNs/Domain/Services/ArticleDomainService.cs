@@ -20,4 +20,9 @@ public class ArticleDomainService(ImageProxyService imageProxyService) : IArticl
 
         return Article.Create(Url.Create(url), title, author, content, summary, imageProxyService.GetUrl(imageUrl));
     }
+
+    public Article CreateLink(string url, string title, string author, string summary, string imageUrl)
+    {
+        return Article.CreateLink(Url.Create(url), title, author, summary, imageProxyService.GetUrl(imageUrl));
+    }
 }

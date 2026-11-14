@@ -65,7 +65,22 @@
         white-space: nowrap;
       }
     }
+
+    .visit-original-btn.primary {
+      color: var(--surface);
+      background: var(--brand);
+      border-color: var(--brand);
+
+      &:hover {
+        background: var(--brand-hover);
+        border-color: var(--brand-hover);
+        color: var(--surface);
+      }
+    }
   }
+
+  .link-cover { max-width: 100%; height: auto; border-radius: 10px; }
+  .link-summary { color: var(--reader-fg); line-height: 1.7; }
 
   .article-content {
     position: relative;

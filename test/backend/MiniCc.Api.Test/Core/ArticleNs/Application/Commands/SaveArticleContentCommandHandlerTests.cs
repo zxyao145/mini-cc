@@ -69,6 +69,26 @@ public class SaveArticleContentCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WithExistingLink_UpgradesToFullAndFillsEmptyMetadata()
+    {
+        const string url = "https://example.com/link";
+        var existing = _domainService.CreateLink(url, "Link title", "", "", "");
+        _articles.Setup(r => r.GetByUrlAsync(url, CancellationToken.None)).ReturnsAsync(existing);
+        var command = new SaveArticleContentCommand(url, "new original", "new readable", "New title", "Jane", "New summary", "");
+
+        var result = await CreateHandler().Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Id.Should().Be(existing.Id);
+        existing.ContentKind.Should().Be(ContentKind.Full);
+        existing.ReadableContent.Should().Be(command.ReadableContent);
+        existing.Title.Should().Be("Link title");
+        existing.Author.Should().Be("Jane");
+        existing.Summary.Should().Be("New summary");
+        _articles.Verify(r => r.AddAsync(It.IsAny<Article>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_WithEmptyReadableContent_DoesNotPersistArticle()
     {
         var command = new SaveArticleContentCommand("https://example.com/article", "original", " ", "Title", "", "", "");

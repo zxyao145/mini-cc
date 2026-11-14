@@ -10,7 +10,7 @@ vi.mock('@/lib/api', () => ({articleApi:{saveProgress:vi.fn(),resetProgress:vi.f
 let root: Root, host: HTMLDivElement;
 const article = {id:'a',readableContent:'<p>first</p><p>second</p><p>third</p>',progressUpdatedAt:null,progressTextOffset:null,progressBlockIndex:null,readingStatus:'unread'} as Article;
 let readerState: ReturnType<typeof useReadingProgress>;
-function Reader({data=article}:{data?:Article}) { const ref=useRef<HTMLDivElement>(null); readerState=useReadingProgress(data,ref,()=>{}); return <ReadableContent contentRef={ref} html={data.readableContent}/>; }
+function Reader({data=article, active=true}:{data?:Article; active?:boolean}) { const ref=useRef<HTMLDivElement>(null); readerState=useReadingProgress(active ? data : undefined,ref,()=>{}); return active ? <ReadableContent contentRef={ref} html={data.readableContent}/> : null; }
 beforeEach(() => {
   Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true}); vi.useFakeTimers(); vi.resetAllMocks(); sessionStorage.clear();
   vi.spyOn(window,'scrollTo').mockImplementation(()=>{});
@@ -211,4 +211,25 @@ it('requires refresh when a summary reset acknowledgement cannot prove the loade
   await act(async()=>root.render(<Reader data={summary}/>));
   await act(async()=>{await expect(readerState.reset()).rejects.toThrow('正文已更新');});
   expect(readerState.contentChanged).toBe(true);
+});
+
+it('clears the reader status and stops observing progress when the same reader becomes inactive', async()=>{
+  const summary={...article,contentKind:'summaryOnly' as const};
+  const full={...article,contentKind:'full' as const,progressUpdatedAt:'2026-11-08T01:00:00Z'};
+  vi.mocked(articleApi.getArticleById).mockResolvedValue(full);
+  const removeListener=vi.spyOn(window,'removeEventListener');
+  await act(async()=>root.render(<Reader data={summary}/>));
+  await act(async()=>document.dispatchEvent(new Event('visibilitychange')));
+  expect(readerState.contentChanged).toBe(true);
+  expect(readerState.conflict).not.toBeNull();
+
+  await act(async()=>root.render(<Reader active={false}/>));
+
+  expect(readerState.contentChanged).toBe(false);
+  expect(readerState.syncStatus).toBe('synced');
+  expect(readerState.conflict).toBeNull();
+  expect(readerState.atEnd).toBe(false);
+  expect(removeListener).toHaveBeenCalledWith('wheel',expect.any(Function));
+  await act(async()=>document.dispatchEvent(new Event('visibilitychange')));
+  expect(articleApi.getArticleById).toHaveBeenCalledTimes(1);
 });

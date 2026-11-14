@@ -59,6 +59,11 @@ public class UpdateProgressCommandHandler(IUnitOfWork unitOfWork)
                 await unitOfWork.RollbackTransactionAsync(cancellationToken);
                 return Result<ProgressSaveDto>.Failure("article not found");
             }
+            if (article.ContentKind == ContentKind.Link)
+            {
+                await unitOfWork.RollbackTransactionAsync(cancellationToken);
+                return Result<ProgressSaveDto>.Failure("Link items have no reading position");
+            }
             if (!request.Reset && article.ProgressUpdatedAt.HasValue && article.ProgressSessionId != request.SessionId &&
                 (!request.BaseUpdatedAt.HasValue || request.BaseUpdatedAt < article.ProgressUpdatedAt))
             {

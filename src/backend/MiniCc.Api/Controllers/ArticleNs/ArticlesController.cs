@@ -78,6 +78,27 @@ public class ArticlesController : ApiControllerBase
         return CreatedAtAction(nameof(GetArticle), new { id = result.Value.Id }, result.Value);
     }
 
+    [HttpPost("link")]
+    public async Task<ActionResult<ArticleDto>> SaveLink([FromBody] SaveLinkCommand command, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+            {
+                _logger.LogError("Error saving link: {Error}", result.Error);
+                return BadRequest(result.Error);
+            }
+
+            return CreatedAtAction(nameof(GetArticle), new { id = result.Value.Id }, result.Value);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
     [HttpPut("{id}")]
     public async Task<ActionResult<ArticleDto>> UpdateArticle(Guid id, [FromBody] UpdateArticleCommand command)
     {
@@ -132,7 +153,11 @@ public class ArticlesController : ApiControllerBase
         try
         {
             var result = await _mediator.Send(command);
-            if (result.IsFailure) return NotFound(result.Error);
+            if (result.IsFailure)
+            {
+                if (result.Error.Contains("not found")) return NotFound(result.Error);
+                return BadRequest(result.Error);
+            }
             if (result.Value.Current != null) return Conflict(new { current = result.Value.Current });
             return Ok(result.Value);
         }

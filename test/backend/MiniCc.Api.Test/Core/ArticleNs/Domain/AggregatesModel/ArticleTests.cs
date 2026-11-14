@@ -1,6 +1,7 @@
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects;
 using MiniCc.Api.Core.ArticleNs.Domain.Events;
+using MiniCc.Api.Core.ArticleNs.Domain.Services;
 using MiniCc.Api.Core.TagNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.TagNs.Domain.AggregatesModel.ValueObjects;
 using MiniCc.Api.Core.TagNs.Domain.Events;
@@ -37,6 +38,45 @@ public class ArticleTests
         article.ReadAt.Should().BeNull();
         article.Id.Should().NotBe(Guid.Empty);
         article.CreatedAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void CreateLink_HasNoBodyAndLinkKind()
+    {
+        var url = Url.Create("https://www.youtube.com/watch?v=abc&utm_source=test#top");
+        var link = Article.CreateLink(url, "Video", "", "Description", "");
+
+        link.ContentKind.Should().Be(ContentKind.Link);
+        link.ReadableContent.Should().BeEmpty();
+        link.OriginalContent.Should().BeEmpty();
+        link.Length.Should().Be(0);
+        link.Summary.Should().Be("Description");
+        link.ReadingStatus.Should().Be(ReadingStatus.Unread);
+        link.Url.Value.Should().Be(url.Value);
+        link.NormalizedUrl.Should().Be(UrlNormalizer.Normalize(url.Value));
+        link.DomainEvents.Should().ContainSingle().Which.Should().BeOfType<ArticleCreatedEvent>();
+    }
+
+    [Fact]
+    public void CreateLink_WithBlankTitle_Throws()
+    {
+        var url = Url.Create("https://example.com");
+        FluentActions.Invoking(() => Article.CreateLink(url, "   ", "", "", ""))
+            .Should().Throw<ArgumentException>().WithParameterName("title");
+    }
+
+    [Fact]
+    public void FillMissingMetadata_FillsOnlyEmptyFields()
+    {
+        var article = Article.CreateLink(Url.Create("https://example.com/video"), "Video", "", "Kept summary", "");
+
+        article.FillMissingMetadata("Jane", "New summary", "https://example.com/cover.png");
+        article.FillMissingMetadata("Other author", "", "https://example.com/other.png");
+
+        article.Title.Should().Be("Video");
+        article.Author.Should().Be("Jane");
+        article.Summary.Should().Be("Kept summary");
+        article.ImageUrl.Should().Be("https://example.com/cover.png");
     }
 
     [Fact]

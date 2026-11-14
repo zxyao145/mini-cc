@@ -46,18 +46,17 @@ public class Article : AggregateRoot
     public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();
     public virtual ICollection<Highlight> Highlights { get; set; } = new List<Highlight>();
 
-    private Article(Guid id, Url url, string title, string author, Content content,
-                   string summary, string imageUrl) : base(id)
+    private Article(Guid id, Url url, string title, string author, string summary, string imageUrl) : base(id)
     {
+        if (string.IsNullOrWhiteSpace(title))
+            throw new ArgumentException("Title cannot be null or empty", nameof(title));
+
         Url = url;
         NormalizedUrl = UrlNormalizer.Normalize(url.Value);
         Title = title;
-        Author = author;
-        ReadableContent = content.ReadableContent;
-        OriginalContent = content.OriginalContent;
-        Length = content.Length;
-        Summary = summary;
-        ImageUrl = imageUrl;
+        Author = author ?? string.Empty;
+        Summary = summary ?? string.Empty;
+        ImageUrl = imageUrl ?? string.Empty;
         CreatedAt = DateTimeOffset.UtcNow;
         IsArchived = false;
         IsFavorite = false;
@@ -74,13 +73,13 @@ public class Article : AggregateRoot
     public static Article Create(Url url, string title, string author, Content content,
                                 string summary = "", string imageUrl = "")
     {
-        if (string.IsNullOrWhiteSpace(title))
-            throw new ArgumentException("Title cannot be null or empty", nameof(title));
-
-        var id = UuidUtil.NewGuidV7();
-        return new Article(id, url, title, author ?? string.Empty, content,
-                          summary ?? string.Empty, imageUrl ?? string.Empty);
+        var article = new Article(UuidUtil.NewGuidV7(), url, title, author, summary, imageUrl);
+        article.ReplaceContent(content, ContentKind.Full);
+        return article;
     }
+
+    public static Article CreateLink(Url url, string title, string author, string summary, string imageUrl) =>
+        new Article(UuidUtil.NewGuidV7(), url, title, author, summary, imageUrl) { ContentKind = ContentKind.Link };
 
     public void UpdateMetadata(string title, string summary)
     {
@@ -91,6 +90,13 @@ public class Article : AggregateRoot
         Summary = summary ?? string.Empty;
 
         AddDomainEvent(new ArticleUpdatedEvent(Id, Title));
+    }
+
+    public void FillMissingMetadata(string author, string summary, string imageUrl)
+    {
+        if (string.IsNullOrWhiteSpace(Author)) Author = author;
+        if (string.IsNullOrWhiteSpace(Summary)) Summary = summary;
+        if (string.IsNullOrWhiteSpace(ImageUrl)) ImageUrl = imageUrl;
     }
 
     public void SetFavorite(bool favorite)

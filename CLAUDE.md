@@ -56,7 +56,7 @@ src/backend/MiniCc.Api/Core/
 - **Performance**: Lazy loading and tree shaking optimization
 
 ### Core Entities
-- **Article**: Saved content with independent reading status (unread/reading/read), favorite, archive, soft deletion, and reading position
+- **Article**: Full articles, feed summaries, and saved links share reading status (unread/reading/read), favorite, archive, tags, and soft deletion. Articles and feed summaries also track reading position.
 - **Tag**: Many-to-many with articles, color-coded
 - **Feed / FeedEntry**: RSS/Atom subscriptions, default tags, leased refreshes, article provenance and durable dismissed-entry deduplication
 - **Highlight**: Text selections with notes and Ok/Pending/Orphaned anchor status
@@ -67,6 +67,7 @@ src/backend/MiniCc.Api/Core/
 GET    /api/articles              # Filtered projection: { items, total, nextCursor }
 GET    /api/tags/{id}/articles     # Same cursor page contract, view=all + tag AND filter
 POST   /api/articles/content      # Save extracted HTML from the extension
+POST   /api/articles/link         # Save a URL and its metadata from the extension
 GET    /api/articles/{id}         # Get single article
 PUT    /api/articles/{id}         # Update metadata
 DELETE /api/articles/{id}         # Move article to trash
@@ -196,7 +197,7 @@ podman compose -f ./docker-compose.yaml down
 
 ### External Services
 - **Image Proxy**: Runs on port 5050 with secret key authentication. Set API `ImageProxy__SignatureKey` to the same imageproxy signing key and `ImageProxy__ProxyUrl` to `/imageProxy` (nginx) or `http://localhost:5050` (manual local setup). Compose shares `IMAGE_PROXY_SECRET` between both services.
-- **Article collection**: Chrome only, via `POST /api/articles/content` with required `originalContent`, `readableContent`, URL and title. No backend page fetching or extraction service.
+- **Page collection**: The Chrome extension sends extracted HTML to `POST /api/articles/content` and link metadata to `POST /api/articles/link`. Extraction runs on the loaded page in Chrome.
 - **CORS**: Configured for localhost:4000, localhost:5000
 
 ### Authentication
@@ -237,6 +238,14 @@ podman compose -f ./docker-compose.yaml down
 - Plugin SummaryOnly→Full saves lock the earliest canonical article, preserve state/tags/notes, replace content once, reset progress with a strictly newer microsecond version and mark all highlights Pending. Full saves only set SavedFromExtensionAt when absent (and restore trash when needed). `PUT /api/highlights/{id}/anchor` accepts offsets or `{ orphaned: true }`, updates Pending only, and returns the acknowledged HighlightDto. Reader UTF-16 text matching chooses the closest occurrence; only acknowledged Ok anchors render, and orphan notes remain visible. List-metadata patches keep the loaded body and its content kind together. A state response reporting completion immediately pauses old-body work; reset acknowledgements include the locked row body kind, which is checked before adopting a new version/session (an unprovable kind requires refresh). A captured loaded kind also protects the 409/Stay path. An open summary reader detects replacement on visibility refresh or conflict choice and pauses obsolete coordinates until the user reloads the full body. Persisted failed progress records its content kind; reopening Full discards a pending SummaryOnly position instead of allowing a 409/Stay action to rebase coordinates from the replaced body.
 - `FeedsProvider` loads after authentication, refreshes every five minutes and after subscription/library mutations. `/pages/feeds` supplies two-step preview/confirmation, default tags, editing, pause/resume, manual refresh and confirmed unsubscribe/trash actions. A scanned `ArticleFeedMapping : IRegister` supplies feed metadata to the injected ArticleDto mapper; detail, extension-save and metadata-update responses share it. Explicit `source=extension` plus `feedId` is an AND filter in both URL parsing and the backend. Choosing RSS in the library exposes a per-feed selector with an all-feeds option; changing it preserves view/search/tags/status/dates/sort. Library feed filters/source projections remain body-free; reader source metadata and the summary banner use the same article state and caches.
 - Verification: backend tests include real PostgreSQL storage/concurrent imports, plugin races, stale leases, pause/unsubscribe during fetch, 304/backoff, Unicode boundaries and real HTTP API status/state preservation; fetch tests include a real fast-header/stalled-body 20-second deadline. `e2e/feeds.spec.ts` uses unique mock run URLs, returned article IDs and finally cleanup so the 65-article baseline remains intact. Final P5 verification: actual .NET 9 + PostgreSQL backend 327/327, frontend 89/89, TypeScript exit 0, EF model alignment, real HTTP lifecycle and isolated production `next build --no-lint` exit 0. Scoped `eslint src e2e --ignore-pattern src/app/pages/account/page.tsx` exits 0 with the existing ArticleCard image warning; full lint still has eight baseline errors in unchanged account/page.tsx and is not claimed green. The complete 42-case Chromium suite (38 prior + 4 P5) passed at 1280×800 and 375×812 in 2.2 minutes. Parent screenshot review verified source text, resolved/orphaned notes, bounded desktop navigation and the 126px mobile header. The 65 original active article IDs remained intact. P5 phase review and final whole-branch review are approved; final correction-wave evidence follows below. Evidence is recorded in the P5 implementation report.
+
+### Saved Links and Markdown Copy
+- `ContentKind.Link = 2` serializes as `"link"` and stores empty original and readable content. The existing schema supports it.
+- `POST /api/articles/link` requires an HTTP(S) URL and title. The saved address is the page's original `document.URL`. The existing `UrlNormalizer` handles deduplication, keeping YouTube playlist parameters distinct. Link saves restore existing matches and preserve their content, metadata, and state. Full content saves upgrade `Link` and `SummaryOnly` matches, fill empty author, summary, and cover fields, and preserve tags, notes, and library state.
+- Link details show the domain, save date, available cover and summary, and an original-page button. Reading progress saves, resets, and new highlights on links return 400.
+- The popup shows both `Save Article` and `Save Link`; the user chooses. Extraction returns `PageChoices { suggested, article, link }`: classification only picks the highlighted primary button, and `Save Article` is disabled when Readability finds no content. Settings open from the top-right gear icon.
+- After in-page navigation changes the URL beyond the fragment, classification, link extraction, and Markdown skip head metadata and JSON-LD. A link uses the current document title and can derive a fallback cover from a YouTube watch or Shorts video ID. A Chrome test of a YouTube video-to-video navigation observed the previous video's `og:title` in the same document after navigation. The destination showed a sign-in challenge and set `document.title` to `YouTube`. The `hqdefault.jpg` fallback displayed without visible letterboxing in the tested desktop and mobile library cards.
+- `Copy Markdown` writes YAML front matter and the converted article or one Markdown link to the clipboard. It includes `title`, `url`, the local `date`, and any available `author` and page `tags`. Article conversion uses Readability, DOMPurify, `turndown`, and `turndown-plugin-gfm`. The extension declares `clipboardWrite`.
 
 ## Testing
 

@@ -1,12 +1,14 @@
 # MiniCC Chrome Extension
 
-A Chrome extension for saving articles to your MiniCC read-later application.
+A Chrome extension for saving articles and links to your MiniCC read-later application.
 
 ## Features
 
 - Extract the loaded page with `@mozilla/readability`, using a cloned DOM
 - Sanitize readable HTML with DOMPurify and preserve the original HTML archive
 - Save articles to MiniCC via REST API
+- Save video pages and other pages without a readable article as links with available metadata
+- Copy Markdown with YAML front matter to the clipboard
 - Configurable API endpoint
 - Clean, modern interface
 - TypeScript + SCSS + pnpm workflow
@@ -40,10 +42,9 @@ A Chrome extension for saving articles to your MiniCC read-later application.
 
 ## Usage
 
-1. Click the MiniCC extension icon while on an article webpage
-2. The extension will automatically extract the page content
-3. Click "Save Article" to save it to your MiniCC application
-4. Use "Settings" to configure the API URL and an API key from the MiniCC account page
+1. Open the MiniCC extension on a webpage.
+2. Click **Save Article** or **Save Link**. The detected page type is highlighted as the suggestion; **Save Article** is unavailable when the page has no readable content. Use the gear icon in the top-right corner to configure the API URL and a key from the MiniCC account page.
+3. Click **Copy Markdown** to copy the page to your clipboard independently of saving it to MiniCC.
 
 ## Configuration
 
@@ -51,7 +52,7 @@ The default API URL is `http://localhost:5000` (Compose/nginx). For the current 
 
 The background worker reads the API key from extension storage and sends it in `X-Api-Key`; the content script only extracts the page. Image proxy signing stays on the server. The website provides reading and management, with no URL collection form.
 
-## API Endpoint
+## API Endpoints
 
 The extension sends POST requests to `/api/articles/content` with the following payload:
 
@@ -66,3 +67,5 @@ The extension sends POST requests to `/api/articles/content` with the following 
   "imageUrl": "https://example.com/cover.jpg"
 }
 ```
+
+For links, `POST /api/articles/link` requires `url` and `title` and accepts `author`, `summary`, and `imageUrl`.
