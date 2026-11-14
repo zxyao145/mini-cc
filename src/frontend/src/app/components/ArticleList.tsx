@@ -3,7 +3,7 @@
 import { BookOpen } from "lucide-react";
 import ArticleCard from "./ArticleCard";
 import { ArticleListItem } from "@/types";
-import styles from "./ArticleList.module.scss";
+import styles from "./ArticleList.module.css";
 
 interface ArticleListProps {
   articles: ArticleListItem[];

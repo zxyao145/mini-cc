@@ -1,31 +1,27 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { LayoutGrid, List, Search, X } from 'lucide-react';
+import { ChevronDown, LayoutGrid, List, ListChecks, Search, X } from 'lucide-react';
+import { Button } from '@/components/arc/button/button';
+import { Checkbox } from '@/components/arc/checkbox/checkbox';
+import { Input } from '@/components/arc/input/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/arc/popover/popover';
+import { Select } from '@/components/arc/select/select';
+import { Tooltip } from '@/components/arc/tooltip/tooltip';
 import { tagApi } from '@/lib/api';
 import { useFeeds } from '@/contexts/FeedsContext';
 import { LibraryQuery, parseLibraryQuery, ReadingStatus, serializeLibraryQuery } from '@/lib/library-query';
 import { TagWithArticleCount } from '@/types';
-import styles from './LibraryToolbar.module.scss';
+import styles from './LibraryToolbar.module.css';
 
 export const statusLabels = { unread: '未读', reading: '阅读中', read: '已读' };
-// Customizable select opens its list below the trigger; other browsers keep the native popup.
-// Turbopack in Next 15.3 cannot parse ::picker(select), so these rules bypass the CSS module pipeline.
-const field = `.${styles.select}`;
-const pickerCss = `@supports (appearance: base-select) {
-  ${field} select, ${field} select::picker(select) { appearance: base-select; }
-  ${field} select { line-height: normal; }
-  ${field} select::picker-icon { display: none; }
-  ${field} select::picker(select) { margin-block: 6px; max-width: min(320px, calc(100vw - 32px)); padding: 4px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow-lg); }
-  ${field} option { display: flex; align-items: center; gap: 12px; min-height: 36px; padding: 6px 10px; border-radius: 6px; color: var(--text-secondary); font-size: 13px; white-space: normal; overflow-wrap: anywhere; }
-  ${field} option:hover, ${field} option:focus-visible { background: var(--surface-hover); outline: 0; }
-  ${field} option:checked { color: var(--brand); background: var(--brand-soft); }
-  ${field} option::checkmark { order: 1; margin-left: auto; }
-  @media (max-width: 600px) { ${field} option { min-height: 44px; } }
-}`;
 interface Props {
-  query: LibraryQuery; onChange: (query: LibraryQuery, replace: boolean) => void;
-  articleStyle: string; onStyleChange: (style: 'grid' | 'list') => void; onSelect?: () => void;
+  query: LibraryQuery;
+  onChange: (query: LibraryQuery, replace: boolean) => void;
+  articleStyle: string;
+  onStyleChange: (style: 'grid' | 'list') => void;
+  onSelect?: () => void;
 }
+
 export default function LibraryToolbar({ query: incomingQuery, onChange, articleStyle, onStyleChange, onSelect }: Props) {
   const { feeds } = useFeeds();
   const [query, setQuery] = useState(incomingQuery);
@@ -33,7 +29,6 @@ export default function LibraryToolbar({ query: incomingQuery, onChange, article
   const [tagSearch, setTagSearch] = useState('');
   const [tags, setTags] = useState<TagWithArticleCount[]>([]);
   const [tagError, setTagError] = useState(false);
-  const toolbar = useRef<HTMLDivElement>(null);
   const callback = useRef(onChange); callback.current = onChange;
   const current = useRef(incomingQuery);
   const sent = useRef(incomingQuery);
@@ -41,22 +36,26 @@ export default function LibraryToolbar({ query: incomingQuery, onChange, article
   const searchValue = useRef(incomingQuery.q);
   const pending = useRef<string[]>([]);
   const incomingKey = serializeLibraryQuery(incomingQuery);
+
   const adoptUrl = useCallback((value: LibraryQuery, keepSearch = false) => {
     const next = keepSearch ? { ...value, q: searchValue.current } : value;
     current.current = next; sent.current = value; pending.current = [];
     searchValue.current = next.q; setQuery(next); setSearch(next.q);
   }, []);
+
   useEffect(() => {
     // Older router commits must not erase edits already sent in a newer navigation.
     if (pending.current.includes(incomingKey) && incomingKey !== serializeLibraryQuery(sent.current)) return;
     const ownAcknowledgement = pending.current.includes(incomingKey);
     adoptUrl(incoming.current, ownAcknowledgement && searchValue.current !== sent.current.q);
   }, [incomingKey, adoptUrl]);
+
   useEffect(() => {
     const onHistory = () => adoptUrl(parseLibraryQuery(new URLSearchParams(window.location.search)));
     window.addEventListener('popstate', onHistory);
     return () => window.removeEventListener('popstate', onHistory);
   }, [adoptUrl]);
+
   const publish = useCallback((patch: Partial<LibraryQuery>, replace: boolean) => {
     const next = { ...current.current, ...patch };
     current.current = next; searchValue.current = next.q; setQuery(next); setSearch(next.q);
@@ -65,19 +64,19 @@ export default function LibraryToolbar({ query: incomingQuery, onChange, article
     sent.current = next; pending.current.push(key);
     callback.current(next, replace);
   }, []);
+
   useEffect(() => {
     if (search === sent.current.q) return;
     const timer = setTimeout(() => publish({ q: searchValue.current }, true), 300);
     return () => clearTimeout(timer);
   }, [search, publish]);
-  useEffect(() => { let cancelled = false; tagApi.getTags().then(data => { if (!cancelled) setTags(data); }).catch(() => { if (!cancelled) setTagError(true); }); return () => { cancelled = true; }; }, []);
+
   useEffect(() => {
-    const close = (event: PointerEvent) => {
-      toolbar.current?.querySelectorAll('details[open]').forEach(detail => { if (!detail.contains(event.target as Node)) detail.removeAttribute('open'); });
-    };
-    document.addEventListener('pointerdown', close);
-    return () => document.removeEventListener('pointerdown', close);
+    let cancelled = false;
+    tagApi.getTags().then(data => { if (!cancelled) setTags(data); }).catch(() => { if (!cancelled) setTagError(true); });
+    return () => { cancelled = true; };
   }, []);
+
   const change = (patch: Partial<LibraryQuery>) => publish(patch, false);
   const toggleStatus = (status: ReadingStatus) => change({ status: current.current.status.includes(status) ? current.current.status.filter(s => s !== status) : [...current.current.status, status] });
   const toggleTag = (id: string) => change({ tags: current.current.tags.includes(id) ? current.current.tags.filter(t => t !== id) : [...current.current.tags, id] });
@@ -103,6 +102,7 @@ export default function LibraryToolbar({ query: incomingQuery, onChange, article
     if (field === 'savedTo') date.setDate(date.getDate() + 1);
     change({ [field]: value ? date.toISOString() : '', range: 'custom' });
   };
+
   const chips = [
     ...query.status.map(status => ({ label: statusLabels[status], remove: () => toggleStatus(status) })),
     ...query.tags.map(id => ({ label: `标签：${tags.find(tag => tag.id === id)?.name || id}`, remove: () => toggleTag(id) })),
@@ -110,41 +110,65 @@ export default function LibraryToolbar({ query: incomingQuery, onChange, article
     ...(query.source || query.feedId ? [{ label: query.source === 'extension' ? '浏览器收藏' : 'RSS', remove: () => change({ source: '', feedId: '' }) }] : []),
     ...(query.savedFrom || query.savedTo ? [{ label: query.range === 'week' ? '最近一周' : query.range === 'month' ? '最近一个月' : `保存时间：${localDate(query.savedFrom) || '不限'} 至 ${localDate(query.savedTo, true) || '不限'}`, remove: () => change({ savedFrom: '', savedTo: '', range: '' }) }] : []),
   ];
-  return <div ref={toolbar} className={styles.toolbar} onKeyDown={event => {
-    if (event.key === 'Escape') { const detail = (event.target as HTMLElement).closest('details'); detail?.removeAttribute('open'); detail?.querySelector('summary')?.focus(); }
-  }}>
-    <style href="library-select-picker" precedence="default">{pickerCss}</style>
+  const statusSummary = query.status.length ? query.status.map(status => statusLabels[status]).join('、') : '全部';
+  const tagSummary = query.tags.length ? `${query.tags.length} 个标签` : '全部';
+  const rangeValue = query.range || (query.savedFrom || query.savedTo ? 'custom' : '');
+
+  return <div className={styles.toolbar}>
     <div className={styles.top}>
       <form className={styles.search} role="search" onSubmit={event => { event.preventDefault(); publish({ q: searchValue.current }, true); }}>
-        <label className="sr-only" htmlFor="library-search">搜索文章</label><Search size={18} aria-hidden="true" />
-        <input id="library-search" type="search" maxLength={200} value={search} onChange={event => { const value = event.target.value; searchValue.current = value; current.current = { ...current.current, q: value }; setSearch(value); }} placeholder="搜索文章…" />
-        {search && <button type="button" aria-label="清除搜索" onClick={() => { publish({ q: '' }, true); }}><X size={17} aria-hidden="true" /></button>}
+        <Input id="library-search" label="搜索文章" hideLabel type="search" maxLength={200} value={search} onChange={event => { const value = event.target.value; searchValue.current = value; current.current = { ...current.current, q: value }; setSearch(value); }} placeholder="搜索文章…" leading={<Search size={18} />} wrapperClassName={styles.searchField} className={styles.searchInput}
+          trailing={search ? <Tooltip content="清除搜索"><Button variant="ghost" size="sm" iconOnly aria-label="清除搜索" onClick={() => publish({ q: '' }, true)}><X size={17} aria-hidden="true" /></Button></Tooltip> : undefined} />
       </form>
-      {onSelect && <button type="button" onClick={onSelect} style={{ minHeight: 44, padding: "8px 12px" }}>选择</button>}
-      <div className={styles.viewSwitch} role="group" aria-label="文章布局">
-        <button type="button" onClick={() => onStyleChange('grid')} aria-label="卡片视图" title="卡片视图" aria-pressed={articleStyle === 'grid'}><LayoutGrid size={18} aria-hidden="true" /></button>
-        <button type="button" onClick={() => onStyleChange('list')} aria-label="列表视图" title="列表视图" aria-pressed={articleStyle === 'list'}><List size={18} aria-hidden="true" /></button>
+      <div className={styles.topActions}>
+        {onSelect && <Button variant="secondary" size="sm" className={styles.selectMode} onClick={onSelect}><ListChecks size={16} aria-hidden="true" />选择</Button>}
+        <div className={styles.viewSwitch} role="group" aria-label="文章布局">
+          <Tooltip content="卡片视图"><Button variant="ghost" size="sm" iconOnly aria-label="卡片视图" onClick={() => onStyleChange('grid')} aria-pressed={articleStyle === 'grid'} className={styles.viewButton}><LayoutGrid size={17} aria-hidden="true" /></Button></Tooltip>
+          <Tooltip content="列表视图"><Button variant="ghost" size="sm" iconOnly aria-label="列表视图" onClick={() => onStyleChange('list')} aria-pressed={articleStyle === 'list'} className={styles.viewButton}><List size={17} aria-hidden="true" /></Button></Tooltip>
+        </div>
       </div>
     </div>
+
     <div className={styles.filters}>
-      <details className={styles.dropdown}><summary>阅读状态{query.status.length ? ` · ${query.status.length}` : ''}</summary><fieldset className={styles.panel}><legend className="sr-only">阅读状态</legend>
-        {(Object.keys(statusLabels) as ReadingStatus[]).map(status => <label key={status}><input type="checkbox" checked={query.status.includes(status)} onChange={() => toggleStatus(status)} />{statusLabels[status]}</label>)}
-      </fieldset></details>
-      <details className={styles.dropdown}><summary>标签{query.tags.length ? ` · ${query.tags.length}` : ''}</summary><div className={styles.panel}>
-        <label htmlFor="tag-search">搜索标签</label><input id="tag-search" value={tagSearch} onChange={event => setTagSearch(event.target.value)} placeholder="标签名称" />
-        {tagError && <p role="alert">标签加载失败</p>}
-        <div className={styles.tagOptions}>{tags.filter(tag => tag.name.toLowerCase().includes(tagSearch.toLowerCase())).map(tag => <label key={tag.id}><input type="checkbox" checked={query.tags.includes(tag.id)} disabled={query.tags.length >= 10 && !query.tags.includes(tag.id)} onChange={() => toggleTag(tag.id)} />{tag.name}</label>)}</div>
-        {!tagError && !tags.length && <p>暂无标签</p>}
-      </div></details>
-      <label className={styles.select}>来源<select value={query.source} onChange={event => change({ source: event.target.value as LibraryQuery['source'], feedId: '' })}><option value="">全部</option><option value="extension">浏览器收藏</option><option value="feed">RSS</option></select></label>
-      {(query.source === 'feed' || query.view === 'feeds' || query.feedId) && <label className={styles.select}>订阅源<select aria-label="订阅源" value={query.feedId} onChange={event => change({ feedId: event.target.value })}><option value="">全部订阅</option>{query.feedId && !feeds.some(feed => feed.id === query.feedId) && <option value={query.feedId}>当前订阅</option>}{feeds.map(feed => <option key={feed.id} value={feed.id}>{feed.title}</option>)}</select></label>}
-      <label className={styles.select}>保存时间<select value={query.range || (query.savedFrom || query.savedTo ? 'custom' : '')} onChange={event => dateRange(event.target.value as LibraryQuery['range'])}><option value="">不限</option><option value="week">最近一周</option><option value="month">最近一个月</option><option value="custom">自定义</option></select></label>
-      <label className={styles.select}>排序<select value={query.sort} disabled={query.view === 'trash'} onChange={event => change({ sort: event.target.value as LibraryQuery['sort'] })}>{query.view === 'trash' ? <option value={query.sort}>最近删除</option> : <><option value="saved_desc">最近保存</option><option value="saved_asc">最早保存</option><option value="read_desc">最近阅读</option>{(query.view === 'feeds' || query.sort === 'published_desc') && <option value="published_desc">最新发布</option>}</>}</select></label>
+      <Popover>
+        <PopoverTrigger asChild><Button variant="secondary" size="sm" className={styles.filterTrigger} aria-label="阅读状态" data-active={!!query.status.length || undefined}><span>阅读状态</span><span className={styles.filterValue}>{statusSummary}</span><ChevronDown size={14} aria-hidden="true" /></Button></PopoverTrigger>
+        <PopoverContent className={styles.filterPanel} aria-label="阅读状态">
+          {(Object.keys(statusLabels) as ReadingStatus[]).map(status => <Checkbox key={status} compact label={statusLabels[status]} checked={query.status.includes(status)} onCheckedChange={() => toggleStatus(status)} />)}
+        </PopoverContent>
+      </Popover>
+      <Popover>
+        <PopoverTrigger asChild><Button variant="secondary" size="sm" className={styles.filterTrigger} aria-label="标签" data-active={!!query.tags.length || undefined}><span>标签</span><span className={styles.filterValue}>{tagSummary}</span><ChevronDown size={14} aria-hidden="true" /></Button></PopoverTrigger>
+        <PopoverContent className={`${styles.filterPanel} ${styles.tagPanel}`} aria-label="标签">
+          <Input label="搜索标签" hideLabel value={tagSearch} onChange={event => setTagSearch(event.target.value)} placeholder="搜索标签" wrapperClassName={styles.tagSearch} leading={<Search size={15} />} />
+          {tagError && <p role="alert" className={styles.filterMessage}>标签加载失败</p>}
+          <div className={styles.tagOptions}>
+            {tags.filter(tag => tag.name.toLowerCase().includes(tagSearch.toLowerCase())).map(tag => <Checkbox key={tag.id} compact label={tag.name} checked={query.tags.includes(tag.id)} disabled={query.tags.length >= 10 && !query.tags.includes(tag.id)} onCheckedChange={() => toggleTag(tag.id)} />)}
+            {!tagError && !tags.length && <p className={styles.filterMessage}>暂无标签</p>}
+          </div>
+        </PopoverContent>
+      </Popover>
+      <Select label="来源" hideLabel variant="chip" value={query.source} options={[
+        { value: '', label: '全部' }, { value: 'extension', label: '浏览器收藏' }, { value: 'feed', label: 'RSS' },
+      ]} onValueChange={source => change({ source: source as LibraryQuery['source'], feedId: '' })} />
+      {(query.source === 'feed' || query.view === 'feeds' || query.feedId) && <Select label="订阅源" hideLabel variant="chip" value={query.feedId} options={[
+        { value: '', label: '全部订阅' }, ...(query.feedId && !feeds.some(feed => feed.id === query.feedId) ? [{ value: query.feedId, label: '当前订阅' }] : []), ...feeds.map(feed => ({ value: feed.id, label: feed.title })),
+      ]} onValueChange={feedId => change({ feedId })} />}
+      <Select label="保存时间" hideLabel variant="chip" value={rangeValue} options={[
+        { value: '', label: '不限' }, { value: 'week', label: '最近一周' }, { value: 'month', label: '最近一个月' }, { value: 'custom', label: '自定义' },
+      ]} onValueChange={range => dateRange(range as LibraryQuery['range'])} />
+      <Select label="排序" hideLabel variant="chip" value={query.sort} disabled={query.view === 'trash'} options={query.view === 'trash'
+        ? [{ value: query.sort, label: '最近删除' }]
+        : [{ value: 'saved_desc', label: '最近保存' }, { value: 'saved_asc', label: '最早保存' }, { value: 'read_desc', label: '最近阅读' }, ...((query.view === 'feeds' || query.sort === 'published_desc') ? [{ value: 'published_desc', label: '最新发布' }] : [])]}
+        onValueChange={sort => change({ sort: sort as LibraryQuery['sort'] })} />
     </div>
     {query.range === 'custom' && <div className={styles.dates}>
-      <label>起始日期<input type="date" value={localDate(query.savedFrom)} max={localDate(query.savedTo, true) || undefined} onChange={event => setDate('savedFrom', event.target.value)} /></label>
-      <span aria-hidden="true">—</span><label>截止日期<input type="date" value={localDate(query.savedTo, true)} min={localDate(query.savedFrom) || undefined} onChange={event => setDate('savedTo', event.target.value)} /></label>
+      <Input label="起始日期" type="date" value={localDate(query.savedFrom)} max={localDate(query.savedTo, true) || undefined} onChange={event => setDate('savedFrom', event.target.value)} wrapperClassName={styles.dateInput} />
+      <span aria-hidden="true">—</span>
+      <Input label="截止日期" type="date" value={localDate(query.savedTo, true)} min={localDate(query.savedFrom) || undefined} onChange={event => setDate('savedTo', event.target.value)} wrapperClassName={styles.dateInput} />
     </div>}
-    {!!chips.length && <div className={styles.chips} aria-label="当前筛选条件">{chips.map(chip => <button type="button" key={chip.label} onClick={chip.remove} aria-label={`移除${chip.label}`}><span>{chip.label}</span><X size={14} aria-hidden="true" /></button>)}<button type="button" className={styles.clear} onClick={() => { publish({ ...parseLibraryQuery(new URLSearchParams()), view: current.current.view, sort: current.current.sort }, false); }}>清除筛选</button></div>}
+    {!!chips.length && <div className={styles.chips} aria-label="当前筛选条件">
+      {chips.map(chip => <Button variant="ghost" size="sm" className={styles.chip} key={chip.label} onClick={chip.remove} aria-label={`移除${chip.label}`}><span>{chip.label}</span><X size={14} aria-hidden="true" /></Button>)}
+      <Button variant="ghost" size="sm" className={styles.clear} onClick={() => { publish({ ...parseLibraryQuery(new URLSearchParams()), view: current.current.view, sort: current.current.sort }, false); }}>清除筛选<X size={14} aria-hidden="true" /></Button>
+    </div>}
   </div>;
 }

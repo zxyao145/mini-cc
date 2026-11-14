@@ -110,20 +110,13 @@ test('reconciles a leading save while away and traverses all 66 server-cursor ro
 test('composes rapid toolbar edits and follows browser back/forward', async ({ page }) => {
   await page.goto('/?status=unread');
   await expect(articleLinks(page)).toHaveCount(20);
-  await page.locator('summary').filter({ hasText: /^标签/ }).click();
+  await page.getByRole('button', { name: '标签', exact: true }).click();
   await expect(page.getByLabel('搜索标签', { exact: true })).toBeVisible();
-  await page.evaluate(() => {
-    const details = document.querySelector('#tag-search')!.closest('details')!;
-    for (const name of ['阅读', '.NET']) {
-      const label = Array.from(details.querySelectorAll('label')).find(label => label.textContent === name)!;
-      (label.querySelector('input') as HTMLInputElement).click();
-    }
-    const source = document.querySelector('select')!;
-    source.value = 'extension'; source.dispatchEvent(new Event('change', { bubbles: true }));
-    const search = document.querySelector('#library-search') as HTMLInputElement;
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(search, '缓存');
-    search.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  await page.getByLabel('阅读', { exact: true }).check();
+  await page.getByLabel('.NET', { exact: true }).check();
+  await page.getByRole('combobox', { name: '来源', exact: true }).click();
+  await page.getByRole('option', { name: '浏览器收藏', exact: true }).click();
+  await page.getByLabel('搜索文章', { exact: true }).fill('缓存');
   await expect.poll(() => new URL(page.url()).searchParams.get('tags')?.split(',').length).toBe(2);
   await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe('缓存');
   await expect(page.getByRole('status')).toHaveText('共 1 篇');
@@ -131,11 +124,11 @@ test('composes rapid toolbar edits and follows browser back/forward', async ({ p
   await page.goBack();
   const previous = new URL(page.url()).searchParams;
   await expect(page.getByLabel('搜索文章', { exact: true })).toHaveValue(previous.get('q') || '');
-  await expect(page.getByRole('combobox', { name: '来源', exact: true })).toHaveValue(previous.get('source') || '');
+  await expect(page.getByRole('combobox', { name: '来源', exact: true })).toContainText(previous.get('source') === 'extension' ? '浏览器收藏' : '全部');
   await page.goForward();
   await expect(page).toHaveURL(finalUrl);
   await expect(page.getByLabel('搜索文章', { exact: true })).toHaveValue('缓存');
-  await expect(page.getByRole('combobox', { name: '来源', exact: true })).toHaveValue('extension');
+  await expect(page.getByRole('combobox', { name: '来源', exact: true })).toContainText('浏览器收藏');
 });
 
 test('removes a selected tag from a reader tail row and restores the original fixture tag', async ({ page }) => {
@@ -155,8 +148,8 @@ test('removes a selected tag from a reader tail row and restores the original fi
     await link.click();
     await expect(page).toHaveURL(new RegExp(`/pages/article/${articleId}$`));
     await expect(page.locator('.article-title-section h1')).toBeVisible();
-    await page.getByRole('button', { name: 'Remove .NET tag', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Remove .NET tag', exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: '移除 .NET 标签', exact: true }).click();
+    await expect(page.getByRole('button', { name: '移除 .NET 标签', exact: true })).toHaveCount(0);
     await page.goBack();
     await expect(articleLinks(page)).toHaveCount(before.total - 1);
     await expect(page.getByRole('status')).toHaveText(`共 ${before.total - 1} 篇`);

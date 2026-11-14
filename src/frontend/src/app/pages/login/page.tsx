@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { BookOpen } from 'lucide-react';
+import { Button } from '@/components/arc/button/button';
+import { Checkbox } from '@/components/arc/checkbox/checkbox';
+import { Input } from '@/components/arc/input/input';
 import { useAuth } from '@/contexts/AuthContext';
-import styles from './login.module.scss';
+import styles from './login.module.css';
 
 export default function LoginPage() {
   const [userName, setUserName] = useState('');
@@ -38,69 +41,49 @@ export default function LoginPage() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.loginBox}>
+      <section className={styles.loginBox} aria-labelledby="login-title">
         <div className={styles.brand}>
           <span className={styles.brandMark}><BookOpen size={20} strokeWidth={1.8} aria-hidden="true" /></span>
           <span>MiniCc<span className={styles.brandDot}>.</span></span>
         </div>
-        <h1 className={styles.title}>登录</h1>
-        
+        <h1 className={styles.title} id="login-title">登录</h1>
+
         <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.field}>
-            <label htmlFor="userName" className={styles.label}>
-              用户名
-            </label>
-            <input
-              type="text"
-              id="userName"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              className={styles.input}
-              placeholder="请输入用户名"
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="password" className={styles.label}>
-              密码
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={styles.input}
-              placeholder="请输入密码"
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className={styles.checkboxField}>
-            <input
-              type="checkbox"
-              id="rememberMe"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className={styles.checkbox}
-              disabled={isLoading}
-            />
-            <label htmlFor="rememberMe" className={styles.checkboxLabel}>
-              记住我
-            </label>
-          </div>
-
-          {error && <div className={styles.error} role="alert">{error}</div>}
-
-          <button
-            type="submit"
-            className={styles.submitButton}
+          <Input
+            label="用户名"
+            id="userName"
+            value={userName}
+            onChange={event => setUserName(event.target.value)}
+            placeholder="请输入用户名"
+            autoComplete="username"
             disabled={isLoading}
-          >
-            {isLoading ? '登录中...' : '登录'}
-          </button>
+          />
+          <Input
+            label="密码"
+            id="password"
+            type="password"
+            value={password}
+            onChange={event => setPassword(event.target.value)}
+            placeholder="请输入密码"
+            autoComplete="current-password"
+            disabled={isLoading}
+          />
+
+          <Checkbox
+            label="记住我"
+            id="rememberMe"
+            checked={rememberMe}
+            onCheckedChange={checked => setRememberMe(checked === true)}
+            disabled={isLoading}
+          />
+
+          {error && <p className={styles.error} role="alert">{error}</p>}
+
+          <Button type="submit" className={styles.submitButton} disabled={isLoading} loading={isLoading}>
+            {isLoading ? '登录中…' : '登录'}
+          </Button>
         </form>
-      </div>
+      </section>
     </div>
   );
 }

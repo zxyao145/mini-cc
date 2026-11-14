@@ -4,11 +4,15 @@ import { useEffect, useState } from "react";
 import { Archive, ArchiveRestore, BookOpen, CheckCheck, Chrome, FileText, Rss, RotateCcw, Heart, Highlighter, LoaderCircle, Trash2 } from "lucide-react";
 import { Article, ArticleListItem, Tag } from "@/types";
 import { useToast } from "@/contexts/ToastContext";
+import { trashArticleConfirmation, useConfirm } from "@/contexts/ConfirmContext";
+import { Button } from "@/components/arc/button/button";
+import { Checkbox } from "@/components/arc/checkbox/checkbox";
+import { Tooltip } from "@/components/arc/tooltip/tooltip";
 import { notifyLibraryMutation } from "@/lib/library-mutations";
 import { articleApi } from "@/lib/api";
 import { articleHostname } from "@/lib/article-source";
 import TagManager from "../pages/article/[id]/components/TagManager";
-import styles from "./ArticleCard.module.scss";
+import styles from "./ArticleCard.module.css";
 import Link from "next/link";
 
 interface ArticleCardProps {
@@ -21,6 +25,7 @@ interface ArticleCardProps {
 
 export default function ArticleCard({ article, onDelete, onUpdate, layout = "grid", selectionMode, selected, selectionDisabled, onSelect }: ArticleCardProps) {
   const toast = useToast();
+  const confirm = useConfirm();
   const [currentArticle, setCurrentArticle] = useState(article);
   const [pendingAction, setPendingAction] = useState<"favorite" | "archive" | "read" | "restore" | "delete" | null>(null);
   const [error, setError] = useState("");
@@ -28,13 +33,13 @@ export default function ArticleCard({ article, onDelete, onUpdate, layout = "gri
   useEffect(() => { setCurrentArticle(article); }, [article]);
 
   const handleDelete = async () => {
-    if (!confirm("将这篇文章移入回收站？")) return;
+    if (!(await confirm(...trashArticleConfirmation))) return;
     setPendingAction("delete");
     setError("");
     try {
       await onDelete(article.id);
     } catch {
-      setError("Could not delete this article. Please try again.");
+      setError("删除失败，请重试。");
     } finally {
       setPendingAction(null);
     }
@@ -53,7 +58,7 @@ export default function ArticleCard({ article, onDelete, onUpdate, layout = "gri
       setCurrentArticle(current => ({ ...current, ...changes }));
       onUpdate?.(article.id, changes);
     } catch {
-      setError(`Could not update ${action === "favorite" ? "favorites" : "archive"}. Please try again.`);
+      setError(action === "favorite" ? "收藏状态更新失败，请重试。" : "归档状态更新失败，请重试。");
     } finally {
       setPendingAction(null);
     }
@@ -67,7 +72,7 @@ export default function ArticleCard({ article, onDelete, onUpdate, layout = "gri
     } catch { setError("阅读状态更新失败，请重试。"); } finally { setPendingAction(null); }
   };
   const handlePurge = async () => {
-    if (!confirm("将永久删除这篇文章，无法恢复。")) return;
+    if (!(await confirm("将永久删除这篇文章，无法恢复。", { title: '永久删除文章？', confirmLabel: '永久删除' }))) return;
     setPendingAction("delete"); setError("");
     try {
       const result = await articleApi.batch([article.id], 'purge');
@@ -89,16 +94,16 @@ export default function ArticleCard({ article, onDelete, onUpdate, layout = "gri
     onUpdate?.(article.id, { tags: newTags });
   };
 
-  const source = articleHostname(currentArticle.url) ?? "Saved article";
+  const source = articleHostname(currentArticle.url) ?? (fromExtension ? "浏览器收藏" : "已保存文章");
 
   const favoriteLabel = currentArticle.isFavorite ? "取消收藏" : "加入收藏";
   const archiveLabel = currentArticle.isArchived ? "移回收件箱" : "归档文章";
 
   return (
-    <div data-article-id={article.id} className={`${styles.card} ${layout === "list" ? styles.list : ""}`}>
-      {onSelect && <label className={`${styles.selection} ${selectionMode ? styles.selectionVisible : ''}`}>
-        <input type="checkbox" aria-label={`选择 ${currentArticle.title}`} checked={!!selected} disabled={selectionDisabled} onChange={() => onSelect(article.id)} />
-      </label>}
+    <div data-article-id={article.id} className={`${styles.card} ${layout === "list" ? styles.list : ""} ${selected ? styles.selected : ""}`}>
+      {onSelect && <div className={`${styles.selection} ${selectionMode ? styles.selectionVisible : ''}`}>
+        <Checkbox compact aria-label={`选择 ${currentArticle.title}`} checked={!!selected} disabled={selectionDisabled} onCheckedChange={() => onSelect(article.id)} />
+      </div>}
       {currentArticle.imageUrl && (
         <div className={styles.imageContainer}>
           <img src={currentArticle.imageUrl} alt="" className={styles.image} loading="lazy" />
@@ -119,28 +124,32 @@ export default function ArticleCard({ article, onDelete, onUpdate, layout = "gri
           {currentArticle.contentKind === "link" && <span className={styles.archiveLabel}>链接</span>}
         </div>
         {currentArticle.deletedAt && <p className={styles.trashInfo}>删除于 {new Date(currentArticle.deletedAt).toLocaleDateString("zh-CN")} · {Math.max(0, toast.trashRetentionDays - Math.floor((Date.now() - Date.parse(currentArticle.deletedAt)) / 86400000))} 天后永久删除</p>}
-        {currentArticle.author && <p className={styles.author}>by {currentArticle.author}</p>}
+        {currentArticle.author && <p className={styles.author}>作者：{currentArticle.author}</p>}
+        {currentArticle.publishedAt && <p className={styles.published}>发布时间：<time dateTime={currentArticle.publishedAt}>{new Date(currentArticle.publishedAt).toLocaleDateString("zh-CN", { month: "short", day: "numeric", year: "numeric" })}</time></p>}
         {currentArticle.summary && <p className={styles.summary}>{currentArticle.summary}</p>}
         {!currentArticle.deletedAt && <TagManager articleId={currentArticle.id} tags={currentArticle.tags || []} onTagsChange={handleTagsChange} compact={true} />}
         <div className={styles.footer}>
           <div className={styles.metadata}>
-            <time dateTime={currentArticle.createdAt} title={`保存时间：${new Date(currentArticle.createdAt).toLocaleDateString()}`}>
-              {new Date(currentArticle.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            <time dateTime={currentArticle.createdAt} title={`保存时间：${new Date(currentArticle.createdAt).toLocaleDateString("zh-CN")}`}>
+              {new Date(currentArticle.createdAt).toLocaleDateString("zh-CN", { month: "short", day: "numeric", year: "numeric" })}
             </time>
             {!!highlightCount && <span className={styles.highlights}><Highlighter size={12} aria-hidden="true" />{highlightCount} 处高亮</span>}
           </div>
-          <div hidden={selectionMode} className={styles.actions} role="group" aria-label={`Actions for ${currentArticle.title}`}>
-            {currentArticle.deletedAt ? <><button onClick={handleRestore} disabled={pendingAction !== null} className={styles.actionBtn} aria-label="恢复文章" title="恢复文章">{pendingAction === "restore" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : <RotateCcw size={17} aria-hidden="true" />}</button><button onClick={handlePurge} disabled={pendingAction !== null} className={styles.actionBtn} aria-label="永久删除文章" title="永久删除文章"><Trash2 size={17} aria-hidden="true" /></button></> : <>
-            <button onClick={handleReading} disabled={pendingAction !== null} className={styles.actionBtn} aria-label={currentArticle.readingStatus === "read" ? "标记未读" : "标记已读"} title={currentArticle.readingStatus === "read" ? "标记未读" : "标记已读"}>{pendingAction === "read" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : currentArticle.readingStatus === "read" ? <BookOpen size={17} aria-hidden="true" /> : <CheckCheck size={17} aria-hidden="true" />}</button>
-            <button onClick={() => handleToggle("favorite")} disabled={pendingAction !== null} className={`${styles.actionBtn} ${currentArticle.isFavorite ? styles.favorited : ""}`} aria-label={favoriteLabel} aria-pressed={currentArticle.isFavorite} title={favoriteLabel}>
-              {pendingAction === "favorite" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : <Heart size={17} strokeWidth={1.7} fill={currentArticle.isFavorite ? "currentColor" : "none"} aria-hidden="true" />}
-            </button>
-            <button onClick={() => handleToggle("archive")} disabled={pendingAction !== null} className={`${styles.actionBtn} ${currentArticle.isArchived ? styles.archived : ""}`} aria-label={archiveLabel} aria-pressed={currentArticle.isArchived} title={archiveLabel}>
-              {pendingAction === "archive" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : currentArticle.isArchived ? <ArchiveRestore size={17} strokeWidth={1.7} aria-hidden="true" /> : <Archive size={17} strokeWidth={1.7} aria-hidden="true" />}
-            </button>
-            <button onClick={handleDelete} disabled={pendingAction !== null} className={`${styles.actionBtn} ${styles.deleteBtn}`} aria-label="删除文章" title="删除文章">
-              {pendingAction === "delete" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : <Trash2 size={17} strokeWidth={1.7} aria-hidden="true" />}
-            </button>
+          <div hidden={selectionMode} className={styles.actions} role="group" aria-label={`文章操作：${currentArticle.title}`}>
+            {currentArticle.deletedAt ? <>
+              <Tooltip content="恢复文章"><Button variant="ghost" size="sm" iconOnly aria-label="恢复文章" disabled={pendingAction !== null} onClick={handleRestore} className={styles.actionBtn}>{pendingAction === "restore" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : <RotateCcw size={17} aria-hidden="true" />}</Button></Tooltip>
+              <Tooltip content="永久删除文章"><Button variant="danger" size="sm" iconOnly aria-label="永久删除文章" disabled={pendingAction !== null} onClick={handlePurge} className={styles.actionBtn}><Trash2 size={17} aria-hidden="true" /></Button></Tooltip>
+            </> : <>
+              <Tooltip content={currentArticle.readingStatus === "read" ? "标记未读" : "标记已读"}><Button variant="ghost" size="sm" iconOnly aria-label={currentArticle.readingStatus === "read" ? "标记未读" : "标记已读"} disabled={pendingAction !== null} onClick={handleReading} className={styles.actionBtn}>{pendingAction === "read" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : currentArticle.readingStatus === "read" ? <BookOpen size={17} aria-hidden="true" /> : <CheckCheck size={17} aria-hidden="true" />}</Button></Tooltip>
+              <Tooltip content={favoriteLabel}><Button variant="ghost" size="sm" iconOnly aria-label={favoriteLabel} aria-pressed={currentArticle.isFavorite} disabled={pendingAction !== null} onClick={() => handleToggle("favorite")} className={`${styles.actionBtn} ${currentArticle.isFavorite ? styles.favorited : ""}`}>
+                {pendingAction === "favorite" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : <Heart size={17} strokeWidth={1.7} fill={currentArticle.isFavorite ? "currentColor" : "none"} aria-hidden="true" />}
+              </Button></Tooltip>
+              <Tooltip content={archiveLabel}><Button variant="ghost" size="sm" iconOnly aria-label={archiveLabel} aria-pressed={currentArticle.isArchived} disabled={pendingAction !== null} onClick={() => handleToggle("archive")} className={`${styles.actionBtn} ${currentArticle.isArchived ? styles.archived : ""}`}>
+                {pendingAction === "archive" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : currentArticle.isArchived ? <ArchiveRestore size={17} strokeWidth={1.7} aria-hidden="true" /> : <Archive size={17} strokeWidth={1.7} aria-hidden="true" />}
+              </Button></Tooltip>
+              <Tooltip content="删除文章"><Button variant="danger" size="sm" iconOnly aria-label="删除文章" disabled={pendingAction !== null} onClick={handleDelete} className={`${styles.actionBtn} ${styles.deleteBtn}`}>
+                {pendingAction === "delete" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : <Trash2 size={17} strokeWidth={1.7} aria-hidden="true" />}
+              </Button></Tooltip>
             </>}
           </div>
         </div>

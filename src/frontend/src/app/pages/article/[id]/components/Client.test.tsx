@@ -9,6 +9,7 @@ import { useArticleList } from '@/hooks/useArticleList';
 import Client from './Client';
 import { defaultReaderPreferences } from '@/lib/reader-preferences';
 vi.mock('@/contexts/ReaderPreferencesContext',()=>({useReaderPreferences:()=>({preferences:defaultReaderPreferences,beforeChange:()=>()=>{},update:vi.fn(),retry:vi.fn(),unsynced:false})}));
+vi.mock('@/contexts/ThemeContext',()=>({useTheme:()=>({theme:'dark'})}));
 vi.mock('next/navigation',()=>({useRouter:()=>({back:vi.fn(),push:vi.fn(),replace:vi.fn()})}));
 vi.mock('@/lib/api', () => ({ articleApi: { getArticleById: vi.fn(), getArticles: vi.fn(), updateState:vi.fn(), resetProgress:vi.fn(), saveProgress:vi.fn() } }));
 vi.mock('./TagManager', () => ({ default: ({ onTagsChange }: { onTagsChange: (tags: Tag[]) => void }) => <button onClick={() => onTagsChange([])}>Remove reader tag</button> }));
@@ -131,4 +132,11 @@ it('renders a link without reader chrome or progress traffic when a state update
   expect(articleApi.getArticleById).toHaveBeenCalledTimes(1);
   expect(articleApi.saveProgress).not.toHaveBeenCalled();
   expect(articleApi.resetProgress).not.toHaveBeenCalled();
+});
+
+it('uses the active app theme when reader preferences follow the system', async () => {
+  const link = { id:'theme-link', title:'Theme link', url:'https://example.com', author:'', readableContent:'', summary:'', imageUrl:'', createdAt:'2026-11-13T00:00:00Z', contentKind:'link', tags:[], feeds:[], highlights:[], readingStatus:'unread', isArchived:false, isFavorite:false } as unknown as Article;
+  vi.mocked(articleApi.getArticleById).mockResolvedValue(link);
+  await act(async () => root.render(<Client id={link.id}/>));
+  expect(container.querySelector('main.reader')?.getAttribute('data-reader-theme')).toBe('dark');
 });

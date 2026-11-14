@@ -1,6 +1,9 @@
 'use client';
 import { ReactNode, RefObject, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { Button } from '@/components/arc/button/button';
+import { Tooltip } from '@/components/arc/tooltip/tooltip';
+import styles from './ReaderPanel.module.css';
 export default function ReaderPanel({label,trigger,onClose,children,className='',drawerBreakpoint=768}:{label:string;trigger:RefObject<HTMLButtonElement|null>;onClose:()=>void;children:ReactNode;className?:string;drawerBreakpoint?:number}) {
   const panel=useRef<HTMLDivElement>(null);
   const [drawer,setDrawer]=useState(()=>window.matchMedia(`(max-width: ${drawerBreakpoint-1}px)`).matches);
@@ -27,7 +30,7 @@ export default function ReaderPanel({label,trigger,onClose,children,className=''
     const button=trigger.current;
     return ()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',key);button?.focus({preventScroll:true});};
   },[onClose,trigger]);
-  return <><div className={`reader-backdrop${drawer?' reader-backdrop-visible':''}`} aria-hidden="true"/><div ref={panel} className={`reader-panel ${className}${drawer?' reader-drawer':''}`} role="dialog" aria-label={label} aria-modal={drawer || undefined}>
-    <div className="reader-panel-heading"><strong>{label}</strong><button onClick={onClose} aria-label={`关闭${label}`}><X size={18}/></button></div>{children}
+  return <><div className={`${styles.backdrop} reader-backdrop${drawer?` ${styles.backdropVisible} reader-backdrop-visible`:''}`} aria-hidden="true"/><div ref={panel} className={`${styles.panel} reader-panel ${className}${drawer?` ${styles.drawer} reader-drawer`:''}`} role="dialog" aria-label={label} aria-modal={drawer || undefined}>
+    <div className={styles.heading}><strong>{label}</strong><Tooltip content={`关闭${label}`}><Button variant="ghost" size="sm" iconOnly aria-label={`关闭${label}`} onClick={onClose}><X size={18}/></Button></Tooltip></div>{children}
   </div></>;
 }

@@ -1,0 +1,218 @@
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.search {
+  flex: 1;
+  min-width: 0;
+  max-width: 520px;
+  margin: 0;
+}
+
+.searchField {
+  width: 100%;
+}
+
+.searchInput {
+  min-width: 0;
+  font-size: var(--text-field);
+}
+
+.searchInput::-webkit-search-cancel-button {
+  display: none;
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.selectMode {
+  white-space: nowrap;
+}
+
+.viewSwitch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  background: var(--surface-muted);
+}
+
+.viewButton[aria-pressed="true"] {
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-resting);
+  color: var(--foreground);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.filterTrigger {
+  min-height: var(--control-height-sm);
+  gap: 7px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+}
+
+.filterTrigger[data-active="true"] {
+  border-color: var(--border-strong);
+  background: var(--accent-subtle);
+  color: var(--foreground);
+}
+
+.filterValue {
+  color: var(--text-secondary);
+  font-weight: 450;
+}
+
+.filterPanel {
+  display: grid;
+  gap: 4px;
+  max-height: var(--radix-popover-content-available-height);
+  overflow-y: auto;
+  width: 220px;
+  max-width: calc(100vw - 24px);
+  padding: 8px;
+}
+
+.tagPanel {
+  width: 280px;
+  padding: 12px;
+}
+
+.tagSearch {
+  margin-bottom: 8px;
+}
+
+.tagOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.filterMessage {
+  margin: 8px 4px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.dateInput {
+  min-width: 0;
+}
+
+.dateInput input {
+  min-width: 0;
+  width: 158px;
+  height: var(--control-height-md);
+}
+
+.dates > span {
+  padding-bottom: 10px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip {
+  min-width: 0;
+  min-height: var(--control-height-sm);
+  max-width: min(100%, 420px);
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-subtle);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+}
+
+.chip > span, .chip > span > span, .chip > span > span > span {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.chip span {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.chip svg {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+}
+
+.clear {
+  min-height: var(--control-height-sm);
+  padding: 0 8px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .top {
+    flex-wrap: wrap;
+  }
+
+  .search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .topActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .filterTrigger {
+    min-height: var(--control-height-lg);
+  }
+
+  .dateInput input {
+    height: var(--control-height-lg);
+    font-size: var(--text-field);
+  }
+
+  .chip {
+    min-height: var(--control-height-lg);
+  }
+}

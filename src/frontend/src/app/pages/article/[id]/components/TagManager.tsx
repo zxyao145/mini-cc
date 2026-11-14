@@ -2,9 +2,13 @@
 
 import { useId, useState } from "react";
 import { Plus, X } from "lucide-react";
+import { Button } from "@/components/arc/button/button";
+import { Input } from "@/components/arc/input/input";
+import { Tooltip } from "@/components/arc/tooltip/tooltip";
 import { Tag, AddTagRequest } from "@/types";
 import { articleApi } from "@/lib/api";
-import styles from "./TagManager.module.scss";
+import { useToast } from "@/contexts/ToastContext";
+import styles from "./TagManager.module.css";
 
 interface TagManagerProps {
   articleId: string;
@@ -20,6 +24,7 @@ export default function TagManager({
   compact = false,
 }: TagManagerProps) {
   const tagInputId = useId();
+  const toast = useToast();
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#3b82f6");
   const [isAdding, setIsAdding] = useState(false);
@@ -44,7 +49,7 @@ export default function TagManager({
       setShowAddForm(false);
     } catch (error) {
       console.error("Failed to add tag:", error);
-      alert("Failed to add tag. Please try again.");
+      toast.show("添加标签失败，请重试");
     } finally {
       setIsAdding(false);
     }
@@ -56,7 +61,7 @@ export default function TagManager({
       onTagsChange(tags.filter((tag) => tag.id !== tagId));
     } catch (error) {
       console.error("Failed to remove tag:", error);
-      alert("Failed to remove tag. Please try again.");
+      toast.show("移除标签失败，请重试");
     }
   };
 
@@ -74,100 +79,44 @@ export default function TagManager({
   ];
 
   return (
-    <div className={`${styles.container} ${compact ? styles.compact : ""}`}>
+    <div className={`${styles.container}${compact ? ` ${styles.compact}` : ""}`}>
       <div className={styles.tagList}>
         {tags.map((tag) => (
-          <span
-            key={tag.id}
-            className={styles.tag}
-          >
+          <span key={tag.id} className={styles.tag}>
             <span className={styles.tagDot} style={{ backgroundColor: tag.color || "var(--text-muted)" }} aria-hidden="true" />
             <span className={styles.tagName}>{tag.name}</span>
-            <button
-              className={styles.removeBtn}
-              onClick={() => handleRemoveTag(tag.id)}
-              title={`Remove ${tag.name} tag`}
-              aria-label={`Remove ${tag.name} tag`}
-            >
-              <X size={12} aria-hidden="true" />
-            </button>
+            <Tooltip content={`移除 ${tag.name} 标签`}>
+              <Button className={styles.removeBtn} variant="ghost" size="sm" iconOnly onClick={() => handleRemoveTag(tag.id)} aria-label={`移除 ${tag.name} 标签`}>
+                <X size={14} aria-hidden="true" />
+              </Button>
+            </Tooltip>
           </span>
         ))}
 
-        {!showAddForm && (
-          <button
-            onClick={() => setShowAddForm(true)}
-            className={styles.addBtn}
-            title="Add tag"
-            aria-expanded={showAddForm}
-          >
-            <Plus size={14} aria-hidden="true" /> Add tag
-          </button>
-        )}
+        {!showAddForm && <Button variant="ghost" size="sm" onClick={() => setShowAddForm(true)} className={styles.addBtn} aria-expanded={showAddForm}>
+          <Plus size={14} aria-hidden="true" />添加标签
+        </Button>}
       </div>
 
       {showAddForm && (
-        <form onSubmit={handleAddTag} className={styles.addForm}>
+        <form onSubmit={handleAddTag} className={styles.addForm} aria-label="添加标签">
           <div className={styles.inputGroup}>
-            <label className={styles.inputLabel} htmlFor={tagInputId}>Tag name</label>
-            <input
-              id={tagInputId}
-              autoFocus
-              type="text"
-              value={newTagName}
-              onChange={(e) => setNewTagName(e.target.value)}
-              placeholder="Tag name"
-              className={styles.tagInput}
-              disabled={isAdding}
-              maxLength={20}
-            />
-
-            <div className={styles.colorPicker}>
-              {predefinedColors.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => setNewTagColor(color)}
-                  className={`${styles.colorOption} ${
-                    newTagColor === color ? styles.selected : ""
-                  }`}
-                  style={{ backgroundColor: color }}
-                  title={`Select ${color}`}
-                  aria-label={`Select ${color}`}
-                  aria-pressed={newTagColor === color}
-                />
-              ))}
-              <input
-                type="color"
-                value={newTagColor}
-                onChange={(e) => setNewTagColor(e.target.value)}
-                className={styles.customColor}
-                title="Custom color"
-                aria-label="Custom tag color"
-              />
-            </div>
+            <Input id={tagInputId} label="标签名称" hideLabel type="text" value={newTagName} onChange={(event) => setNewTagName(event.target.value)} placeholder="标签名称" wrapperClassName={styles.tagInputField} autoFocus disabled={isAdding} maxLength={20} />
+            <fieldset className={styles.colorPicker}>
+              <legend>标签颜色</legend>
+              {predefinedColors.map((color) => <Tooltip key={color} content={`选择颜色 ${color}`}>
+                <Button type="button" variant="ghost" size="sm" iconOnly onClick={() => setNewTagColor(color)} className={`${styles.colorOption}${newTagColor === color ? ` ${styles.selected}` : ""}`} style={{ backgroundColor: color }} aria-label={`选择颜色 ${color}`} aria-pressed={newTagColor === color} />
+              </Tooltip>)}
+              <label className={styles.customColorLabel}>
+                <span>自定义</span>
+                <input type="color" value={newTagColor} onChange={(event) => setNewTagColor(event.target.value)} className={styles.customColor} aria-label="自定义标签颜色" />
+              </label>
+            </fieldset>
           </div>
 
           <div className={styles.formActions}>
-            <button
-              type="submit"
-              disabled={isAdding || !newTagName.trim()}
-              className={styles.saveBtn}
-            >
-              {isAdding ? "Adding..." : "Add"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowAddForm(false);
-                setNewTagName("");
-                setNewTagColor("#3b82f6");
-              }}
-              className={styles.cancelBtn}
-              disabled={isAdding}
-            >
-              Cancel
-            </button>
+            <Button type="submit" variant="primary" size="sm" disabled={isAdding || !newTagName.trim()} className={styles.saveBtn}>{isAdding ? "添加中…" : "添加"}</Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => { setShowAddForm(false); setNewTagName(""); setNewTagColor("#3b82f6"); }} className={styles.cancelBtn} disabled={isAdding}>取消</Button>
           </div>
         </form>
       )}

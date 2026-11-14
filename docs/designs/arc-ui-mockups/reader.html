@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arc UI 阅读页样稿</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --bg-primary: #f5f5f7; --bg-secondary: #fff; --bg-tertiary: #e5e5e7; --border: #d1d1d6;
+  --text-primary: #1d1d1f; --text-secondary: #86868b; --accent: #0071e3; --selected-bg: #e8f4fd; --selected-border: #0071e3; }
+body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg-primary); color: var(--text-primary); line-height: 1.5; padding: 2rem; }
+h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: .5rem; }
+h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: .25rem; }
+.subtitle { color: var(--text-secondary); margin-bottom: 1.5rem; }
+.options { display: flex; flex-direction: column; gap: .75rem; }
+.option { background: var(--bg-secondary); border: 2px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; display: flex; align-items: flex-start; gap: 1rem; }
+.option.selected { background: var(--selected-bg); border-color: var(--selected-border); }
+.option .letter { background: var(--bg-tertiary); color: var(--text-secondary); width: 1.75rem; height: 1.75rem; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: .85rem; flex-shrink: 0; }
+.option.selected .letter { background: var(--accent); color: #fff; }
+.option .content { flex: 1; min-width: 0; }
+.option .content h3 { font-size: .95rem; margin-bottom: .15rem; }
+.option .content > p { color: var(--text-secondary); font-size: .85rem; }
+.mockup { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 1.5rem; }
+.mockup-header { background: var(--bg-tertiary); padding: .5rem 1rem; font-size: .75rem; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+.mockup-body { padding: 1.5rem; }
+</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Inter:wght@400..700&display=swap" rel="stylesheet">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></symbol>
+    <symbol id="i-checks" viewBox="0 0 24 24"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+    <symbol id="i-archive" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></symbol>
+    <symbol id="i-type" viewBox="0 0 24 24"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></symbol>
+    <symbol id="i-hl" viewBox="0 0 24 24"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+    <symbol id="i-rss" viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 18 18"><path d="M4.25 9.25 L7.25 12.25 L13.75 5.75"/></symbol>
+  </defs>
+</svg>
+
+<style>
+  .rm {
+    --bg: oklch(100% 0 0); --surface: oklch(100% 0 0); --muted: oklch(97.8% 0 0); --muted-2: oklch(95.8% 0 0);
+    --fg: oklch(15% 0 0); --fg2: oklch(46% 0 0); --fg3: oklch(59% 0 0);
+    --line: oklch(93.5% 0 0); --line-strong: oklch(82% 0 0);
+    --danger: oklch(53% .18 10);
+    --grad-soft: linear-gradient(135deg, oklch(97.5% .016 300), oklch(98% .016 65));
+    --grad: linear-gradient(100deg, oklch(90% .045 300), oklch(92% .045 65));
+    --grad-ink: linear-gradient(180deg, oklch(47% .1 300), oklch(50% .09 55));
+    --shadow-resting: 0 1px 2px oklch(0% 0 0 / .035);
+    --shadow-raised: 0 6px 18px oklch(0% 0 0 / .065), 0 1px 3px oklch(0% 0 0 / .035);
+    --shadow-floating: 0 20px 48px oklch(0% 0 0 / .105), 0 3px 10px oklch(0% 0 0 / .045);
+    font-family: "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    letter-spacing: -.01em; color: var(--fg); text-align: left;
+  }
+  .rm svg.i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .rm .frame { position: relative; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: var(--bg); }
+  .rm .progress { height: 3px; background: var(--muted-2); }
+  .rm .progress i { display: block; width: 38%; height: 100%; background: linear-gradient(90deg, oklch(70% .09 300), oklch(75% .09 60)); }
+
+  /* toolbar */
+  .rm .toolbar { display: flex; align-items: center; gap: 2px; margin: 14px 20px 0; padding: 5px; border: 1px solid var(--line); border-radius: 16px; background: oklch(100% 0 0 / .86); backdrop-filter: blur(12px); box-shadow: var(--shadow-resting); }
+  .rm .tb { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-radius: 11px; font-size: 13px; font-weight: 500; color: var(--fg2); white-space: nowrap; }
+  .rm .tb.icon { width: 32px; padding: 0; justify-content: center; }
+  .rm .tb.hover { background: var(--muted); color: var(--fg); }
+  .rm .tb.pressed { color: oklch(53% .18 10); }
+  .rm .tb.pressed svg { fill: currentColor; }
+  .rm .sep { width: 1px; height: 18px; background: var(--line); margin: 0 6px; }
+  .rm .grow { flex: 1; }
+  .rm .sync { font-size: 12px; color: var(--fg3); margin-right: 6px; display: inline-flex; align-items: center; gap: 6px; }
+  .rm .sync::before { content: ""; width: 6px; height: 6px; border-radius: 99px; background: oklch(50% .12 162); }
+  .rm .tip { position: absolute; top: 58px; left: 50%; transform: translateX(-50%); }
+
+  /* layout */
+  .rm .page { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 40px; padding: 28px 28px 32px 56px; }
+  .rm .art { max-width: 620px; }
+  .rm .src { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--fg3); margin-bottom: 10px; }
+  .rm .src .pill { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 99px; background: var(--grad-soft); color: oklch(40% .06 300); font-weight: 500; }
+  .rm .src .pill svg.i { width: 12px; height: 12px; }
+  .rm h1 { font: 650 28px/1.2 "Geist", "PingFang SC", sans-serif; letter-spacing: -.03em; margin: 0 0 10px; }
+  .rm .byline { font-size: 13px; color: var(--fg2); display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+  .rm .tags { display: flex; gap: 6px; margin-bottom: 22px; }
+  .rm .tag { font-size: 12px; padding: 2px 9px; border-radius: 8px; background: color-mix(in oklab, oklch(51% .16 290) 10%, transparent); color: oklch(45% .16 290); }
+  .rm .tag.teal { background: color-mix(in oklab, oklch(50% .095 182) 11%, transparent); color: oklch(42% .095 182); }
+  .rm .tag.add { background: none; border: 1px dashed var(--line-strong); color: var(--fg3); }
+  .rm h2.ah { font: 600 19px/1.35 "Geist", "PingFang SC", sans-serif; letter-spacing: -.02em; margin: 22px 0 8px; }
+  .rm p.body { font-size: 16px; line-height: 1.8; color: oklch(22% 0 0); margin: 0 0 14px; }
+  .rm mark { background: color-mix(in oklab, #ffd84d 45%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; box-shadow: 0 1px 0 color-mix(in oklab, #e0a800 60%, transparent); }
+  .rm .selected { background: oklch(80% .08 250 / .45); }
+  .rm .rel { position: relative; }
+
+  /* popovers */
+  .rm .selpop { position: absolute; left: 140px; top: -46px; display: inline-flex; align-items: center; gap: 2px; padding: 4px; border-radius: 14px; background: oklch(18% 0 0); color: oklch(96% 0 0); box-shadow: var(--shadow-floating); z-index: 2; }
+  .rm .selpop span { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 10px; font-size: 13px; font-weight: 500; }
+  .rm .selpop span.icon { width: 30px; padding: 0; justify-content: center; color: oklch(75% 0 0); }
+  .rm .selpop span.h { background: oklch(28% 0 0); }
+  .rm .selpop .dotc { width: 12px; height: 12px; border-radius: 99px; background: #ffd84d; box-shadow: 0 0 0 2px oklch(18% 0 0), 0 0 0 3px oklch(60% 0 0); }
+  .rm .menu { position: absolute; left: 60px; top: 30px; width: 220px; padding: 6px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-floating); z-index: 2; }
+  .rm .menu .q { margin: 4px 8px 8px; padding-left: 8px; border-left: 2px solid #ffd84d; font-size: 12px; color: var(--fg2); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .rm .menu .it { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border-radius: 10px; font-size: 13px; color: var(--fg); }
+  .rm .menu .it svg.i { color: var(--fg3); }
+  .rm .menu .it.hover { background: var(--muted); }
+  .rm .menu .it.danger, .rm .menu .it.danger svg.i { color: var(--danger); }
+  .rm .menu .it kbd { margin-left: auto; font: 11px "Geist", sans-serif; color: var(--fg3); }
+  .rm .menu hr { border: 0; height: 1px; background: var(--line); margin: 4px 6px; }
+
+  /* toc */
+  .rm .toc { position: sticky; top: 0; align-self: start; padding-top: 6px; }
+  .rm .toc .lbl { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; color: var(--fg3); margin: 0 0 10px; }
+  .rm .toc .lbl svg.i { width: 14px; height: 14px; }
+  .rm .toc ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--line); }
+  .rm .toc li { position: relative; padding: 5px 0 5px 14px; font-size: 12.5px; line-height: 1.45; color: var(--fg3); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .rm .toc li.n { padding-left: 26px; font-size: 12px; }
+  .rm .toc li.on { color: var(--fg); font-weight: 500; }
+  .rm .toc li.on::before { content: ""; position: absolute; left: -1px; top: 6px; bottom: 6px; width: 2px; border-radius: 2px; background: var(--grad-ink); }
+  .rm .toc .pct { margin-top: 14px; font: 500 12px "Geist", sans-serif; color: var(--fg3); }
+
+  /* dialog */
+  .rm .scrim { position: relative; display: grid; place-items: center; padding: 36px 20px; background: oklch(18% 0 0 / .32); border-radius: 18px; }
+  .rm .dialog { width: 460px; max-height: 520px; display: flex; flex-direction: column; border-radius: 24px; background: var(--surface); box-shadow: var(--shadow-floating); overflow: hidden; }
+  .rm .dh { display: flex; align-items: flex-start; gap: 12px; padding: 20px 20px 14px 24px; }
+  .rm .dh small { display: block; font-size: 12px; color: var(--fg3); margin-bottom: 4px; }
+  .rm .dh h3 { margin: 0; font: 600 19px "Geist", "PingFang SC", sans-serif; letter-spacing: -.02em; }
+  .rm .dh .close { margin-left: auto; width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; color: var(--fg3); }
+  .rm .steps { display: flex; gap: 4px; padding: 0 24px 14px; }
+  .rm .steps i { flex: 1; height: 3px; border-radius: 99px; background: var(--fg); }
+  .rm .db { flex: 1; overflow: auto; padding: 4px 24px 18px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+  .rm .feedurl { display: flex; align-items: center; gap: 10px; padding: 12px 0; font-size: 13px; color: var(--fg2); }
+  .rm .feedurl .ic { width: 30px; height: 30px; border-radius: 9px; background: var(--grad-soft); display: grid; place-items: center; color: oklch(40% .06 300); }
+  .rm .entries { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .rm .entry { padding: 10px 14px; border-top: 1px solid var(--line); }
+  .rm .entry:first-child { border-top: 0; }
+  .rm .entry b { display: block; font-size: 13px; font-weight: 500; }
+  .rm .entry span { font-size: 11.5px; color: var(--fg3); }
+  .rm .field { margin-top: 16px; }
+  .rm .field label { display: block; font-size: 12.5px; font-weight: 500; margin-bottom: 6px; }
+  .rm .field .hint { font-size: 12px; color: var(--fg3); margin: -2px 0 8px; }
+  .rm .input { height: 40px; border: 1px solid var(--line); border-radius: 14px; padding: 0 14px; display: flex; align-items: center; font-size: 14px; }
+  .rm .checks { display: flex; gap: 6px; flex-wrap: wrap; }
+  .rm .cchip { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px 0 8px; border: 1px solid var(--line); border-radius: 12px; font-size: 13px; }
+  .rm .cchip .box { width: 18px; height: 18px; border-radius: 5px; border: 1px solid var(--line-strong); display: grid; place-items: center; }
+  .rm .cchip.on { border-color: oklch(23% 0 0); }
+  .rm .cchip.on .box { background: oklch(23% 0 0); border-color: oklch(23% 0 0); }
+  .rm .cchip .box svg { width: 14px; height: 14px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .rm .df { display: flex; align-items: center; gap: 8px; padding: 14px 20px; }
+  .rm .btn { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 14px; font-size: 13px; font-weight: 500; border: 1px solid transparent; white-space: nowrap; }
+  .rm .btn.ghost { color: var(--fg2); padding: 0 12px; }
+  .rm .btn.secondary { border-color: var(--line); background: var(--surface); }
+  .rm .btn.primary { background: var(--fg); color: var(--bg); }
+  .rm .btn svg.i { width: 15px; height: 15px; }
+  .rm .ann { font-size: 12px; color: var(--fg3); margin: 8px 2px 0; line-height: 1.55; }
+  .rm .ann b { color: var(--fg2); font-weight: 600; }
+  .rm .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+  @media (max-width: 900px) { .rm .row2 { grid-template-columns: 1fr; } }
+</style>
+
+<h2>阅读页、目录、高亮菜单和弹窗</h2>
+<p class="subtitle">按 C 版（黑白灰 + 少量渐变）画了你截图里剩下的几处。这一页只有一个方案，直接说哪里不对就行。</p>
+
+<div class="rm">
+  <div class="mockup">
+    <div class="mockup-header">阅读页（桌面宽屏，目录固定在正文右侧）</div>
+    <div class="mockup-body" style="padding:0">
+      <div class="frame">
+        <div class="progress"><i></i></div>
+        <div class="toolbar">
+          <span class="tb"><svg class="i"><use href="#i-back"/></svg>返回</span>
+          <span class="sep"></span>
+          <span class="tb hover"><svg class="i"><use href="#i-checks"/></svg>标记已读</span>
+          <span class="tb"><svg class="i"><use href="#i-reset"/></svg>从头阅读</span>
+          <span class="tb icon pressed" title="已收藏"><svg class="i"><use href="#i-heart"/></svg></span>
+          <span class="tb icon" title="归档"><svg class="i"><use href="#i-archive"/></svg></span>
+          <span class="tb icon" title="删除文章"><svg class="i"><use href="#i-trash"/></svg></span>
+          <span class="grow"></span>
+          <span class="sync">进度已同步 · 38%</span>
+          <span class="tb icon" title="阅读设置"><svg class="i"><use href="#i-type"/></svg></span>
+          <span class="tb icon" title="打开原文"><svg class="i"><use href="#i-ext"/></svg></span>
+        </div>
+
+        <div class="page">
+          <article class="art">
+            <div class="src"><span class="pill"><svg class="i"><use href="#i-rss"/></svg>阮一峰的网络日志</span>ruanyifeng.com · 11 月 13 日保存 · 约 12 分钟</div>
+            <h1>Prompt Engineering for Technical Writers</h1>
+            <div class="byline">by Anthropic · 2,840 字</div>
+            <div class="tags"><span class="tag">AI</span><span class="tag teal">写作</span><span class="tag add">+ 标签</span></div>
+
+            <h2 class="ah">Strategy 1: Teaching AI Your Voice</h2>
+            <p class="body rel">Most prompt engineering advice treats all use cases the same. <span class="selected">“Be specific,” they say. “Give examples,” they suggest.</span> But technical writers have unique needs that generic advice doesn’t address.
+              <span class="selpop"><span class="h"><span class="dotc"></span>高亮</span><span class="icon" title="取消"><svg class="i"><use href="#i-x"/></svg></span></span>
+            </p>
+            <p class="body rel"><mark>一个开源的桌面 IDE，保留 IntelliJ IDEA 的使用习惯，底层用 Rust + Tauri 2 重写。</mark>（投稿）这一段演示点击已有高亮后弹出的菜单。
+              <span class="menu">
+                <div class="q">一个开源的桌面 IDE，保留 IntelliJ IDEA 的使用习惯，底层用 Rust + Tauri 2 重写。</div>
+                <div class="it hover"><svg class="i"><use href="#i-x"/></svg>关闭<kbd>Esc</kbd></div>
+                <hr>
+                <div class="it danger"><svg class="i"><use href="#i-trash"/></svg>删除高亮</div>
+              </span>
+            </p>
+            <p class="body" style="margin-top:96px">Here we’ll look at five strategies, each grounded in a real writing workflow, and how to adapt them to your own documentation style.</p>
+          </article>
+
+          <aside class="toc">
+            <div class="lbl"><svg class="i"><use href="#i-list"/></svg>目录</div>
+            <ol>
+              <li>Why generic advice falls short</li>
+              <li class="on">Strategy 1: Teaching AI Your Voice</li>
+              <li class="n">Collecting good samples</li>
+              <li class="n">Writing the style brief</li>
+              <li>Strategy 2: Structured Outlines Before Prose</li>
+              <li>Strategy 3: Reviewing for Accuracy</li>
+              <li>把这些方法用到中文技术文档里的几个注意事项</li>
+            </ol>
+            <div class="pct">已读 38%</div>
+          </aside>
+        </div>
+      </div>
+      <p class="ann" style="padding:0 12px 12px">
+        <b>工具栏规则：</b>每个按钮都有图标；常用的“返回 / 标记已读 / 从头阅读”带文字，其余只放图标，悬停显示中文提示。<br>
+        <b>目录：</b>固定宽 210px，标题最多两行后省略，当前章节用左侧渐变细线标出；窄屏时仍收进工具栏里的抽屉。<br>
+        <b>选中文字：</b>深色小浮条“高亮 / ×”。<b>点已有高亮：</b>白色菜单，顶部回显高亮原文，每项都有图标，删除放在最后并用红色。
+      </p>
+    </div>
+  </div>
+
+  <div class="mockup" style="margin-top:18px">
+    <div class="mockup-header">订阅弹窗（第 2 步）：滚动只发生在中间区域，四角保持圆角，底部按钮常驻</div>
+    <div class="mockup-body" style="padding:0">
+      <div class="scrim">
+        <div class="dialog">
+          <div class="dh">
+            <div><small>添加订阅 · 第 2 步，共 2 步</small><h3>确认订阅</h3></div>
+            <span class="close"><svg class="i"><use href="#i-x"/></svg></span>
+          </div>
+          <div class="steps"><i></i><i></i></div>
+          <div class="db">
+            <div class="feedurl"><span class="ic"><svg class="i"><use href="#i-rss"/></svg></span>http://www.ruanyifeng.com/blog/</div>
+            <div class="entries">
+              <div class="entry"><b>科技爱好者周刊（第 419 期）：机房来了，写字楼走了</b><span>全文 · 2026/11/13</span></div>
+              <div class="entry"><b>科技爱好者周刊（第 418 期）：如果科技停止在21世纪初</b><span>全文 · 2026/11/6</span></div>
+              <div class="entry"><b>科技爱好者周刊（第 417 期）：不要让 AI 代表你</b><span>全文 · 2026/10/30</span></div>
+            </div>
+            <div class="field"><label>订阅名称</label><div class="input">阮一峰的网络日志</div></div>
+            <div class="field">
+              <label>默认标签</label>
+              <div class="hint">只应用于今后新导入的文章。</div>
+              <div class="checks">
+                <span class="cchip on"><span class="box"><svg><use href="#i-check"/></svg></span>技术</span>
+                <span class="cchip"><span class="box"></span>旅游</span>
+                <span class="cchip"><span class="box"></span>周刊</span>
+              </div>
+            </div>
+          </div>
+          <div class="df">
+            <span class="btn ghost"><svg class="i"><use href="#i-left"/></svg>上一步</span>
+            <span class="grow" style="flex:1"></span>
+            <span class="btn secondary">取消</span>
+            <span class="btn primary"><svg class="i"><use href="#i-rss"/></svg>确认订阅</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
