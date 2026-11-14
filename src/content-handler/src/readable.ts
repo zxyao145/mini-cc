@@ -9,8 +9,11 @@ export interface ReadableArticle {
   textLength: number;
 }
 
-export function parseReadable(document: Document, mode: 'save' | 'markdown' = 'save'): ReadableArticle | null {
-  const clone = document.cloneNode(true) as Document;
+export function parseReadable(
+  clone: Document,
+  view: NonNullable<Document['defaultView']>,
+  mode: 'save' | 'markdown' = 'save',
+): ReadableArticle | null {
   if (mode === 'markdown') {
     // Readability removes form controls. Keep task state as an inert marker in the clone.
     const beforeCheckbox = clone.createRange();
@@ -28,7 +31,7 @@ export function parseReadable(document: Document, mode: 'save' | 'markdown' = 's
   const article = new Readability(clone, { keepClasses: mode === 'markdown' }).parse();
   if (!article?.content) return null;
 
-  const html = createDOMPurify(document.defaultView!).sanitize(article.content);
+  const html = createDOMPurify(view).sanitize(article.content);
 
   return {
     title: article.title ?? '',

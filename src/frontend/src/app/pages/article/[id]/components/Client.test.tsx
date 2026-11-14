@@ -13,7 +13,7 @@ vi.mock('@/contexts/ThemeContext',()=>({useTheme:()=>({theme:'dark'})}));
 vi.mock('next/navigation',()=>({useRouter:()=>({back:vi.fn(),push:vi.fn(),replace:vi.fn()})}));
 vi.mock('@/lib/api', () => ({ articleApi: { getArticleById: vi.fn(), getArticles: vi.fn(), updateState:vi.fn(), resetProgress:vi.fn(), saveProgress:vi.fn() } }));
 vi.mock('./TagManager', () => ({ default: ({ onTagsChange }: { onTagsChange: (tags: Tag[]) => void }) => <button onClick={() => onTagsChange([])}>Remove reader tag</button> }));
-vi.mock('./HighlightManager', () => ({ default: () => null }));
+vi.mock('./HighlightManager', () => ({ default: ({ bodyStale, contentRevision }: { bodyStale: boolean; contentRevision: number }) => <output data-testid="anchor-body" data-stale={String(bodyStale)} data-revision={contentRevision}/> }));
 vi.mock('./HighlightList', () => ({ default: ({ highlights, onHighlightsChange }: { highlights: Highlight[]; onHighlightsChange: (items: Highlight[]) => void }) => <><span>{highlights.map(h => h.note).join(',')}</span><button onClick={() => onHighlightsChange(highlights.slice(1))}>Remove reader highlight</button></> }));
 const tag = { id: '00000000-0000-0000-0000-000000000001', name: 'Selected', color: '#112233', createdAt: '2026-11-08T00:00:00Z' };
 const filteredKey = `view=all&tags=${tag.id}`;
@@ -25,7 +25,7 @@ it('patches reader tags/highlight counts, preserves detail content, and reconcil
   const entry = { items: rows.slice(0, 40), total: 65, nextCursor: 'after:a40', scrollY: 640, savedAt: Date.now(), firstPageIds: rows.slice(0, 20).map(a => a.id) };
   writeLibraryCache(filteredKey, entry); writeLibraryCache('view=all', entry);
   const highlights = [{ id: 'h1', note: 'first note' }, { id: 'h2', note: 'retained note' }] as Highlight[];
-  vi.mocked(articleApi.getArticleById).mockResolvedValue({ ...rows[24], progress:null, originalContent: 'Retained original body', textContentLength: 20, progressTextOffset: null, progressBlockIndex: null, progressBlockRatio: null, progressUpdatedAt: null, progressSessionId: null, normalizedUrl: 'https://example.com/a25', savedFromExtensionAt: null, readableContent: '<p>Retained reader body</p>', highlights } as Article);
+  vi.mocked(articleApi.getArticleById).mockResolvedValue({ ...rows[24], contentRevision: 0, progress:null, originalContent: 'Retained original body', textContentLength: 20, progressTextOffset: null, progressBlockIndex: null, progressBlockRatio: null, progressUpdatedAt: null, progressSessionId: null, normalizedUrl: 'https://example.com/a25', savedFromExtensionAt: null, readableContent: '<p>Retained reader body</p>', highlights } as Article);
   await act(async () => root.render(<Client id="a25" />));
   await act(async () => (Array.from(container.querySelectorAll('button')).find(b => b.textContent === 'Remove reader tag')!).click());
   expect(readLibraryCache(filteredKey)?.items.some(a => a.id === 'a25')).toBe(false);
@@ -51,7 +51,7 @@ it('patches reader tags/highlight counts, preserves detail content, and reconcil
   expect(list.total).toBe(64);
 });
 it('exposes reader read/favorite/archive/reset actions and merges acknowledged rows without dropping body or notes', async () => {
-  const details = {progress:null,savedFromExtension:false,feeds:[],author:'',originalContent:'',textContentLength:14,summary:'',createdAt:'',lastReadAt:null,progressTextOffset:null,progressBlockRatio:null,progressPercent:null,progressSessionId:null,deletedAt:null,publishedAt:null,normalizedUrl:'https://example.com',contentKind:'full',savedFromExtensionAt:null,imageUrl:'',id:'reader',title:'Reader actions',url:'https://example.com',readableContent:'<p>Preserved body</p>',highlights:[{id:'h',articleId:'reader',text:'body',color:'#ffff00',startOffset:0,endOffset:4,createdAt:'',note:'Preserved note'}],tags:[],readingStatus:'unread',isArchived:false,isFavorite:false,progressBlockIndex:null,progressUpdatedAt:null} as Article;
+  const details = {contentRevision:0,progress:null,savedFromExtension:false,feeds:[],author:'',originalContent:'',textContentLength:14,summary:'',createdAt:'',lastReadAt:null,progressTextOffset:null,progressBlockRatio:null,progressPercent:null,progressSessionId:null,deletedAt:null,publishedAt:null,normalizedUrl:'https://example.com',contentKind:'full',savedFromExtensionAt:null,imageUrl:'',id:'reader',title:'Reader actions',url:'https://example.com',readableContent:'<p>Preserved body</p>',highlights:[{id:'h',articleId:'reader',text:'body',color:'#ffff00',startOffset:0,endOffset:4,createdAt:'',note:'Preserved note'}],tags:[],readingStatus:'unread',isArchived:false,isFavorite:false,progressBlockIndex:null,progressUpdatedAt:null} as Article;
   vi.mocked(articleApi.getArticleById).mockResolvedValue(details);
   vi.mocked(articleApi.updateState).mockResolvedValue({...details,readingStatus:'read',highlightCount:1,savedFromExtension:false,feeds:[]} as ArticleListItem);
   vi.mocked(articleApi.resetProgress).mockResolvedValue({progressUpdatedAt:'v1',readingStatus:'read',lastReadAt:null});
@@ -62,7 +62,7 @@ it('exposes reader read/favorite/archive/reset actions and merges acknowledged r
   expect(container.querySelector('button[aria-label="标记未读"]')).not.toBeNull();
   expect(container.querySelector('button[aria-label="归档文章"]')).not.toBeNull();
   await act(async()=>container.querySelector<HTMLButtonElement>('button[aria-label="从头阅读"]')!.click());
-  expect(articleApi.resetProgress).toHaveBeenCalledWith('reader',expect.any(String));
+  expect(articleApi.resetProgress).toHaveBeenCalledWith('reader',expect.any(String),0);
   expect(container.querySelector('button[aria-label="标记未读"]')).not.toBeNull();
 });
 
@@ -74,7 +74,7 @@ it('keeps summary body/kind coherent when a state response reports completion an
   await act(async () => container.querySelector<HTMLButtonElement>('button[aria-label="加入收藏"]')!.click());
   expect(container.querySelector('.readable-content')?.textContent).toBe('Old summary body');
   expect(container.querySelector('.reader-summary-banner')).not.toBeNull();
-  expect(container.textContent).toContain('正文已补全，请刷新后继续阅读');
+  expect(container.textContent).toContain('正文已更新，请刷新后继续阅读');
   await act(async () => container.querySelector<HTMLButtonElement>('button[aria-label="从头阅读"]')!.click());
   expect(articleApi.resetProgress).not.toHaveBeenCalled();
   expect(container.textContent).not.toContain('留在这里');
@@ -86,7 +86,7 @@ it('pauses unseen summary replacement before adopting a full-body reset acknowle
   vi.mocked(articleApi.resetProgress).mockResolvedValue({ progressUpdatedAt:'2026-11-08T03:00:00Z', readingStatus:'unread', lastReadAt:null, contentKind:'full' });
   await act(async () => root.render(<Client id={summary.id}/>));
   await act(async () => container.querySelector<HTMLButtonElement>('button[aria-label="从头阅读"]')!.click());
-  expect(container.textContent).toContain('正文已补全，请刷新后继续阅读');
+  expect(container.textContent).toContain('正文已更新，请刷新后继续阅读');
   expect(container.querySelector('.readable-content')?.textContent).toBe('Old summary body');
   expect(container.querySelector('.reader-summary-banner')).not.toBeNull();
 });
@@ -139,4 +139,21 @@ it('uses the active app theme when reader preferences follow the system', async 
   vi.mocked(articleApi.getArticleById).mockResolvedValue(link);
   await act(async () => root.render(<Client id={link.id}/>));
   expect(container.querySelector('main.reader')?.getAttribute('data-reader-theme')).toBe('dark');
+});
+
+it('shows the replacement banner and keeps the loaded revision through list patches', async () => {
+  const details = { id: 'revision', title: 'Original title', url: 'https://example.com/article', readableContent: '<p>Original body</p>', contentKind: 'full', contentRevision: 0, tags: [], highlights: [], readingStatus: 'unread', progressBlockIndex: null, progressUpdatedAt: null, isFavorite: false } as unknown as Article;
+  vi.mocked(articleApi.getArticleById).mockResolvedValueOnce(details)
+    .mockResolvedValue({ ...details, readableContent: '<p>New body</p>', contentRevision: 1 });
+  vi.mocked(articleApi.updateState).mockResolvedValue({ id: details.id, contentKind: 'full', contentRevision: 1, isFavorite: true } as unknown as ArticleListItem);
+
+  await act(async () => root.render(<Client id={details.id} />));
+  await act(async () => container.querySelector<HTMLButtonElement>('button[aria-label="加入收藏"]')!.click());
+  const renderedBody = container.querySelector('[data-testid="anchor-body"]');
+  expect(renderedBody?.getAttribute('data-revision')).toBe('0');
+  await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+  expect(renderedBody?.getAttribute('data-stale')).toBe('true');
+  expect(container.querySelector('.readable-content')?.textContent).toBe('Original body');
+  expect(container.querySelector('[role="alert"] span')?.textContent).toBe('正文已更新，请刷新后继续阅读。旧正文的进度已暂停同步。');
+  expect(container.textContent).not.toContain('留在这里');
 });

@@ -135,7 +135,7 @@ test('rejects unsupported or overlong page URLs before creating a link', () => {
 
 test('rejects a readable local page before choosing the article save endpoint', () => {
   const local = doc(textArticle(), 'file:///tmp/article.html');
-  const readable = parseReadable(local.window.document);
+  const readable = parseReadable(local.window.document.cloneNode(true) as Document, local.window.document.defaultView!);
   assert.ok(readable && readable.textLength >= 500);
   assert.throws(() => extractPage(local.window.document, local.window.document.URL), /http and https/i);
   local.window.close();
@@ -164,7 +164,7 @@ test('offers both choices for a readable page and suggests the detected kind', (
   article.window.close();
 
   const video = doc(textArticle(650, '<meta property="og:type" content="article">'), 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
-  const readable = parseReadable(video.window.document);
+  const readable = parseReadable(video.window.document.cloneNode(true) as Document, video.window.document.defaultView!);
   assert.ok(readable && readable.textLength >= 500);
   const videoChoices = extractPage(video.window.document, video.window.document.URL);
   assert.equal(videoChoices.suggested, 'link');

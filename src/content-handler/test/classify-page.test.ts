@@ -9,7 +9,7 @@ function page(options: { url?: string; metadata?: string; textLength?: number } 
   const dom = new JSDOM(`<!doctype html><html><head>${options.metadata ?? ''}</head><body>${paragraphs}</body></html>`, {
     url: options.url ?? 'https://example.com/story',
   });
-  const readable = parseReadable(dom.window.document);
+  const readable = parseReadable(dom.window.document.cloneNode(true) as Document, dom.window.document.defaultView!);
   return { dom, readable };
 }
 

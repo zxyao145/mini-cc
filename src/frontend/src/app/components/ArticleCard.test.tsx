@@ -41,7 +41,7 @@ it.each([
     isFavorite: initial, isArchived: initial, readingStatus: 'unread', readAt: null,
     lastReadAt: null, progressTextOffset: null, progressBlockIndex: null, progressBlockRatio: null,
     progressPercent: null, progressUpdatedAt: null, progressSessionId: null, deletedAt: null,
-    publishedAt: null, normalizedUrl: 'https://example.com/article', contentKind: 'full',
+    publishedAt: null, normalizedUrl: 'https://example.com/article', contentKind: 'full', contentRevision: 0,
     savedFromExtensionAt: null,
   };
   vi.mocked(articleApi.updateState).mockImplementation(async (_, patch) => ({ ...article, ...patch, savedFromExtension: false, feeds: [], highlightCount: 0 } as import('@/types').ArticleListItem));

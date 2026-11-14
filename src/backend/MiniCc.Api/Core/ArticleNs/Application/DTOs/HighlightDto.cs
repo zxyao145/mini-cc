@@ -12,3 +12,5 @@ public class HighlightDto
     public DateTimeOffset CreatedAt { get; set; }
     public Guid ArticleId { get; set; }
 }
+
+public record HighlightSave(HighlightDto? Highlight = null, int? ConflictingRevision = null);

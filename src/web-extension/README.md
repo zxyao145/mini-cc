@@ -4,7 +4,7 @@ A Chrome extension for saving articles and links to your MiniCC read-later appli
 
 ## Features
 
-- Extract the loaded page with `@mozilla/readability`, using a cloned DOM
+- Extract the loaded page with `@minicc/content-handler`, which applies site-specific rules to a cloned DOM before Readability
 - Sanitize readable HTML with DOMPurify and preserve the original HTML archive
 - Save articles to MiniCC via REST API
 - Save video pages and other pages without a readable article as links with available metadata
@@ -15,12 +15,16 @@ A Chrome extension for saving articles and links to your MiniCC read-later appli
 
 ## Installation
 
-1. Install dependencies:
+1. From the repository root, install dependencies in the SDK and extension independently.
+
    ```bash
-   pnpm install
+   pnpm --dir src/content-handler install
+   pnpm --dir src/web-extension install
    ```
 
-2. Build the extension:
+   If pnpm 12 reports `ERR_PNPM_IGNORED_BUILDS`, use `PNPM_CONFIG_STRICT_DEP_BUILDS=false pnpm install --ignore-scripts` in each package.
+
+2. Build from `src/web-extension`.
    ```bash
    pnpm build
    ```
@@ -38,13 +42,17 @@ A Chrome extension for saving articles and links to your MiniCC read-later appli
 - `pnpm build` - Build for production
 - `pnpm lint` - Run ESLint
 - `pnpm typecheck` - Check TypeScript
-- `pnpm test` - Run extraction and background messaging tests
+- `pnpm test` - Run popup, background and clipboard tests
+
+Run the extraction tests in [the SDK package](../content-handler/README.md).
 
 ## Usage
 
 1. Open the MiniCC extension on a webpage.
 2. Click **Save Article** or **Save Link**. The detected page type is highlighted as the suggestion; **Save Article** is unavailable when the page has no readable content. Use the gear icon in the top-right corner to configure the API URL and a key from the MiniCC account page.
-3. Click **Copy Markdown** to copy the page to your clipboard independently of saving it to MiniCC.
+3. Click **Copy Markdown** to copy the page to your clipboard. Markdown extraction runs synchronously on the loaded page.
+
+The YouTube preview uses oEmbed to fill in the title, channel and thumbnail when available. Re-saving an existing article refreshes its metadata and replaces a changed body while preserving tags, notes and library state.
 
 ## Configuration
 

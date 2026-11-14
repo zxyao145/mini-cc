@@ -7,6 +7,8 @@ import { PendingProgress, ProgressSnapshot, ProgressWriter, SyncStatus } from '@
 import { ReadingPosition, readPosition, restorationScrollTop } from '@/lib/reading-position';
 import { useReaderBlocks } from './useReaderBlocks';
 
+function readerVisible(): boolean { return document.visibilityState !== 'hidden'; }
+
 function isNewerProgressVersion(value: string, known: string | null): boolean {
   if (!known) return true;
   const milliseconds = Date.parse(value), previous = Date.parse(known);
@@ -19,14 +21,16 @@ function positionOf(article: Article): ReadingPosition | null {
   return article.progressBlockIndex == null ? null : {textOffset:article.progressTextOffset,blockIndex:article.progressBlockIndex,blockRatio:article.progressBlockRatio || 0,percent:article.progressPercent || 0};
 }
 function snapshotOf(article: Article): ProgressSnapshot {
-  return {...(positionOf(article) || {}),progressUpdatedAt:article.progressUpdatedAt};
+  return {...(positionOf(article) || {}),progressUpdatedAt:article.progressUpdatedAt,contentRevision:article.contentRevision};
 }
-function storedProgress(id: string, contentKind: Article['contentKind']): PendingProgress | null {
+function storedProgress(id: string, contentKind: Article['contentKind'], contentRevision?: number): PendingProgress | null {
   try {
     const item = JSON.parse(sessionStorage.getItem(`progress:${id}`) || 'null');
-    if (item?.contentKind === 'summaryOnly' && contentKind === 'full') {
+    // Legacy entries predate revision tracking and can only resume against revision zero.
+    if ((item?.contentKind === 'summaryOnly' && contentKind === 'full') ||
+        (item && contentRevision !== undefined && (item.contentRevision ?? 0) !== contentRevision)) {
       sessionStorage.removeItem(`progress:${id}`);
-      return null; // The saved coordinates refer to the replaced summary, not the full body.
+      return null;
     }
     return item?.position && 'baseUpdatedAt' in item ? item : null;
   }
@@ -40,7 +44,9 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
   const latest = useRef({article,onArticleChange}); latest.current = {article,onArticleChange};
   const [contentChanged,setContentChanged] = useState(false);
   const staleContent = useRef(false);
-  const loadedKind = useRef<Article["contentKind"] | undefined>(article?.contentKind);
+  const loadedKind = useRef<Article['contentKind'] | undefined>(article?.contentKind);
+  const loadedRevision = useRef(article?.contentRevision);
+  const refreshing = useRef(false);
   const [syncStatus,setSyncStatus] = useState<SyncStatus>('synced');
   const [conflict,setConflict] = useState<ProgressSnapshot | null>(null);
   const [percent,setPercent] = useState(0);
@@ -53,11 +59,14 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
   const initialAnchor = useRef<ReadingPosition | null>(null);
   const restoredId = useRef<string | null>(null);
   const dwell = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const observeContentKind = useCallback((kind: Article['contentKind'] | undefined, current?: ProgressSnapshot) => {
+  const observeContent = useCallback((next: { contentKind?: Article['contentKind']; contentRevision?: number }, current?: ProgressSnapshot) => {
+    if (staleContent.current) return true;
     const known = latest.current.article;
-    if (!known || loadedKind.current !== 'summaryOnly' || kind !== 'full') return false;
+    const summaryReplaced = loadedKind.current === 'summaryOnly' && next.contentKind === 'full';
+    const revisionChanged = next.contentRevision !== undefined && loadedRevision.current !== undefined && next.contentRevision !== loadedRevision.current;
+    if (!known || (!summaryReplaced && !revisionChanged)) return false;
     staleContent.current = true; setContentChanged(true); clearTimeout(dwell.current);
-    writer.current?.showConflict(current ?? snapshotOf(known));
+    writer.current?.stop(current ?? snapshotOf(known));
     return true;
   }, []);
   const programmatic = useRef(false);
@@ -89,25 +98,43 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
   useEffect(() => {
     if (!article?.id) return;
     let mounted = true;
-    const id = article.id;
+    let refreshGeneration = 0;
+    const { id, contentRevision } = article;
     userScrolled.current=false;intent.current=0;clearTimeout(dwell.current);
     staleContent.current=false;setContentChanged(false);loadedKind.current=article.contentKind;
+    loadedRevision.current = contentRevision; refreshing.current = false;
     setSyncStatus('synced');setConflict(null);setAtEnd(false);
-    const pending = storedProgress(id, article.contentKind);
+    const pending = storedProgress(id, article.contentKind, contentRevision);
     initialAnchor.current = pending?.position || positionOf(article);
+    const observeProgressConflict = (error: unknown) => {
+      const failure = error as { status?: number; current?: ProgressSnapshot };
+      return mounted && failure?.status === 409 && failure.current && observeContent(failure.current, failure.current);
+    };
     const instance = new ProgressWriter(crypto.randomUUID(),article.progressUpdatedAt,{
-      send:(request,keepalive)=>articleApi.saveProgress(id,request,keepalive),
-      reset:async sessionId=>{
-        const result = await articleApi.resetProgress(id,sessionId);
-        // This kind comes from the same locked transaction as the reset acknowledgement.
-        // An upgrade after an acknowledged summary reset still invalidates its version on the server.
-        if (article.contentKind === 'summaryOnly' && result.contentKind !== 'summaryOnly') {
-          if (mounted) observeContentKind('full', { progressUpdatedAt: result.progressUpdatedAt });
-          throw new Error('正文已更新，请刷新后继续');
+      send:async (request,keepalive)=>{
+        try {
+          const result = await articleApi.saveProgress(id,{ ...request, contentRevision },keepalive);
+          if (mounted) observeContent(result, result);
+          return result;
+        } catch (error) {
+          observeProgressConflict(error);
+          throw error;
         }
+      },
+      reset:async sessionId=>{
+        let result;
+        try {
+          result = await articleApi.resetProgress(id,sessionId,contentRevision);
+        } catch (error) {
+          if (observeProgressConflict(error)) throw new Error('正文已更新，请刷新后继续');
+          throw error;
+        }
+        // Legacy summary acknowledgements must confirm that the summary is still loaded.
+        const contentKind = article.contentKind === 'summaryOnly' ? result.contentKind ?? 'full' : result.contentKind;
+        if (mounted && observeContent({ ...result, contentKind }, result)) throw new Error('正文已更新，请刷新后继续');
         return result;
       },
-      persist:value=>{try {if(value)sessionStorage.setItem(`progress:${id}`,JSON.stringify({...value,contentKind:article.contentKind}));else sessionStorage.removeItem(`progress:${id}`);}catch{/* Optional storage may be full/unavailable. */}},
+      persist:value=>{try {if(value)sessionStorage.setItem(`progress:${id}`,JSON.stringify({...value,contentKind:article.contentKind,contentRevision}));else sessionStorage.removeItem(`progress:${id}`);}catch{/* Optional storage may be full/unavailable. */}},
       onChange:(status,current)=>{if(mounted){setSyncStatus(status);setConflict(current);}},
       onSaved:(result,position)=>{
         const changes: Partial<Article> = {...result,progressSessionId:instance.sessionId,
@@ -119,29 +146,47 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
       },
     },pending);
     writer.current=instance;
-    instance.setVisible(document.visibilityState !== 'hidden');
-    if(pending && document.visibilityState !== 'hidden')void instance.flush();
+    instance.setVisible(readerVisible());
+    if(pending && readerVisible())void instance.flush();
     const refresh = async () => {
+      if (staleContent.current || !readerVisible()) return;
+      const generation = ++refreshGeneration;
+      refreshing.current = true;
+      clearTimeout(dwell.current);
+      instance.setVisible(false);
       try {
         const fresh = await articleApi.getArticleById(id);
-        if (!mounted) return;
-        if (observeContentKind(fresh.contentKind, snapshotOf(fresh))) return;
+        if (!mounted || generation !== refreshGeneration) return;
+        const snapshot = snapshotOf(fresh);
+        if (observeContent(fresh, snapshot)) return;
         if(fresh.progressUpdatedAt && isNewerProgressVersion(fresh.progressUpdatedAt, instance.baseUpdatedAt) && fresh.progressSessionId!==instance.sessionId)
-          instance.showConflict(snapshotOf(fresh));
-      } catch {/* A failed refresh must not rebase pending data. Retried PUT still checks its original base. */}
-      finally { if(mounted)instance.setVisible(document.visibilityState !== 'hidden'); }
+          instance.showConflict(snapshot);
+      } catch {/* A failed refresh must not rebase pending data. Retried PUT still checks the original base and revision. */}
+      finally {
+        if (mounted && generation === refreshGeneration) {
+          refreshing.current = false;
+          if (!staleContent.current) instance.setVisible(readerVisible());
+        }
+      }
+    };
+    const pagehide = () => {
+      clearTimeout(dwell.current);
+      instance.setVisible(false);
+      if (!refreshing.current) void instance.flush(true);
     };
     const visibility = () => {
-      clearTimeout(dwell.current);
-      if(document.visibilityState==='hidden'){instance.setVisible(false);void instance.flush(true);}
+      if (document.visibilityState === 'hidden') pagehide();
       else void refresh();
     };
-    const pagehide=()=>{instance.setVisible(false);void instance.flush(true);};
-    document.addEventListener('visibilitychange',visibility);window.addEventListener('pagehide',pagehide);
+    document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pagehide', pagehide);
     return ()=>{
       mounted=false;layoutChange.current+=1;layoutAnchor.current=null;programmatic.current=false;
-      clearTimeout(dwell.current);instance.setVisible(false);void instance.flush(true);
-      document.removeEventListener('visibilitychange',visibility);window.removeEventListener('pagehide',pagehide);
+      pagehide();
+      document.removeEventListener('visibilitychange', visibility);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('pagehide', pagehide);
       if(writer.current===instance)writer.current=null;
     };
     // A page session is created once per article, not per acknowledged progress render.
@@ -194,14 +239,17 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
   },[articleId,layout,contentRef,restore]);
 
   const chooseConflict=async(jump:boolean)=>{
-    if(!conflict || staleContent.current)return;
+    if (!conflict || observeContent(conflict, conflict)) return;
+    const instance = writer.current;
+    if (!instance) return;
     if (loadedKind.current === 'summaryOnly' && latest.current.article) {
       try {
         const fresh = await articleApi.getArticleById(latest.current.article.id);
-        if (observeContentKind(fresh.contentKind, snapshotOf(fresh))) return;
+        if (writer.current !== instance || observeContent(fresh, snapshotOf(fresh))) return;
       } catch { return; }
     }
-    writer.current?.resolveConflict(conflict,jump);
+    if (instance.conflict !== conflict) return;
+    instance.resolveConflict(conflict,jump);
     if(jump){userScrolled.current=false;clearTimeout(dwell.current);restore(conflict.blockIndex==null?null:{textOffset:conflict.textOffset??null,blockIndex:conflict.blockIndex,blockRatio:conflict.blockRatio||0,percent:conflict.percent||0});}
   };
   const reset=async()=>{
@@ -217,5 +265,5 @@ export function useReadingProgress(article: Article | undefined, contentRef: Ref
   const progress = articleId
     ? {contentChanged,syncStatus,conflict,percent,atEnd}
     : {contentChanged:false,syncStatus:'synced' as const,conflict:null,percent:0,atEnd:false};
-  return {observeContentKind,...progress,chooseConflict,reset,withStateChange,preserveLayout};
+  return {observeContent,...progress,chooseConflict,reset,withStateChange,preserveLayout};
 }

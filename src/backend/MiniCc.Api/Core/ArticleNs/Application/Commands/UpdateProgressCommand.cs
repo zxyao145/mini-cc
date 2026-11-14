@@ -17,17 +17,19 @@ public class UpdateProgressCommand : IRequest<Result<ProgressSaveDto>>
     public double Percent { get; set; }
     public string SessionId { get; set; } = "";
     public DateTimeOffset? BaseUpdatedAt { get; set; }
+    public int? ContentRevision { get; set; }
 }
 
 public class ResetProgressRequest
 {
     public string SessionId { get; set; } = "";
+    public int? ContentRevision { get; set; }
 }
 
 public record ProgressSnapshot(int? TextOffset, int? BlockIndex, double? BlockRatio, double? Percent,
-    DateTimeOffset? ProgressUpdatedAt);
-public record ProgressSaveDto(DateTimeOffset ProgressUpdatedAt, ReadingStatus ReadingStatus,
-    DateTimeOffset? LastReadAt, ProgressSnapshot? Current = null, ContentKind? ContentKind = null);
+    DateTimeOffset? ProgressUpdatedAt, int ContentRevision);
+public record ProgressSaveDto(DateTimeOffset? ProgressUpdatedAt, ReadingStatus ReadingStatus,
+    DateTimeOffset? LastReadAt, ProgressSnapshot? Current = null, ContentKind? ContentKind = null, int? ContentRevision = null);
 
 public class UpdateProgressCommandValidator : AbstractValidator<UpdateProgressCommand>
 {
@@ -64,13 +66,15 @@ public class UpdateProgressCommandHandler(IUnitOfWork unitOfWork)
                 await unitOfWork.RollbackTransactionAsync(cancellationToken);
                 return Result<ProgressSaveDto>.Failure("Link items have no reading position");
             }
-            if (!request.Reset && article.ProgressUpdatedAt.HasValue && article.ProgressSessionId != request.SessionId &&
-                (!request.BaseUpdatedAt.HasValue || request.BaseUpdatedAt < article.ProgressUpdatedAt))
+            var staleContent = request.ContentRevision.HasValue && request.ContentRevision != article.ContentRevision;
+            var staleProgress = !request.Reset && article.ProgressUpdatedAt.HasValue && article.ProgressSessionId != request.SessionId &&
+                (!request.BaseUpdatedAt.HasValue || request.BaseUpdatedAt < article.ProgressUpdatedAt);
+            if (staleContent || staleProgress)
             {
                 await unitOfWork.RollbackTransactionAsync(cancellationToken);
-                return Result<ProgressSaveDto>.Success(new(article.ProgressUpdatedAt.Value, article.ReadingStatus,
+                return Result<ProgressSaveDto>.Success(new(article.ProgressUpdatedAt, article.ReadingStatus,
                     article.LastReadAt, new(article.ProgressTextOffset, article.ProgressBlockIndex, article.ProgressBlockRatio,
-                        article.ProgressPercent, article.ProgressUpdatedAt)));
+                        article.ProgressPercent, article.ProgressUpdatedAt, article.ContentRevision)));
             }
             // Preserve a strictly newer server version even for writes inside the same clock tick.
             var clock = DateTimeOffset.UtcNow;
@@ -80,7 +84,8 @@ public class UpdateProgressCommandHandler(IUnitOfWork unitOfWork)
             else article.ApplyProgress(new ReadingPosition(request.TextOffset, request.BlockIndex, request.BlockRatio, request.Percent), request.SessionId, now);
             await unitOfWork.SaveChangesAsync(cancellationToken);
             await unitOfWork.CommitTransactionAsync(cancellationToken);
-            return Result<ProgressSaveDto>.Success(new(now, article.ReadingStatus, article.LastReadAt, ContentKind: article.ContentKind));
+            return Result<ProgressSaveDto>.Success(new(now, article.ReadingStatus, article.LastReadAt,
+                ContentKind: article.ContentKind, ContentRevision: article.ContentRevision));
         }
         catch
         {

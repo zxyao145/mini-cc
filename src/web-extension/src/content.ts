@@ -1,5 +1,4 @@
-import { extractPage } from './extract-page';
-import { buildMarkdown } from './markdown';
+import { buildMarkdown, extractPage } from '@minicc/content-handler';
 
 const loadedUrl = location.href;
 

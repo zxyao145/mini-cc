@@ -39,6 +39,8 @@ public class ArticleRepository : IArticleRepository
     public async Task<Article?> GetByUrlAsync(string url, CancellationToken cancellationToken = default)
     {
         return await _context.Articles.FromSqlInterpolated($"SELECT * FROM \"Articles\" WHERE \"NormalizedUrl\" = {url} ORDER BY \"CreatedAt\", \"Id\" LIMIT 1 FOR UPDATE").IgnoreQueryFilters()
+            // Load annotations after acquiring the article lock so a waiting save sees the latest anchors.
+            .AsSplitQuery()
             .Include(a => a.Tags)
             .Include(a => a.Highlights)
             .Include(a => a.FeedEntries).ThenInclude(e => e.Feed)

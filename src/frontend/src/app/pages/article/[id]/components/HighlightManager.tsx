@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import axios from 'axios';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useFloating, autoUpdate, offset, flip, shift, arrow } from '@floating-ui/react';
 import { CircleCheck, Highlighter, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/arc/button/button';
@@ -16,11 +17,17 @@ const DEFAULT_HIGHLIGHT_COLOR = '#ffeb3b';
 interface HighlightManagerProps {
   articleId: string;
   highlights: Highlight[];
+  bodyStale: boolean;
+  contentRevision?: number;
+  onContentChanged?: (next: { contentRevision: number }) => void;
   onHighlightsChange: (highlights: Highlight[]) => void;
 }
 
 export default function HighlightManager({ 
-  articleId, 
+  articleId,
+  bodyStale,
+  contentRevision,
+  onContentChanged,
   highlights, 
   onHighlightsChange 
 }: HighlightManagerProps) {
@@ -29,6 +36,12 @@ export default function HighlightManager({
   const [clickedHighlight, setClickedHighlight] = useState<string | null>(null);
   const [mergeNotification, setMergeNotification] = useState<string | null>(null);
   
+  const bodySession = useRef<object | null>(null);
+  useLayoutEffect(() => {
+    bodySession.current = {};
+    return () => { bodySession.current = null; };
+  }, [articleId, contentRevision]);
+
   const arrowRef = useRef(null);
   const highlightMenuArrowRef = useRef(null);
   
@@ -152,23 +165,38 @@ export default function HighlightManager({
     };
   }, [hideTooltip, handleCancel, clickedHighlight, menuRefs, tooltipVisible, tooltipRefs]);
 
+  const observeContentConflict = useCallback((error: unknown) => {
+    if (!axios.isAxiosError(error) || error.response?.status !== 409) return false;
+    const revision = error.response.data?.current?.contentRevision;
+    if (typeof revision !== 'number') return false;
+    onContentChanged?.({ contentRevision: revision });
+    return true;
+  }, [onContentChanged]);
+
   const latestHighlights = useRef({ highlights, onHighlightsChange });
   latestHighlights.current = { highlights, onHighlightsChange };
   useEffect(() => {
+    if (bodyStale) return;
     const content = document.querySelector('.readable-content') as HTMLElement | null;
     if (!content) return;
     let mounted = true;
     const pending = highlights.filter(h => h.anchorStatus === 'pending');
     const text = getTextContent(content);
     if (pending.length) void Promise.allSettled(pending.map(async highlight => {
-      return highlightApi.anchor(highlight.id, nearestAnchor(text, highlight.text, highlight.startOffset));
+      try {
+        const anchor = nearestAnchor(text, highlight.text, highlight.startOffset);
+        return await highlightApi.anchor(highlight.id, { ...anchor, contentRevision });
+      } catch (error) {
+        if (mounted) observeContentConflict(error);
+        throw error;
+      }
     })).then(results => {
       if (!mounted) return;
       const resolved = new Map(results.flatMap(result => result.status === 'fulfilled' ? [[result.value.id, result.value] as const] : []));
       if (resolved.size) latestHighlights.current.onHighlightsChange(latestHighlights.current.highlights.map(h => resolved.has(h.id) ? { ...h, startOffset: resolved.get(h.id)!.startOffset, endOffset: resolved.get(h.id)!.endOffset, anchorStatus: resolved.get(h.id)!.anchorStatus } : h));
     });
     return () => { mounted = false; };
-  }, [articleId, highlights]);
+  }, [articleId, bodyStale, contentRevision, highlights, observeContentConflict]);
 
   // Apply highlights to content
   useEffect(() => {
@@ -277,6 +305,8 @@ export default function HighlightManager({
   };
 
   const handleCreateHighlight = async () => {
+    if (bodyStale) return;
+    const session = bodySession.current;
     const selection = window.getSelection();
     if (!selectedText || !selection || selection.rangeCount === 0) return;
 
@@ -295,10 +325,6 @@ export default function HighlightManager({
         
         if (adjacentHighlights.length > 0) {
           console.log(`Found ${adjacentHighlights.length} adjacent highlights, merging...`);
-          
-          // 显示合并通知
-          setMergeNotification(`已与 ${adjacentHighlights.length} 个相邻高亮合并`);
-          setTimeout(() => setMergeNotification(null), 3000);
           
           // 需要合并高亮
           const allOffsets = [
@@ -331,25 +357,32 @@ export default function HighlightManager({
             mergedText: mergedText.substring(0, 50) + (mergedText.length > 50 ? '...' : '')
           });
           
-          // 删除所有相邻的高亮
-          for (const highlight of adjacentHighlights) {
-            await articleApi.deleteHighlight(highlight.id);
-          }
-          
-          // 创建合并后的新高亮
+          // Save the merged note before removing its originals.
           const mergedHighlight = await articleApi.addHighlight(articleId, {
             text: mergedText,
             note: mergedNotes,
             color: mergedColor,
             startOffset: mergedStartOffset,
-            endOffset: mergedEndOffset
+            endOffset: mergedEndOffset,
+            contentRevision
           });
-          
-          // 更新高亮列表
-          const remainingHighlights = highlights.filter(h => 
-            !adjacentHighlights.find(ah => ah.id === h.id)
-          );
-          onHighlightsChange([...remainingHighlights, mergedHighlight]);
+
+          if (bodySession.current === session) {
+            setMergeNotification(`已与 ${adjacentHighlights.length} 个相邻高亮合并`);
+            setTimeout(() => {
+              if (bodySession.current === session) setMergeNotification(null);
+            }, 3000);
+          }
+          const deletedIds = new Set<string>();
+          try {
+            for (const highlight of adjacentHighlights) {
+              await articleApi.deleteHighlight(highlight.id);
+              deletedIds.add(highlight.id);
+            }
+          } finally {
+            const remainingHighlights = latestHighlights.current.highlights.filter(h => !deletedIds.has(h.id));
+            if (bodySession.current === session) onHighlightsChange([...remainingHighlights, mergedHighlight]);
+          }
           
         } else {
           // 没有相邻高亮，直接创建新高亮
@@ -358,23 +391,32 @@ export default function HighlightManager({
             note: '',
             color: DEFAULT_HIGHLIGHT_COLOR,
             startOffset,
-            endOffset
+            endOffset,
+            contentRevision
           });
           
-          onHighlightsChange([...highlights, newHighlight]);
+          if (bodySession.current === session) onHighlightsChange([...latestHighlights.current.highlights, newHighlight]);
         }
       }
       
-      hideTooltip();
-      selection.removeAllRanges();
+      if (bodySession.current === session) {
+        hideTooltip();
+        selection.removeAllRanges();
+      }
     } catch (error) {
-      console.error('Failed to create highlight:', error);
+      if (bodySession.current !== session) return;
+      if (observeContentConflict(error)) {
+        hideTooltip();
+        selection.removeAllRanges();
+      } else {
+        console.error('Failed to create highlight:', error);
+      }
     }
   };
 
   return (
     <>
-      {tooltipVisible && (
+      {!bodyStale && tooltipVisible && (
         <div 
           ref={tooltipRefs.setFloating}
           className={styles.selectionTooltip}

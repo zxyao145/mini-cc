@@ -123,3 +123,126 @@ test('shows a dismissible end prompt and never automatically marks a completed s
   await expect.poll(async()=>(await detail(page.request)).readingStatus).toBe('read');
   await expect(page.getByRole('region',{name:'读完提示'})).toHaveCount(0);
 });
+
+
+test('re-saving a full article from the extension pauses the open reader until reload', async ({ page }) => {
+  await open(page);
+  await userScroll(page, 20);
+  await expect.poll(async () => (await detail(page.request)).progress?.blockIndex).toBe(20);
+  const old = await detail(page.request);
+  const title = 'Updated P2 reading article';
+  const firstParagraph = 'Replacement article body starts here.';
+  const body = `<p>${firstParagraph}</p><p>Different content saved through the extension endpoint.</p>`;
+  const saved = await page.request.post('/api/articles/content', { data: {
+    url: old.url, title, originalContent: body, readableContent: body,
+  } });
+  expect(saved.ok()).toBe(true);
+  expect((await saved.json()).id).toBe(id);
+
+  let progressWrites = 0;
+  await page.route(`**/api/articles/${id}/progress`, async route => {
+    if (route.request().method() === 'PUT') progressWrites++;
+    await route.continue();
+  });
+  await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await expect(page.getByText('正文已更新，请刷新后继续阅读。旧正文的进度已暂停同步。', { exact: true })).toBeVisible();
+  await userScroll(page, 35);
+  await userScroll(page, 42);
+  expect(progressWrites).toBe(0);
+  expect((await detail(page.request)).progress).toBeNull();
+
+  await page.getByRole('button', { name: '刷新正文', exact: true }).click();
+  await expect(page.locator('.readable-content p').first()).toHaveText(firstParagraph);
+  await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+});
+
+
+test('a queued highlight anchor cannot overwrite a replacement body’s pending highlight', async ({ page }) => {
+  const article = await detail(page.request);
+  const quote = '缓存与阅读位置。';
+  const created = await page.request.post(`/api/articles/${id}/highlights`, { data: {
+    text: quote, startOffset: 14, endOffset: 14 + quote.length, color: '#ffeb3b', note: 'Retained note',
+  } });
+  expect(created.ok()).toBe(true);
+  const highlight = await created.json();
+  async function replaceBody(text: string) {
+    const body = `<p>${text}</p>`;
+    const saved = await page.request.post('/api/articles/content', { data: {
+      url: article.url, title: article.title, originalContent: body, readableContent: body,
+    } });
+    expect(saved.ok()).toBe(true);
+    return saved.json();
+  }
+
+  const middle = await replaceBody(`First replacement: ${quote}`);
+  const path = `**/api/highlights/${highlight.id}/anchor`;
+  const finalText = `Second replacement starts with different text before ${quote}`;
+  await page.route(path, async route => {
+    expect(route.request().postDataJSON().contentRevision).toBe(middle.contentRevision);
+    await replaceBody(finalText);
+    await route.continue();
+  }, { times: 1 });
+  const response = page.waitForResponse(res => res.url().endsWith(`/api/highlights/${highlight.id}/anchor`));
+  await page.goto(`/pages/article/${id}`);
+  expect((await response).status()).toBe(409);
+  await expect(page.getByRole('button', { name: '刷新正文', exact: true })).toBeVisible();
+  expect((await detail(page.request)).highlights[0].anchorStatus).toBe('pending');
+
+  await page.getByRole('button', { name: '刷新正文', exact: true }).click();
+  await expect(page.locator(`[data-highlight-id="${highlight.id}"]`)).toHaveText(quote);
+  const anchored = (await detail(page.request)).highlights[0];
+  expect(anchored.startOffset).toBe(finalText.indexOf(quote));
+  expect(anchored.note).toBe('Retained note');
+});
+
+test('rejects a stale highlight merge before removing the original note', async ({ page }) => {
+  const article = await detail(page.request);
+  const created = await page.request.post(`/api/articles/${id}/highlights`, { data: {
+    text: 'Paragraph', startOffset: 0, endOffset: 9, color: '#ffeb3b', note: 'Original note',
+  } });
+  expect(created.ok()).toBe(true);
+  const original = await created.json();
+  await open(page);
+  const oldHighlight = page.locator(`[data-highlight-id="${original.id}"]`);
+  await expect(oldHighlight).toHaveText('Paragraph');
+
+  let deletes = 0;
+  await page.route(`**/api/highlights/${original.id}`, async route => {
+    if (route.request().method() === 'DELETE') deletes++;
+    await route.continue();
+  });
+  const path = `**/api/articles/${id}/highlights`;
+  await page.route(path, async route => {
+    expect(route.request().method()).toBe('POST');
+    const request = route.request().postDataJSON();
+    expect(request.contentRevision).toBe(article.contentRevision);
+    expect(request.note).toBe('Original note');
+    const body = '<p>New body shifts the Paragraph selection.</p>';
+    const saved = await page.request.post('/api/articles/content', { data: {
+      url: article.url, title: article.title, originalContent: body, readableContent: body,
+    } });
+    expect(saved.ok()).toBe(true);
+    await route.continue();
+  }, { times: 1 });
+  await oldHighlight.evaluate(highlight => {
+    const adjacentText = highlight.nextSibling!;
+    const range = document.createRange();
+    range.setStart(adjacentText, 1);
+    range.setEnd(adjacentText, 2);
+    const selection = window.getSelection()!;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    document.dispatchEvent(new MouseEvent('mouseup'));
+  });
+  const response = page.waitForResponse(res => res.url().endsWith(`/api/articles/${id}/highlights`) && res.request().method() === 'POST');
+  const create = page.getByRole('button', { name: '高亮', exact: true });
+  await expect(create).toBeVisible();
+  // The synthetic text selection above makes this independent of viewport-specific drag coordinates.
+  await create.dispatchEvent('click');
+  expect((await response).status()).toBe(409);
+  await expect(page.getByRole('button', { name: '刷新正文', exact: true })).toBeVisible();
+  expect(deletes).toBe(0);
+  expect((await detail(page.request)).highlights).toEqual([
+    expect.objectContaining({ id: original.id, note: 'Original note', anchorStatus: 'pending' }),
+  ]);
+});

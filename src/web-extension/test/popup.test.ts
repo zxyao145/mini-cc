@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { JSDOM } from 'jsdom';
-import type { ArticlePage, LinkPage, PageChoices, SavePageMessage } from '../src/types';
+import type { ArticlePage, LinkPage, PageChoices } from '@minicc/content-handler';
+import type { SavePageMessage } from '../src/types';
 import { withGlobals } from './with-globals.ts';
 
 const link: LinkPage = { kind: 'link', url: 'https://example.com/video', title: 'Video' };
@@ -20,7 +21,12 @@ interface Popup {
   closed: () => number;
 }
 
-async function withPopup(name: string, choices: PageChoices, run: (popup: Popup) => Promise<void>) {
+async function withPopup(
+  name: string,
+  choices: PageChoices,
+  run: (popup: Popup) => Promise<void>,
+  fetch?: typeof globalThis.fetch,
+) {
   const html = readFileSync(new URL('../src/popup.html', import.meta.url), 'utf8');
   const dom = new JSDOM(html);
   const { document } = dom.window;
@@ -33,7 +39,7 @@ async function withPopup(name: string, choices: PageChoices, run: (popup: Popup)
   const chromeMock = {
     storage: { sync: { get: async () => ({}) } },
     tabs: {
-      query: async () => [{ id: 1, url: link.url }],
+      query: async () => [{ id: 1, url: choices.link.url }],
       sendMessage: async (_tab: number, { action }: { action: string }) => {
         messages.push(action);
         return action === 'extractContent' ? { success: true, content: choices } : { success: true, markdown: '# Video\n' };
@@ -47,6 +53,7 @@ async function withPopup(name: string, choices: PageChoices, run: (popup: Popup)
     },
   };
   const globals = {
+    ...(fetch ? { fetch } : {}),
     window: dom.window,
     document,
     chrome: chromeMock,
@@ -137,4 +144,90 @@ test('highlights the suggested article and previews its metadata', async () => {
     assert.equal(button('save-link-btn').disabled, false);
     assert.equal(document.querySelector('#preview-title')?.textContent, 'Transcript');
   });
+});
+
+const youtubeLink: LinkPage = {
+  kind: 'link',
+  url: 'https://www.youtube.com/watch?v=BnSUk0je6oo',
+  title: 'YouTube',
+  imageUrl: 'https://i.ytimg.com/vi/BnSUk0je6oo/hqdefault.jpg',
+};
+const youtubeChoices: PageChoices = { suggested: 'link', article: null, link: youtubeLink };
+
+test('merges YouTube oEmbed metadata into the preview and saved link', async () => {
+  let respond!: (response: Response) => void;
+  const fetch = () => new Promise<Response>(resolve => { respond = resolve; });
+
+  await withPopup('youtube', youtubeChoices, async ({ document, button, saved }) => {
+    assert.equal(document.querySelector('#status')?.textContent, 'Extracting content...');
+    assert.equal(button('save-link-btn').disabled, true);
+    const thumbnail = 'https://i.ytimg.com/vi/BnSUk0je6oo/oembed.jpg';
+    respond(Response.json({ title: 'Real title', author_name: 'Channel', thumbnail_url: thumbnail }));
+    await settle();
+    assert.equal(document.querySelector('#preview-title')?.textContent, 'Real title');
+    assert.equal(document.querySelector('#preview-author')?.textContent, 'Channel');
+
+    await withGlobals({ setTimeout: () => {} }, async () => {
+      button('save-link-btn').click();
+      await settle();
+    });
+    assert.deepEqual(saved, [{ action: 'savePage', content: {
+      ...youtubeLink, title: 'Real title', author: 'Channel', imageUrl: thumbnail,
+    } }]);
+  }, fetch);
+});
+
+test('keeps extracted metadata when YouTube oEmbed fails', async () => {
+  let calls = 0;
+  const fetch = async () => {
+    calls++;
+    throw new Error('Network unavailable');
+  };
+  await withPopup('youtube-failed', youtubeChoices, async ({ document, button, saved }) => {
+    assert.equal(calls, 1);
+    assert.equal(document.querySelector('#preview-title')?.textContent, 'YouTube');
+    await withGlobals({ setTimeout: () => {} }, async () => {
+      button('save-link-btn').click();
+      await settle();
+    });
+    assert.deepEqual(saved, [{ action: 'savePage', content: youtubeLink }]);
+  }, fetch);
+});
+
+test('previews extracted metadata after the five-second oEmbed timeout', async () => {
+  const timers: Array<() => void> = [];
+  let signal: AbortSignal | null | undefined;
+  const fetch: typeof globalThis.fetch = (_input, init) => {
+    signal = init?.signal;
+    return new Promise(() => {});
+  };
+
+  await withGlobals({
+    setTimeout: (callback: () => void, delay: number) => {
+      assert.equal(delay, 5000);
+      timers.push(callback);
+    },
+  }, async () => {
+    await withPopup('youtube-timeout', youtubeChoices, async ({ document, button }) => {
+      assert.equal(document.querySelector('#status')?.textContent, 'Extracting content...');
+      assert.equal(timers.length, 1);
+      timers[0]();
+      await settle();
+      assert.ok(signal?.aborted);
+      assert.equal(document.querySelector('#preview-title')?.textContent, 'YouTube');
+      assert.equal(button('save-link-btn').disabled, false);
+    }, fetch);
+  });
+});
+
+test('does not fetch metadata for sites without a URL hook', async () => {
+  let calls = 0;
+  const fetch = async () => {
+    calls++;
+    return Response.json({});
+  };
+  await withPopup('no-url-hook', { suggested: 'link', article: null, link }, async ({ document }) => {
+    assert.equal(calls, 0);
+    assert.equal(document.querySelector('#preview-title')?.textContent, 'Video');
+  }, fetch);
 });

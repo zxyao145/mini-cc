@@ -1,8 +1,11 @@
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference -- Include the ambient declaration for linked SDK consumers.
+/// <reference path="./turndown-plugin-gfm.d.ts" />
 import TurndownService from 'turndown';
 import { strikethrough } from 'turndown-plugin-gfm';
 import { extractPageTags, isMetaTrusted, pageAuthor, pageTitle } from './page-meta';
 import { isArticlePage } from './classify-page';
-import { parseReadable } from './readable';
+import { applyOverrides, readDocument } from './prepare';
+import type { SiteHandler } from './types';
 
 export function htmlToMarkdown(html: string): string {
   const service = new TurndownService({
@@ -110,21 +113,24 @@ function singleLine(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
-export function buildMarkdown(document: Document, loadedUrl: string, now = new Date()): string {
+export function buildMarkdown(document: Document, loadedUrl: string, now = new Date(), handlers?: readonly SiteHandler[]): string {
   const url = document.URL;
   const trusted = isMetaTrusted(loadedUrl, url);
-  const readable = parseReadable(document, 'markdown');
+  const { readable, overrides } = readDocument(document, 'markdown', handlers);
   const fields = { url, date: localDate(now), tags: trusted ? extractPageTags(document) : undefined };
 
-  if (readable && isArticlePage(document, readable, trusted)) {
+  if (readable && (overrides.suggested ?? (isArticlePage(document, readable, trusted) ? 'article' : 'link')) === 'article') {
     const title = (trusted ? readable.title.trim() : '') || document.title.trim();
-    const front = frontMatter({ ...fields, title, author: trusted ? readable.byline : undefined });
-    return `${front}\n# ${singleLine(title)}\n\n${htmlToMarkdown(readable.html)}`;
+    const metadata = applyOverrides({ kind: 'link', url, title, author: trusted ? readable.byline : undefined }, overrides);
+    const front = frontMatter({ ...fields, ...metadata });
+    return `${front}\n# ${singleLine(metadata.title)}\n\n${htmlToMarkdown(readable.html)}`;
   }
 
-  const title = pageTitle(document, trusted);
-  const front = frontMatter({ ...fields, title, author: trusted ? pageAuthor(document) : undefined });
-  const escapedTitle = singleLine(title).replace(/\\/g, '\\\\').replace(/[\[\]]/g, '\\$&');
+  const metadata = applyOverrides({
+    kind: 'link', url, title: pageTitle(document, trusted), author: trusted ? pageAuthor(document) : undefined,
+  }, overrides);
+  const front = frontMatter({ ...fields, ...metadata });
+  const escapedTitle = singleLine(metadata.title).replace(/\\/g, '\\\\').replace(/[\[\]]/g, '\\$&');
   const escapedUrl = url.replace(/[()]/g, '\\$&');
   return `${front}\n[${escapedTitle}](${escapedUrl})\n`;
 }

@@ -5,10 +5,12 @@ using System.Text.Json.Serialization;
 
 namespace MiniCc.Api.Core.ArticleNs.Application.Commands;
 
-public class AddHighlightCommand : IRequest<Result<HighlightDto>>
+public class AddHighlightCommand : IRequest<Result<HighlightSave>>
 {
     [JsonIgnore]
     public Guid ArticleId { get; set; } = Guid.Empty;
+
+    public int? ContentRevision { get; set; }
 
     /// <summary>
     /// 高亮文本内容

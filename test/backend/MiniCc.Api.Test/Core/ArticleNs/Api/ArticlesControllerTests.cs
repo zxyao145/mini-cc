@@ -452,7 +452,7 @@ public class ArticlesControllerTests
         var articleId = Guid.NewGuid();
         var command = new AddHighlightCommand { Text = "Important text", Note = "Note", StartOffset = 0, EndOffset = 10 };
         var highlightDto = new HighlightDto { Id = Guid.NewGuid(), Text = "Important text", Note = "Note" };
-        var result = Result<HighlightDto>.Success(highlightDto);
+        var result = Result<HighlightSave>.Success(new(highlightDto));
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<AddHighlightCommand>(), It.IsAny<CancellationToken>()))
@@ -476,7 +476,7 @@ public class ArticlesControllerTests
         var articleId = Guid.NewGuid();
         var command = new AddHighlightCommand { Text = "Important text", Note = "Note", StartOffset = 0, EndOffset = 10 };
         var errorMessage = "Article not found";
-        var result = Result<HighlightDto>.Failure(errorMessage);
+        var result = Result<HighlightSave>.Failure(errorMessage);
 
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<AddHighlightCommand>(), It.IsAny<CancellationToken>()))

@@ -65,7 +65,7 @@ public class ReadingProgressPostgresTests(PostgresFixture fixture)
         first.ReadingStatus.Should().Be(ReadingStatus.Read);
         var reset = (await Save(article.Id, "two", reset: true)).Value;
         reset.ReadingStatus.Should().Be(ReadingStatus.Read);
-        reset.ProgressUpdatedAt.Should().BeAfter(first.ProgressUpdatedAt);
+        reset.ProgressUpdatedAt.Should().BeAfter(first.ProgressUpdatedAt!.Value);
         await using var db = fixture.CreateContext();
         var saved = await db.Articles.FindAsync(article.Id);
         saved!.ProgressTextOffset.Should().BeNull();

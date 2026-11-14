@@ -56,9 +56,14 @@ export const articleApi = {
     return response.json();
   },
 
-  async resetProgress(id: string, sessionId: string): Promise<import('./progress-writer').ProgressSaved> {
-    const response = await api.post(`/articles/${id}/progress/reset`, { sessionId });
-    return response.data;
+  async resetProgress(id: string, sessionId: string, contentRevision?: number): Promise<import('./progress-writer').ProgressSaved> {
+    try {
+      return (await api.post(`/articles/${id}/progress/reset`, { sessionId, contentRevision })).data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 409)
+        throw { status: 409, current: error.response.data?.current };
+      throw error;
+    }
   },
 
   async restoreArticle(id: string): Promise<ArticleListItem> {
@@ -66,7 +71,7 @@ export const articleApi = {
     return response.data;
   },
 
-  async addHighlight(articleId: string, highlight: Omit<Highlight, 'id' | 'createdAt' | 'articleId'>): Promise<Highlight> {
+  async addHighlight(articleId: string, highlight: Omit<Highlight, 'id' | 'createdAt' | 'articleId'> & { contentRevision?: number }): Promise<Highlight> {
     const response = await api.post(`/articles/${articleId}/highlights`, highlight);
     return response.data;
   },
@@ -107,7 +112,7 @@ export const tagApi = {
 };
 
 export const highlightApi = {
-  async anchor(id: string, anchor: import("./highlight-anchor").HighlightAnchor): Promise<Highlight> { return (await api.put(`/highlights/${id}/anchor`, anchor)).data; },
+  async anchor(id: string, anchor: import("./highlight-anchor").HighlightAnchor & { contentRevision?: number }): Promise<Highlight> { return (await api.put(`/highlights/${id}/anchor`, anchor)).data; },
   async getHighlights(): Promise<Highlight[]> {
     const response = await api.get('/highlights');
     return response.data;

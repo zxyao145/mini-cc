@@ -1,0 +1,43 @@
+<!-- Synthetic selector fixture modeled on Omnivore's Stack Overflow handler. Live pages displayed a verification challenge. -->
+<!doctype html>
+<html lang="en">
+<head><title>Sorting records by two keys - Stack Overflow</title></head>
+<body>
+<div id="question-header"><h1>Sorting records by two keys</h1></div>
+<div itemprop="mainEntity">
+  <div id="question">
+    <div itemprop="upvoteCount" data-value="42">42</div>
+    <div itemprop="text" class="js-post-body">
+      <p>I am collecting records by date, and I want to sort them by the timestamp first and use a stable name comparison to break ties. The records can receive the same timestamp, especially when a batch arrives together.</p>
+      <p>My current implementation uses two independent sorts. What is the simplest way to express the order with one comparator while keeping duplicate records in their existing order when both keys match?</p>
+    </div>
+    <div class="post-signature owner">
+      <div class="user-action-time">asked Nov 1 at 09:30</div>
+      <div class="user-details"><a href="/users/1/river">River</a><span class="reputation-score">1,234</span></div>
+    </div>
+    <div class="comments"><ul><li class="comment">
+      <span class="comment-copy">Are the timestamps already normalized to UTC? This matters for a date comparison.</span>
+      <a class="comment-user" href="/users/2/jordan">Jordan</a>
+      <span class="relativetime-clean">Nov 1 at 10:00</span>
+    </li></ul></div>
+  </div>
+  <div id="answers">
+    <div class="answer accepted-answer">
+      <div itemprop="upvoteCount" data-value="17">17</div>
+      <div itemprop="text" class="js-post-body">
+        <p>Compare the timestamps and return the result immediately when the timestamps differ. When they compare equal, compare the names and return that result. One comparator defines the complete order and makes the precedence of the fields explicit.</p>
+        <pre><code>records.sort((a, b) =&gt; a.time - b.time || a.name.localeCompare(b.name));</code></pre>
+      </div>
+      <div class="post-signature"><div class="user-details"><a href="/users/3/casey">Casey</a><span class="reputation-score">576</span></div></div>
+    </div>
+    <div class="answer">
+      <div class="js-vote-count" data-value="3">3</div>
+      <div class="js-post-body">
+        <p>A sequence of stable sorts can work too. Sort by the less significant field first and then by the outer field. The second sort preserves the previous order within its groups, provided the sorting function is stable.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<aside>Related questions</aside>
+</body>
+</html>

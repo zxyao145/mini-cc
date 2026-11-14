@@ -13,7 +13,7 @@ it('preserves concatenated UTF-16 text through real highlighting, notes, heading
   const raw = document.createElement('div'); raw.innerHTML = html;
   const before = getTextContent(raw);
   try {
-    await act(async () => root.render(<><HighlightManager articleId="test" highlights={[{id:'h',articleId:'test',text:'before',note:'note',color:'#ffeb3b',startOffset:4,endOffset:10,createdAt:''}]} onHighlightsChange={() => {}} /><div className="readable-content" dangerouslySetInnerHTML={{__html:html}} /></>));
+    await act(async () => root.render(<><HighlightManager articleId="test" bodyStale={false} highlights={[{id:'h',articleId:'test',text:'before',note:'note',color:'#ffeb3b',startOffset:4,endOffset:10,createdAt:''}]} onHighlightsChange={() => {}} /><div className="readable-content" dangerouslySetInnerHTML={{__html:html}} /></>));
     const content = host.querySelector<HTMLElement>('.readable-content')!;
     decorateReaderContent(content);
     await act(async () => vi.advanceTimersByTime(150));

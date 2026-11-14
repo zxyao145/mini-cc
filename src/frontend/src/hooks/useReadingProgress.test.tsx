@@ -10,6 +10,16 @@ vi.mock('@/lib/api', () => ({articleApi:{saveProgress:vi.fn(),resetProgress:vi.f
 let root: Root, host: HTMLDivElement;
 const article = {id:'a',readableContent:'<p>first</p><p>second</p><p>third</p>',progressUpdatedAt:null,progressTextOffset:null,progressBlockIndex:null,readingStatus:'unread'} as Article;
 let readerState: ReturnType<typeof useReadingProgress>;
+const fullBody = { ...article, contentKind: 'full' as const, contentRevision: 0 };
+const replacement = { ...fullBody, contentRevision: 1, readableContent: '<p>Replacement body</p>', progressUpdatedAt: '2026-11-14T02:00:00Z' };
+const position = { textOffset: 5, blockIndex: 1, blockRatio: .5, percent: 40 };
+async function scrollAndDwell(ms = 3002) {
+  await act(async () => {
+    window.dispatchEvent(new WheelEvent('wheel'));
+    window.dispatchEvent(new Event('scroll'));
+    await vi.advanceTimersByTimeAsync(ms);
+  });
+}
 function Reader({data=article, active=true}:{data?:Article; active?:boolean}) { const ref=useRef<HTMLDivElement>(null); readerState=useReadingProgress(active ? data : undefined,ref,()=>{}); return active ? <ReadableContent contentRef={ref} html={data.readableContent}/> : null; }
 beforeEach(() => {
   Object.assign(globalThis,{IS_REACT_ACT_ENVIRONMENT:true}); vi.useFakeTimers(); vi.resetAllMocks(); sessionStorage.clear();
@@ -232,4 +242,96 @@ it('clears the reader status and stops observing progress when the same reader b
   expect(removeListener).toHaveBeenCalledWith('wheel',expect.any(Function));
   await act(async()=>document.dispatchEvent(new Event('visibilitychange')));
   expect(articleApi.getArticleById).toHaveBeenCalledTimes(1);
+});
+
+
+it('pauses full-body coordinates when a visibility refresh reports a newer revision', async () => {
+  vi.mocked(articleApi.getArticleById).mockResolvedValue(replacement);
+  await act(async () => root.render(<Reader data={fullBody} />));
+  await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+  expect(readerState.contentChanged).toBe(true);
+  await scrollAndDwell(10000);
+  expect(articleApi.saveProgress).not.toHaveBeenCalled();
+});
+
+it('holds pending progress for the latest focus or visibility refresh', async () => {
+  let releaseFirst!: (value: Article) => void;
+  let releaseLatest!: (value: Article) => void;
+  vi.mocked(articleApi.getArticleById)
+    .mockReturnValueOnce(new Promise(resolve => { releaseFirst = resolve; }))
+    .mockReturnValueOnce(new Promise(resolve => { releaseLatest = resolve; }));
+  vi.mocked(articleApi.saveProgress).mockRejectedValueOnce({ status: 503 });
+  await act(async () => root.render(<Reader data={fullBody} />));
+  await scrollAndDwell();
+  expect(articleApi.saveProgress).toHaveBeenCalledTimes(1);
+
+  await act(async () => window.dispatchEvent(new Event('focus')));
+  await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+  await act(async () => releaseFirst(fullBody));
+  await scrollAndDwell(10000);
+  expect(articleApi.saveProgress).toHaveBeenCalledTimes(1);
+
+  await act(async () => releaseLatest(replacement));
+  expect(readerState.contentChanged).toBe(true);
+  expect(sessionStorage.getItem('progress:a')).toBeNull();
+});
+
+it('a progress 409 with a different revision pauses instead of offering Stay', async () => {
+  const current = { contentRevision: 1, progressUpdatedAt: replacement.progressUpdatedAt };
+  vi.mocked(articleApi.saveProgress).mockRejectedValueOnce({ status: 409, current });
+  await act(async () => root.render(<Reader data={fullBody} />));
+  await scrollAndDwell();
+  expect(readerState.contentChanged).toBe(true);
+  expect(articleApi.saveProgress).toHaveBeenCalledWith('a', expect.objectContaining({ contentRevision: 0 }), false);
+  await act(async () => readerState.chooseConflict(false));
+  await scrollAndDwell(10000);
+  expect(articleApi.saveProgress).toHaveBeenCalledTimes(1);
+  expect(sessionStorage.getItem('progress:a')).toBeNull();
+});
+
+it('a successful progress acknowledgement for a different revision pauses further writes', async () => {
+  vi.mocked(articleApi.saveProgress).mockResolvedValueOnce({ contentRevision: 1, progressUpdatedAt: replacement.progressUpdatedAt!, readingStatus: 'reading', lastReadAt: null });
+  await act(async () => root.render(<Reader data={fullBody} />));
+  await scrollAndDwell();
+  expect(readerState.contentChanged).toBe(true);
+  await scrollAndDwell(10000);
+  expect(articleApi.saveProgress).toHaveBeenCalledTimes(1);
+});
+
+it('a late failed write cannot restore stale storage after the reader detects replacement', async () => {
+  let fail!: (failure: unknown) => void;
+  vi.mocked(articleApi.saveProgress).mockReturnValueOnce(new Promise((_, reject) => { fail = reject; }));
+  vi.mocked(articleApi.getArticleById).mockResolvedValue(replacement);
+  await act(async () => root.render(<Reader data={fullBody} />));
+  await scrollAndDwell();
+  expect(sessionStorage.getItem('progress:a')).not.toBeNull();
+  await act(async () => document.dispatchEvent(new Event('visibilitychange')));
+  await act(async () => fail({ status: 503 }));
+  expect(readerState.contentChanged).toBe(true);
+  expect(sessionStorage.getItem('progress:a')).toBeNull();
+});
+
+it.each([200, 409])('requires refresh when reset responds %i for a different revision', async status => {
+  const current = { contentRevision: 1, progressUpdatedAt: replacement.progressUpdatedAt! };
+  if (status === 200) vi.mocked(articleApi.resetProgress).mockResolvedValue({ ...current, contentKind: 'full', readingStatus: 'reading', lastReadAt: null });
+  else vi.mocked(articleApi.resetProgress).mockRejectedValue({ status, current });
+  await act(async () => root.render(<Reader data={fullBody} />));
+  await act(async () => { await expect(readerState.reset()).rejects.toThrow('正文已更新'); });
+  expect(articleApi.resetProgress).toHaveBeenCalledWith('a', expect.any(String), 0);
+  expect(readerState.contentChanged).toBe(true);
+  await scrollAndDwell(10000);
+  expect(articleApi.saveProgress).not.toHaveBeenCalled();
+});
+
+it.each([0, undefined])('discards stored failed progress with revision %s on reopening a replaced body', async contentRevision => {
+  sessionStorage.setItem('progress:a', JSON.stringify({ position, baseUpdatedAt: null, contentKind: 'full', contentRevision }));
+  await act(async () => root.render(<Reader data={replacement} />));
+  expect(articleApi.saveProgress).not.toHaveBeenCalled();
+  expect(sessionStorage.getItem('progress:a')).toBeNull();
+});
+
+it.each([0, undefined])('retries stored progress with revision %s on the original body', async contentRevision => {
+  sessionStorage.setItem('progress:a', JSON.stringify({ position, baseUpdatedAt: 'original', contentKind: 'full', contentRevision }));
+  await act(async () => root.render(<Reader data={fullBody} />));
+  expect(articleApi.saveProgress).toHaveBeenCalledWith('a', expect.objectContaining({ baseUpdatedAt: 'original', contentRevision: 0 }), false);
 });
