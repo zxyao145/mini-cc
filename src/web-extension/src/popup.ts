@@ -1,9 +1,15 @@
-import './popup.scss';
-import { ContentFetchResult, ExtractedContent } from './types';
+import { copyText } from './clipboard';
+import { assertHttpPageUrl } from './page-meta';
+import { DEFAULT_API_URL, type ExtractedPage, type PageChoices, type SavePageResponse } from './types';
+
+type PageKind = ExtractedPage['kind'];
+const PAGE_KINDS: PageKind[] = ['article', 'link'];
+const SAVE_LABEL = { article: 'Article', link: 'Link' };
 
 class PopupManager {
   private statusEl: HTMLElement;
-  private saveBtn: HTMLButtonElement;
+  private saveButtons: Record<PageKind, HTMLButtonElement>;
+  private copyMarkdownBtn: HTMLButtonElement;
   private settingsBtn: HTMLButtonElement;
   private settingsPanel: HTMLElement;
   private contentPreview: HTMLElement;
@@ -14,12 +20,17 @@ class PopupManager {
   private apiAkInput: HTMLInputElement;
   private saveSettingsBtn: HTMLButtonElement;
 
-  private apiUrl: string = 'http://localhost:5000';
+  private apiUrl: string = DEFAULT_API_URL;
+  private choices: PageChoices | null = null;
   private ak: string = '';
 
   constructor() {
     this.statusEl = document.getElementById('status')!;
-    this.saveBtn = document.getElementById('save-btn') as HTMLButtonElement;
+    this.saveButtons = {
+      article: document.getElementById('save-article-btn') as HTMLButtonElement,
+      link: document.getElementById('save-link-btn') as HTMLButtonElement,
+    };
+    this.copyMarkdownBtn = document.getElementById('copy-md-btn') as HTMLButtonElement;
     this.settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement;
     this.settingsPanel = document.getElementById('settings-panel')!;
     this.contentPreview = document.getElementById('content-preview')!;
@@ -36,6 +47,7 @@ class PopupManager {
   private async init() {
     await this.loadSettings();
     this.bindEvents();
+    this.updateSaveButtons();
     await this.extractContent();
   }
 
@@ -52,7 +64,10 @@ class PopupManager {
   }
 
   private bindEvents() {
-    this.saveBtn.addEventListener('click', () => this.saveArticle());
+    for (const kind of PAGE_KINDS) {
+      this.saveButtons[kind].addEventListener('click', () => this.savePage(kind));
+    }
+    this.copyMarkdownBtn.addEventListener('click', () => this.copyMarkdown());
     this.settingsBtn.addEventListener('click', () => this.toggleSettings());
     this.saveSettingsBtn.addEventListener('click', () => this.saveSettings());
   }
@@ -83,76 +98,87 @@ class PopupManager {
     this.statusEl.classList.add('hidden');
   }
 
-  private async extractContent(): Promise<ExtractedContent | null> {
+  private async getActiveTab() {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.id) throw new Error('No active tab found');
+    return { id: tab.id, url: tab.url };
+  }
+
+  private async extractContent() {
     try {
       this.showStatus('Extracting content...', 'loading');
       
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab.id) {
-        throw new Error('No active tab found');
-      }
+      const tab = await this.getActiveTab();
+      assertHttpPageUrl(tab.url);
 
       const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractContent' });
       if (response.success) {
+        this.choices = response.content;
         this.displayPreview(response.content);
         this.hideStatus();
-        return response.content;
       } else {
         throw new Error(response.error || 'Failed to extract content');
       }
     } catch (error) {
       this.showStatus(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-      return null;
     }
   }
 
-  private displayPreview(content: ExtractedContent) {
-    this.previewTitle.textContent = content.title;
-    this.previewAuthor.textContent = content.author || 'Unknown author';
-    this.previewUrl.textContent = content.url;
+  private displayPreview(choices: PageChoices) {
+    const preview = choices.suggested === 'article' ? choices.article : choices.link;
+    this.previewTitle.textContent = preview.title;
+    this.previewAuthor.textContent = preview.author || 'Unknown author';
+    this.previewUrl.textContent = preview.url;
     this.contentPreview.classList.remove('hidden');
-    this.saveBtn.disabled = false;
+    for (const kind of PAGE_KINDS) {
+      this.saveButtons[kind].classList.toggle('btn-primary', kind === choices.suggested);
+      this.saveButtons[kind].classList.toggle('btn-secondary', kind !== choices.suggested);
+    }
+    this.updateSaveButtons();
   }
 
-  private async saveArticle() {
+  // A page without readable content can only be saved as a link.
+  private updateSaveButtons() {
+    this.saveButtons.article.disabled = !this.choices?.article;
+    this.saveButtons.link.disabled = !this.choices;
+  }
+
+  private async savePage(kind: PageKind) {
+    const content = this.choices?.[kind];
+    if (!content) return;
+
+    const label = SAVE_LABEL[kind];
+    const name = label.toLowerCase();
     try {
-      const content = await this.extractContent();
-      if (!content) {
-        return;
-      }
+      this.showStatus(`Saving ${name}...`, 'loading');
+      for (const button of Object.values(this.saveButtons)) button.disabled = true;
 
-      this.showStatus('Saving article...', 'loading');
-      this.saveBtn.disabled = true;
-
-      const payload: ContentFetchResult = {
-        url: content.url,
-        title: content.title,
-        originalContent: content.content,
-        author: content.author,
-        contentType: 'text/html'
-      };
-
-      const response = await fetch(`${this.apiUrl}/api/Articles/content`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          "X-Api-Key": this.ak,
-        },
-        body: JSON.stringify(payload),
+      const response: SavePageResponse = await chrome.runtime.sendMessage({
+        action: 'savePage',
+        content,
       });
+      if (!response.success) throw new Error(response.error);
 
-      if (response.ok) {
-        this.showStatus('Article saved successfully!', 'success');
-        setTimeout(() => {
-          window.close();
-        }, 2000);
-      } else {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
+      this.showStatus(`${label} saved successfully!`, 'success');
+      setTimeout(() => {
+        window.close();
+      }, 2000);
     } catch (error) {
-      this.showStatus(`Error saving article: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
-      this.saveBtn.disabled = false;
+      this.showStatus(`Error saving ${name}: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      this.updateSaveButtons();
+    }
+  }
+
+  private async copyMarkdown() {
+    try {
+      const tab = await this.getActiveTab();
+
+      const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractMarkdown' });
+      if (!response.success) throw new Error(response.error || 'Failed to extract Markdown');
+      await copyText(response.markdown);
+      this.showStatus('Markdown copied', 'success');
+    } catch (error) {
+      this.showStatus(`Error copying Markdown: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   }
 }

@@ -2,9 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { TagWithArticles } from "@/types";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import { TagWithArticleCount } from "@/types";
 import { tagApi } from "@/lib/api";
-import ArticleSummaryCard from "./ArticleSummaryCard";
+import ArticleList from "@/app/components/ArticleList";
+import { useArticleList } from "@/hooks/useArticleList";
+import { parseLibraryQuery } from "@/lib/library-query";
+import { articleApi } from "@/lib/api";
+import { useToast } from "@/contexts/ToastContext";
 import styles from "./TagDetail.module.scss";
 
 interface TagDetailProps {
@@ -12,17 +17,19 @@ interface TagDetailProps {
 }
 
 export default function TagDetail({ tagId }: TagDetailProps) {
-  const [tag, setTag] = useState<TagWithArticles | null>(null);
+  const [tag, setTag] = useState<TagWithArticleCount | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const toast = useToast();
+  const list = useArticleList(parseLibraryQuery(new URLSearchParams({ view: "all", tags: tagId })));
 
   const loadTag = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const tagData = await tagApi.getTagById(tagId);
-      setTag(tagData);
+      const tagData = await tagApi.getTags();
+      setTag(tagData.find(tag => tag.id === tagId) || null);
     } catch (err) {
       console.error("Error loading tag:", err);
       setError("Failed to load tag details");
@@ -84,7 +91,7 @@ export default function TagDetail({ tagId }: TagDetailProps) {
               <h1 className={styles.tagName}>{tag.name}</h1>
             </div>
             <p className={styles.tagStats}>
-              {tag.articles.length} article{tag.articles.length !== 1 ? 's' : ''}
+              {list.total} article{list.total !== 1 ? 's' : ''}
             </p>
           </div>
           
@@ -93,35 +100,24 @@ export default function TagDetail({ tagId }: TagDetailProps) {
               onClick={() => router.back()}
               className={styles.backButton}
             >
-              ← Back to Tags
+              <ArrowLeft size={14} aria-hidden="true" /> Back to Tags
             </button>
             <button
               onClick={handleDeleteTag}
               className={styles.deleteButton}
               title="Delete tag"
             >
-              Delete Tag
+              <Trash2 size={14} aria-hidden="true" /> Delete Tag
             </button>
           </div>
         </div>
       </header>
 
       <main className={styles.main}>
-        {tag.articles.length === 0 ? (
-          <div className={styles.empty}>
-            <h2>No articles found</h2>
-            <p>This tag doesn&apos;t have any articles associated with it yet.</p>
-          </div>
-        ) : (
-          <div className={styles.articlesList}>
-            <h2 className={styles.sectionTitle}>Articles ({tag.articles.length})</h2>
-            <div className={styles.articles}>
-              {tag.articles.map((article) => (
-                <ArticleSummaryCard key={article.id} article={article} />
-              ))}
-            </div>
-          </div>
-        )}
+        <p role="status">{list.hasMore ? `共 ${list.total} 篇，已加载 ${list.items.length} 篇` : `共 ${list.total} 篇`}</p>
+        <ArticleList articles={list.items} loading={list.loading} onDelete={async id => { await articleApi.deleteArticle(id); list.removeItems([id]); toast.deleted([id]); }} onUpdate={list.updateItem} articleStyle="list" />
+        {list.error && <p role="alert">{list.error}</p>}
+        {(list.hasMore || list.error) && <button type="button" className={styles.backButton} disabled={list.loadingMore} onClick={list.loadMore}>{list.loadingMore ? '正在加载…' : list.error ? '加载失败，重试' : '加载更多'}</button>}
       </main>
     </div>
   );

@@ -1,73 +1,78 @@
 .highlightList {
-  margin-top: 2rem;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  background: white;
+  margin-top: 2.5rem;
   overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
 }
 
 .header {
-  padding: 1rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
-  cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: background 0.2s ease;
-  
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color var(--motion);
+
   &:hover {
-    background: #e9ecef;
+    background: var(--surface-muted);
   }
-  
+
   h3 {
     margin: 0;
-    color: #2c3e50;
-    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-size: 15px;
     font-weight: 600;
   }
 }
 
 .toggleButton {
-  background: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: none;
-  color: #6c757d;
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 0.25rem;
-  transition: color 0.2s ease;
-  
+  border-radius: 6px;
+  color: var(--text-muted);
+  background: none;
+
   &:hover {
-    color: #495057;
+    color: var(--text-primary);
   }
 }
 
 .highlightItems {
   max-height: 400px;
   overflow-y: auto;
+  border-top: 1px solid var(--line);
 }
 
 .highlightItem {
-  padding: 1rem;
-  border-bottom: 1px solid #f1f3f4;
-  
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+
   &:last-child {
     border-bottom: none;
   }
 }
 
+// --hl carries the stored highlight colour.
 .highlightText {
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  font-style: italic;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--hl, var(--highlight));
+  border-radius: 0 6px 6px 0;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--hl, var(--highlight)) 22%, var(--surface));
+  font-size: 15px;
+  line-height: 1.6;
   cursor: pointer;
-  margin-bottom: 0.75rem;
-  transition: all 0.2s ease;
-  border-left: 4px solid rgba(0, 0, 0, 0.1);
-  
+  transition: background-color var(--motion);
+
   &:hover {
-    transform: translateX(4px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: color-mix(in srgb, var(--hl, var(--highlight)) 36%, var(--surface));
   }
 }
 
@@ -75,112 +80,106 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 8px;
 }
 
 .date {
-  font-size: 0.85rem;
-  color: #6c757d;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .noteDisplay {
-  margin-bottom: 0.75rem;
+  margin-bottom: 10px;
 }
 
 .note {
-  padding: 0.5rem 0.75rem;
-  background: #e8f4fd;
-  border-radius: 4px;
-  border-left: 4px solid #3498db;
-  
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--text-primary);
+  background: var(--surface-muted);
+  font-size: 14px;
+
   strong {
-    color: #2980b9;
+    color: var(--text-secondary);
+    font-weight: 600;
   }
 }
 
 .noNote {
-  color: #95a5a6;
-  font-style: italic;
-  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .noteEdit {
-  margin-bottom: 0.75rem;
-  
+  margin-bottom: 10px;
+
   .noteTextarea {
     width: 100%;
     min-height: 80px;
-    padding: 0.75rem;
-    border: 1px solid #bdc3c7;
-    border-radius: 4px;
+    margin-bottom: 8px;
+    padding: 8px 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    color: var(--text-primary);
+    background: var(--surface);
     font-family: inherit;
     resize: vertical;
-    margin-bottom: 0.5rem;
-    
+
     &:focus {
       outline: none;
-      border-color: #3498db;
-      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px var(--brand-ring);
     }
   }
 }
 
 .noteActions {
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
 }
 
 .actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 .editButton, .deleteButton, .saveButton, .cancelButton {
-  padding: 0.4rem 0.8rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.85rem;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  transition: all 0.2s ease;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 500;
 }
 
-.editButton {
-  background: #3498db;
-  color: white;
-  
-  &:hover {
-    background: #2980b9;
-  }
+.editButton:hover, .cancelButton:hover {
+  color: var(--text-primary);
+  background: var(--surface-muted);
 }
 
 .deleteButton {
-  background: #e74c3c;
-  color: white;
-  
+  border-color: transparent;
+  color: var(--text-muted);
+
   &:hover {
-    background: #c0392b;
+    color: var(--danger-text);
+    background: var(--danger-soft);
   }
 }
 
 .saveButton {
-  background: #27ae60;
-  color: white;
-  
-  &:hover {
-    background: #219a52;
-  }
-}
+  border-color: transparent;
+  color: #ffffff;
+  background: var(--brand);
 
-.cancelButton {
-  background: #95a5a6;
-  color: white;
-  
   &:hover {
-    background: #7f8c8d;
+    background: var(--brand-hover);
   }
 }
 
@@ -190,11 +189,16 @@
 
 @keyframes highlightPulse {
   0%, 100% {
-    background-color: inherit;
+    box-shadow: 0 0 0 0 transparent;
   }
   50% {
-    background-color: #ffeaa7 !important;
-    transform: scale(1.02);
+    box-shadow: 0 0 0 4px var(--brand-ring);
+  }
+}
+
+@media (pointer: coarse) {
+  .editButton, .deleteButton, .saveButton, .cancelButton {
+    min-height: 44px;
   }
 }
 
@@ -202,38 +206,16 @@
   .highlightList {
     margin-top: 1.5rem;
   }
-  
+
   .header {
-    padding: 0.75rem;
-    
-    h3 {
-      font-size: 1rem;
-    }
+    padding: 10px 12px;
   }
-  
+
   .highlightItem {
-    padding: 0.75rem;
+    padding: 12px;
   }
-  
+
   .highlightText {
-    font-size: 0.9rem;
-    padding: 0.4rem 0.6rem;
-  }
-  
-  .actions {
-    flex-direction: column;
-    
-    .editButton, .deleteButton {
-      justify-content: center;
-      padding: 0.5rem;
-    }
-  }
-  
-  .noteActions {
-    flex-direction: column;
-    
-    .saveButton, .cancelButton {
-      justify-content: center;
-    }
+    font-size: 14px;
   }
 }

@@ -37,6 +37,7 @@ public class HighlightConfiguration : IEntityTypeConfiguration<Highlight>
     public void Configure(EntityTypeBuilder<Highlight> builder)
     {
         builder.HasKey(h => h.Id);
+        builder.HasQueryFilter(h => h.Article.DeletedAt == null);
 
         builder.Property(h => h.ArticleId)
             .IsRequired();

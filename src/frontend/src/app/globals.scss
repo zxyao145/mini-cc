@@ -1,114 +1,211 @@
 @import "tailwindcss";
+@import "simpledotcss/simple.min.css" layer(base);
 
+// Palettes. "maps" is the default; it follows the Google Maps illustration style:
+// pale mint canvas, white cards, cool blue-grey fills, Google grey text and Google blue.
+// To use the neutral + indigo palette instead, set <html data-theme="indigo"> in app/layout.tsx.
+:root {
+  color-scheme: light;
+  accent-color: var(--brand);
+
+  // Surfaces: mint "map" canvas under white cards; fills use a cool blue-grey.
+  --canvas: #eef5ec;
+  --surface: #ffffff;
+  --surface-muted: #edf1f5;
+  --surface-hover: #e1e7ee;
+  --text-primary: #1f1f1f;
+  --text-secondary: #444746;
+  --text-muted: #5f6368;
+  --line: #e3e7e8;
+  --line-strong: #d0d5d8;
+
+  // Google blue. #1967d2 keeps text AA on both white and the soft blue fill.
+  --brand: #1967d2;
+  --brand-hover: #185abc;
+  --brand-soft: #e8f0fe;
+  --brand-ring: rgb(26 115 232 / 24%);
+
+  // Status colours from the Google red / green family.
+  --danger: #d93025;
+  --danger-text: #b3261e;
+  --danger-soft: #fce8e6;
+  --success: #137333;
+  --success-soft: #e6f4ea;
+  --favorite: #ea4335;
+  --favorite-soft: #fce8e6;
+
+  // Tags are filled chips, like the keywords in the Maps query bubble.
+  --chip-bg: var(--surface-muted);
+  --chip-border: transparent;
+
+  // Reading. Highlights keep their stored colour but are rendered as a tint of it.
+  --highlight: #ffeb3b;
+  --code-bg: var(--surface-muted);
+  --code-text: #1f1f1f;
+
+  // Google elevation shadows use the grey-800 base (60 64 67).
+  // Cards rest slightly raised above the mint canvas, like the white card in the Maps sheet.
+  --card-shadow: 0 1px 2px rgb(60 64 67 / 8%), 0 1px 4px 1px rgb(60 64 67 / 5%);
+  --shadow-sm: 0 1px 2px rgb(60 64 67 / 16%);
+  --shadow-md: 0 1px 3px rgb(60 64 67 / 10%), 0 4px 14px rgb(60 64 67 / 8%);
+  --shadow-lg: 0 1px 3px rgb(60 64 67 / 18%), 0 8px 24px 2px rgb(60 64 67 / 14%);
+  --radius: 12px;
+  --motion: 160ms ease;
+
+  // Keep the Simple.css reading defaults in sync with the application theme.
+  --bg: var(--surface);
+  --accent-bg: var(--surface-muted);
+  --text: var(--text-primary);
+  --text-light: var(--text-secondary);
+  --border: var(--line-strong);
+  --accent: var(--brand);
+  --accent-hover: var(--brand-hover);
+  --accent-text: #ffffff;
+  --code: var(--code-text);
+  --preformatted: var(--code-text);
+  --marked: color-mix(in srgb, var(--highlight) 45%, transparent);
+  --disabled: var(--surface-muted);
+}
+
+// Neutral zinc surfaces with a single indigo accent.
+:root[data-theme="indigo"] {
+  --canvas: #f7f7f8;
+  --surface: #ffffff;
+  --surface-muted: #f4f4f5;
+  --surface-hover: #ececef;
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #6b6b74;
+  --line: #e4e4e7;
+  --line-strong: #d4d4d8;
+
+  --brand: #4f46e5;
+  --brand-hover: #4338ca;
+  --brand-soft: #eef0ff;
+  --brand-ring: rgb(79 70 229 / 20%);
+
+  --danger: #dc2626;
+  --danger-text: #b91c1c;
+  --danger-soft: #fef2f2;
+  --success: #15803d;
+  --success-soft: #f0fdf4;
+  --favorite: #e11d48;
+  --favorite-soft: #fff1f2;
+
+  --chip-bg: var(--surface);
+  --chip-border: var(--line);
+
+  --code-bg: #f4f4f5;
+  --code-text: #27272a;
+
+  --card-shadow: none;
+  --shadow-sm: 0 1px 2px rgb(24 24 27 / 6%);
+  --shadow-md: 0 4px 16px rgb(24 24 27 / 6%);
+  --shadow-lg: 0 12px 32px rgb(24 24 27 / 14%);
+}
 
 html,
 body {
-  max-width: 100vw;
-  overflow-x: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  margin: 0;
+  max-width: none;
+  min-width: 320px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  /** Simple.css reset **/
-  display: block !important; /* 覆盖 Simple.css，恢复成普通文档流 */
 }
 
-
 body {
-  color: #333;
-  background-color: #f8f9fa;
+  display: block;
+  color: var(--text-primary);
+  background: var(--canvas);
+  font-size: 16px;
   line-height: 1.6;
 }
 
+main { padding-top: 0; }
+
+button,
+input,
+select,
+textarea {
+  margin-bottom: 0;
+  font: inherit;
+}
 
 button {
   cursor: pointer;
+  touch-action: manipulation;
+  background: transparent;
+  color: inherit;
+  border: 1px solid transparent;
+  transition: background-color var(--motion), color var(--motion), border-color var(--motion);
+
+  &:disabled { cursor: not-allowed; opacity: 0.55; }
+}
+
+:where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1100;
+  padding: 10px 16px;
+  border-radius: 8px;
+  color: var(--surface);
+  background: var(--brand);
+  transform: translateY(-160%);
+  &:focus { transform: translateY(0); }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  min-height: 44px;
   padding: 8px 16px;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s ease;
 
-
-  &.btn-primary {
-    color: #fff;
-    background-color: #4d83ff;
-    border-color: #4d83ff;
-
-    &:hover {
-      background-color: #2768ff;
-      border-color: #1a5fff;
-    }
+  &.btn-primary,
+  &.btn-navy {
+    color: var(--surface);
+    background: var(--brand);
+    &:hover { background: var(--brand-hover); }
   }
 
   &.btn-secondary {
-    color: #fff;
-    background-color: #686868;
-    border-color: #686868;
-
-    &:hover {
-      color: #fff;
-      background-color: #555555;
-      border-color: #4f4f4f;
-    }
+    color: var(--text-secondary);
+    background: var(--surface);
+    border-color: var(--line);
+    &:hover { color: var(--text-primary); background: var(--surface-muted); }
   }
 
-  &.btn-navy {
-    color: #fff;
-    background-color: #2d5f8b;
-    border-color: #686868;
-    box-shadow: 0 2px 2px 0 rgba(104, 104, 104, .14);
-
-    &:hover {
-
-      color: #fff;
-      background-color: #4276a4;
-      border-color: #4276a4;
-    }
-  }
-
-  &.btn-danger {
-    color: #fff;
-    background-color: #ff4747;
-    border-color: #ff4747;
-
-    &:hover {
-      color: #fff;
-      background-color: #ff2121;
-      border-color: #ff1414;
-    }
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-
-  .btn-sm,
-  .btn-group-sm>.btn {
-    padding: 0.5rem 0.81rem;
-    font-size: 0.875rem;
-    line-height: 1;
-    border-radius: 0.1875rem;
-  }
+  &.btn-danger { color: var(--surface); background: var(--danger); }
 }
 
-
-.btn-group > .btn:not(:last-child) {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
-
-.btn-group > .btn:not(:first-child) {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-}
-

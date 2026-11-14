@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from "react";
+import { PencilLine, Trash2 } from "lucide-react";
 import { highlightApi, articleApi } from "@/lib/api";
 import { Highlight } from "@/types";
+import { updateCachedArticle } from "@/lib/library-cache";
 import styles from "./highlights.module.scss";
 
 interface HighlightCardProps {
@@ -44,8 +46,9 @@ function HighlightCard({ highlight, onDelete, onUpdateNote }: HighlightCardProps
 
   return (
     <div className={styles.highlightCard}>
-      <div className={styles.highlightText} style={{ backgroundColor: highlight.color || '#ffeb3b' }}>
+      <div className={styles.highlightText} style={{ '--hl': highlight.color || '#ffeb3b' } as React.CSSProperties}>
         {highlight.text}
+        {highlight.anchorStatus === "orphaned" && <p>原文位置已失效</p>}
       </div>
       
       <div className={styles.noteSection}>
@@ -79,6 +82,7 @@ function HighlightCard({ highlight, onDelete, onUpdateNote }: HighlightCardProps
               onClick={() => setIsEditing(true)}
               className={styles.editButton}
             >
+              <PencilLine size={14} aria-hidden="true" />
               {highlight.note ? 'Edit Note' : 'Add Note'}
             </button>
           </div>
@@ -99,8 +103,9 @@ function HighlightCard({ highlight, onDelete, onUpdateNote }: HighlightCardProps
           onClick={() => onDelete(highlight.id)}
           className={styles.deleteButton}
           title="Delete highlight"
+          aria-label="Delete highlight"
         >
-          ×
+          <Trash2 size={16} aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -130,7 +135,12 @@ export default function HighlightsPage() {
   const handleDeleteHighlight = async (highlightId: string) => {
     try {
       await highlightApi.deleteHighlight(highlightId);
-      setHighlights(highlights.filter(h => h.id !== highlightId));
+      setHighlights(current => {
+        const deleted = current.find(h => h.id === highlightId);
+        const remaining = current.filter(h => h.id !== highlightId);
+        if (deleted) updateCachedArticle(deleted.articleId, { highlightCount: remaining.filter(h => h.articleId === deleted.articleId).length });
+        return remaining;
+      });
     } catch (err) {
       console.error('Failed to delete highlight:', err);
     }
@@ -152,7 +162,7 @@ export default function HighlightsPage() {
   if (loading) {
     return (
       <div className={styles.container}>
-        <h1>HighLights</h1>
+        <h1 className="sr-only">Highlights</h1>
         <p>Loading highlights...</p>
       </div>
     );
@@ -161,7 +171,7 @@ export default function HighlightsPage() {
   if (error) {
     return (
       <div className={styles.container}>
-        <h1>HighLights</h1>
+        <h1 className="sr-only">Highlights</h1>
         <p className={styles.error}>{error}</p>
         <button onClick={loadHighlights} className={styles.retryButton}>
           Retry
@@ -173,11 +183,11 @@ export default function HighlightsPage() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>My HighLights</h1>
-        <p>All your saved highlights in one place</p>
+        <h1>All highlights</h1>
+        <span className={styles.count}>{highlights.length} highlight{highlights.length === 1 ? "" : "s"}</span>
       </header>
 
-      <main className={styles.main}>
+      <div className={styles.main}>
         {highlights.length === 0 ? (
           <div className={styles.empty}>
             <h2>No highlights yet</h2>
@@ -195,7 +205,7 @@ export default function HighlightsPage() {
             ))}
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

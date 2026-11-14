@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/" xmlns:sy="http://purl.org/rss/1.0/modules/syndication/">
+<channel><title>Fixture RSS</title><link>https://example.com/</link><description>Fixture</description><sy:updatePeriod>daily</sy:updatePeriod><sy:updateFrequency>4</sy:updateFrequency>
+<item><title>No guid</title><link>https://example.com/post</link><description><![CDATA[<figure><img src="../image.png"><figcaption>Caption</figcaption></figure><a href="/read">Read</a>]]></description><media:thumbnail url="/cover.jpg"/></item>
+<item><title>Permalink guid</title><guid>https://example.com/permalink</guid><description>Brief</description></item>
+<item><title>Missing link</title><guid isPermaLink="false">opaque</guid><description>Brief</description></item>
+</channel></rss>

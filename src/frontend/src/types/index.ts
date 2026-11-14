@@ -8,23 +8,28 @@ export interface Article {
     textContentLength: number; // 修复拼写错误
     summary: string;
     createdAt: string;
-    readAt?: string ;
+    readAt?: string | null;
+    readingStatus: 'unread' | 'reading' | 'read';
+    lastReadAt: string | null;
+    progressTextOffset: number | null;
+    progressBlockIndex: number | null;
+    progressBlockRatio: number | null;
+    progressPercent: number | null;
+    progressUpdatedAt: string | null;
+    progressSessionId: string | null;
+    progress: { textOffset: number | null; blockIndex: number; blockRatio: number; percent: number; updatedAt: string | null } | null;
+    savedFromExtension: boolean;
+    feeds: { id: string; title: string }[];
+    deletedAt: string | null;
+    publishedAt: string | null;
+    normalizedUrl: string;
+    contentKind: 'full' | 'summaryOnly' | 'link';
+    savedFromExtensionAt: string | null;
     isArchived: boolean;
     isFavorite: boolean;
     imageUrl: string;
     tags: Tag[];
     highlights: Highlight[];
-}
-
-export interface ArticleSummary {
-    id: string;
-    title: string;
-    author: string;
-    summary: string;
-    createdAt: string;
-    imageUrl: string;
-    isFavorite: boolean;
-    isArchived: boolean;
 }
 
 export interface Tag {
@@ -38,11 +43,8 @@ export interface TagWithArticleCount extends Tag {
   articleCount: number;
 }
 
-export interface TagWithArticles extends Tag {
-  articles: ArticleSummary[];
-}
-
 export interface Highlight {
+  anchorStatus?: "ok" | "pending" | "orphaned";
   id: string;
   text: string;
   note: string;
@@ -51,10 +53,6 @@ export interface Highlight {
   endOffset: number;
   createdAt: string;
   articleId: string;
-}
-
-export interface SaveArticleRequest {
-  url: string;
 }
 
 export interface AddTagRequest {
@@ -101,4 +99,30 @@ export interface UpdateApiKeyRequest {
   name: string;
   expiredTime?: string;
   disabled: boolean;
+}
+
+export interface ArticleStatePatch {
+  isFavorite?: boolean;
+  isArchived?: boolean;
+  readingStatus?: 'unread' | 'read';
+}
+
+export type ArticleListItem = Pick<Article,
+  'id' | 'url' | 'title' | 'author' | 'summary' | 'imageUrl' | 'createdAt' | 'publishedAt' |
+  'readAt' | 'lastReadAt' | 'deletedAt' | 'readingStatus' | 'progressPercent' |
+  'isFavorite' | 'isArchived' | 'contentKind' | 'tags'> & {
+  savedFromExtension: boolean;
+  feeds: { id: string; title: string }[];
+  highlightCount: number;
+};
+export interface ArticleListPage { items: ArticleListItem[]; total: number; nextCursor: string | null; }
+
+export interface Feed {
+  id: string; title: string; originalTitle: string; feedUrl: string; siteUrl: string | null; format: 'rss' | 'atom';
+  status: 'active' | 'paused'; health: 'ok' | 'failing'; lastSuccessAt: string | null; lastFetchedAt: string | null;
+  lastError: string | null; unreadCount: number; articleCount: number; tags: Tag[];
+}
+export interface FeedPreview {
+  feedUrl: string; title: string; siteUrl: string | null; format: 'rss' | 'atom'; existingFeedId?: string;
+  items: { title: string; url: string; publishedAt: string | null; contentKind: Article['contentKind'] }[];
 }

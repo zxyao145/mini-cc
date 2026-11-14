@@ -2,9 +2,14 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFloating, autoUpdate, offset, flip, shift, arrow } from '@floating-ui/react';
-import { articleApi } from '@/lib/api';
+import { CircleCheck, Highlighter, Trash2, X } from 'lucide-react';
+import { nearestAnchor } from '@/lib/highlight-anchor';
+import { articleApi, highlightApi } from '@/lib/api';
 import { Highlight } from '@/types';
+import { calculateTextOffset, getTextContent, textNodes } from '@/lib/text-offsets';
 import styles from './HighlightManager.module.scss';
+
+const DEFAULT_HIGHLIGHT_COLOR = '#ffeb3b';
 
 interface HighlightManagerProps {
   articleId: string;
@@ -127,6 +132,24 @@ export default function HighlightManager({
     };
   }, [hideTooltip, clickedHighlight, menuRefs, tooltipRefs]);
 
+  const latestHighlights = useRef({ highlights, onHighlightsChange });
+  latestHighlights.current = { highlights, onHighlightsChange };
+  useEffect(() => {
+    const content = document.querySelector('.readable-content') as HTMLElement | null;
+    if (!content) return;
+    let mounted = true;
+    const pending = highlights.filter(h => h.anchorStatus === 'pending');
+    const text = getTextContent(content);
+    if (pending.length) void Promise.allSettled(pending.map(async highlight => {
+      return highlightApi.anchor(highlight.id, nearestAnchor(text, highlight.text, highlight.startOffset));
+    })).then(results => {
+      if (!mounted) return;
+      const resolved = new Map(results.flatMap(result => result.status === 'fulfilled' ? [[result.value.id, result.value] as const] : []));
+      if (resolved.size) latestHighlights.current.onHighlightsChange(latestHighlights.current.highlights.map(h => resolved.has(h.id) ? { ...h, startOffset: resolved.get(h.id)!.startOffset, endOffset: resolved.get(h.id)!.endOffset, anchorStatus: resolved.get(h.id)!.anchorStatus } : h));
+    });
+    return () => { mounted = false; };
+  }, [articleId, highlights]);
+
   // Apply highlights to content
   useEffect(() => {
     const applyHighlights = () => {
@@ -146,30 +169,16 @@ export default function HighlightManager({
       // Apply new highlights
       if (highlights.length === 0) return;
 
-      const walker = document.createTreeWalker(
-        contentDiv,
-        NodeFilter.SHOW_TEXT
-      );
-
-      const textNodes: { node: Text; text: string; offset: number }[] = [];
-      let totalOffset = 0;
-      let node: Node | null;
-
-      while ((node = walker.nextNode())) {
-        const textNode = node as Text;
-        const text = textNode.textContent || '';
-        textNodes.push({ node: textNode, text, offset: totalOffset });
-        totalOffset += text.length;
-      }
+      const nodes = textNodes(contentDiv);
 
       // Sort highlights by start offset (reverse order for proper DOM manipulation)
-      const sortedHighlights = [...highlights].sort((a, b) => b.startOffset - a.startOffset);
+      const sortedHighlights = highlights.filter(h => !h.anchorStatus || h.anchorStatus === 'ok').sort((a, b) => b.startOffset - a.startOffset);
 
       sortedHighlights.forEach((highlight) => {
-        const startNode = textNodes.find(tn => 
+        const startNode = nodes.find(tn =>
           tn.offset <= highlight.startOffset && tn.offset + tn.text.length > highlight.startOffset
         );
-        const endNode = textNodes.find(tn => 
+        const endNode = nodes.find(tn =>
           tn.offset < highlight.endOffset && tn.offset + tn.text.length >= highlight.endOffset
         );
 
@@ -184,39 +193,20 @@ export default function HighlightManager({
           if (!range.collapsed) {
             const span = document.createElement('span');
             span.className = styles.highlight;
-            span.style.backgroundColor = highlight.color || '#ffeb3b';
-            span.style.padding = '2px 4px';
-            span.style.borderRadius = '3px';
-            span.style.cursor = 'pointer';
-            span.style.position = 'relative';
+            span.style.setProperty('--hl', highlight.color || DEFAULT_HIGHLIGHT_COLOR);
             span.setAttribute('data-highlight-id', highlight.id);
             span.title = highlight.note ? `Note: ${highlight.note}` : 'Click to delete highlight';
 
-            // Add note icon if note exists
-            if (highlight.note && highlight.note.trim()) {
-              const noteIcon = document.createElement('span');
-              noteIcon.className = styles.noteIcon;
-              noteIcon.innerHTML = '📝';
-              noteIcon.style.position = 'absolute';
-              noteIcon.style.top = '-8px';
-              noteIcon.style.right = '-8px';
-              noteIcon.style.fontSize = '12px';
-              noteIcon.style.background = 'white';
-              noteIcon.style.borderRadius = '50%';
-              noteIcon.style.width = '16px';
-              noteIcon.style.height = '16px';
-              noteIcon.style.display = 'flex';
-              noteIcon.style.alignItems = 'center';
-              noteIcon.style.justifyContent = 'center';
-              noteIcon.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)';
-              noteIcon.style.zIndex = '10';
-              noteIcon.style.pointerEvents = 'none';
-              
-              span.appendChild(noteIcon);
-            }
-
             try {
               range.surroundContents(span);
+              // Mark highlights that have a note. Appended after surroundContents, which
+              // clears the wrapper's children. The marker is empty so it adds no article text.
+              if (highlight.note && highlight.note.trim()) {
+                const noteIcon = document.createElement('span');
+                noteIcon.className = styles.noteIcon;
+                noteIcon.setAttribute('aria-hidden', 'true');
+                span.appendChild(noteIcon);
+              }
             } catch (e) {
               console.warn('Could not apply highlight:', e);
             }
@@ -226,7 +216,10 @@ export default function HighlightManager({
     };
 
     // Apply highlights after a short delay to ensure DOM is ready
-    const timer = setTimeout(applyHighlights, 100);
+    const timer = setTimeout(() => {
+      applyHighlights();
+      document.querySelector('.readable-content')?.dispatchEvent(new Event('reader-highlights-rendered'));
+    }, 100);
     return () => clearTimeout(timer);
   }, [highlights]);
 
@@ -234,6 +227,7 @@ export default function HighlightManager({
     const tolerance = 5; // 允许5个字符的间隔也被视为相邻
     
     return highlights.filter(h => {
+      if (h.anchorStatus === 'pending' || h.anchorStatus === 'orphaned') return false;
       // 检查是否相邻或重叠
       return (
         // 新选择与现有高亮直接相邻
@@ -250,40 +244,6 @@ export default function HighlightManager({
         (h.startOffset <= startOffset && h.endOffset >= endOffset)
       );
     });
-  };
-
-  const calculateTextOffset = (contentDiv: HTMLElement, targetNode: Node, offset: number): number => {
-    const walker = document.createTreeWalker(
-      contentDiv,
-      NodeFilter.SHOW_TEXT
-    );
-
-    let textOffset = 0;
-    let node: Node | null;
-    
-    while ((node = walker.nextNode())) {
-      if (node === targetNode) {
-        return textOffset + offset;
-      }
-      textOffset += (node.textContent || '').length;
-    }
-    
-    return -1;
-  };
-
-  const getTextContent = (contentDiv: HTMLElement): string => {
-    // 获取纯文本内容，忽略HTML标签
-    const walker = document.createTreeWalker(
-      contentDiv,
-      NodeFilter.SHOW_TEXT
-    );
-
-    let textContent = '';
-    let node: Node | null;
-    while ((node = walker.nextNode())) {
-      textContent += node.textContent || '';
-    }
-    return textContent;
   };
 
   const handleDeleteHighlight = async (highlightId: string) => {
@@ -342,7 +302,7 @@ export default function HighlightManager({
           const mergedNotes = allNotes.length > 0 ? allNotes.join('; ') : '';
           
           // 选择颜色（优先使用第一个相邻高亮的颜色）
-          const mergedColor = adjacentHighlights[0]?.color || '#ffeb3b';
+          const mergedColor = adjacentHighlights[0]?.color || DEFAULT_HIGHLIGHT_COLOR;
           
           console.log(`Merging highlights:`, {
             originalRanges: adjacentHighlights.map(h => `${h.startOffset}-${h.endOffset}`),
@@ -376,7 +336,7 @@ export default function HighlightManager({
           const newHighlight = await articleApi.addHighlight(articleId, {
             text: selectedText,
             note: '',
-            color: '#ffeb3b',
+            color: DEFAULT_HIGHLIGHT_COLOR,
             startOffset,
             endOffset
           });
@@ -409,31 +369,18 @@ export default function HighlightManager({
           style={tooltipStyles}
         >
           <button onClick={handleCreateHighlight} className={styles.highlightButton}>
-            💡 Highlight
+            <Highlighter size={15} aria-hidden="true" /> Highlight
           </button>
-          <button onClick={handleCancel} className={styles.cancelTooltipButton}>
-            ✕
+          <button onClick={handleCancel} className={styles.cancelTooltipButton} aria-label="Cancel" title="Cancel">
+            <X size={15} aria-hidden="true" />
           </button>
           <div ref={arrowRef} className={styles.tooltipArrow} />
         </div>
       )}
       
       {mergeNotification && (
-        <div 
-          className={styles.mergeNotification}
-          style={{
-            position: 'fixed',
-            top: '20px',
-            right: '20px',
-            background: '#4caf50',
-            color: 'white',
-            padding: '12px 16px',
-            borderRadius: '6px',
-            zIndex: 1002,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-          }}
-        >
-          ✅ {mergeNotification}
+        <div className={styles.mergeNotification} role="status">
+          <CircleCheck size={16} aria-hidden="true" /> {mergeNotification}
         </div>
       )}
       
@@ -452,7 +399,7 @@ export default function HighlightManager({
                 onClick={() => handleDeleteHighlight(clickedHighlight)}
                 className={styles.deleteButton}
               >
-                🗑️ Delete Highlight
+                <Trash2 size={15} aria-hidden="true" /> Delete Highlight
               </button>
               <button
                 onClick={() => setClickedHighlight(null)}

@@ -1,6 +1,7 @@
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects;
 using MiniCc.Api.Core.ArticleNs.Domain.Events;
+using MiniCc.Api.Core.ArticleNs.Domain.Services;
 using MiniCc.Api.Core.TagNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.TagNs.Domain.AggregatesModel.ValueObjects;
 using MiniCc.Api.Core.TagNs.Domain.Events;
@@ -37,6 +38,45 @@ public class ArticleTests
         article.ReadAt.Should().BeNull();
         article.Id.Should().NotBe(Guid.Empty);
         article.CreatedAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(1));
+    }
+
+    [Fact]
+    public void CreateLink_HasNoBodyAndLinkKind()
+    {
+        var url = Url.Create("https://www.youtube.com/watch?v=abc&utm_source=test#top");
+        var link = Article.CreateLink(url, "Video", "", "Description", "");
+
+        link.ContentKind.Should().Be(ContentKind.Link);
+        link.ReadableContent.Should().BeEmpty();
+        link.OriginalContent.Should().BeEmpty();
+        link.Length.Should().Be(0);
+        link.Summary.Should().Be("Description");
+        link.ReadingStatus.Should().Be(ReadingStatus.Unread);
+        link.Url.Value.Should().Be(url.Value);
+        link.NormalizedUrl.Should().Be(UrlNormalizer.Normalize(url.Value));
+        link.DomainEvents.Should().ContainSingle().Which.Should().BeOfType<ArticleCreatedEvent>();
+    }
+
+    [Fact]
+    public void CreateLink_WithBlankTitle_Throws()
+    {
+        var url = Url.Create("https://example.com");
+        FluentActions.Invoking(() => Article.CreateLink(url, "   ", "", "", ""))
+            .Should().Throw<ArgumentException>().WithParameterName("title");
+    }
+
+    [Fact]
+    public void FillMissingMetadata_FillsOnlyEmptyFields()
+    {
+        var article = Article.CreateLink(Url.Create("https://example.com/video"), "Video", "", "Kept summary", "");
+
+        article.FillMissingMetadata("Jane", "New summary", "https://example.com/cover.png");
+        article.FillMissingMetadata("Other author", "", "https://example.com/other.png");
+
+        article.Title.Should().Be("Video");
+        article.Author.Should().Be("Jane");
+        article.Summary.Should().Be("Kept summary");
+        article.ImageUrl.Should().Be("https://example.com/cover.png");
     }
 
     [Fact]
@@ -179,125 +219,118 @@ public class ArticleTests
     }
 
     [Fact]
-    public void MarkAsRead_WhenNotRead_ShouldSetReadAtAndAddEvent()
+    public void StateSetters_AreIdempotentAndIndependent()
     {
-        // Arrange
         var article = CreateTestArticle();
-        article.ClearDomainEvents();
-
-        // Act
-        article.MarkAsRead();
-
-        // Assert
-        article.ReadAt.Should().NotBeNull();
-        article.ReadAt.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(1));
-        
-        article.DomainEvents.Should().HaveCount(1);
-        var domainEvent = article.DomainEvents.First();
-        domainEvent.Should().BeOfType<ArticleReadEvent>();
-    }
-
-    [Fact]
-    public void MarkAsRead_WhenAlreadyRead_ShouldNotChangeReadAtOrAddEvent()
-    {
-        // Arrange
-        var article = CreateTestArticle();
-        article.MarkAsRead();
-        var originalReadAt = article.ReadAt;
-        article.ClearDomainEvents();
-
-        // Act
-        article.MarkAsRead();
-
-        // Assert
-        article.ReadAt.Should().Be(originalReadAt);
-        article.DomainEvents.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void ToggleFavorite_WhenNotFavorite_ShouldSetToFavoriteAndAddEvent()
-    {
-        // Arrange
-        var article = CreateTestArticle();
-        article.ClearDomainEvents();
-
-        // Act
-        article.ToggleFavorite();
-
-        // Assert
+        var now = DateTimeOffset.UtcNow;
+        article.SetFavorite(true);
+        article.SetFavorite(true);
+        article.SetArchived(true);
+        article.SetArchived(true);
+        article.ReadingStatus.Should().Be(ReadingStatus.Unread);
+        article.MarkRead(now);
+        article.MarkRead(now.AddHours(1));
+        article.ReadAt.Should().Be(now);
         article.IsFavorite.Should().BeTrue();
-        
-        article.DomainEvents.Should().HaveCount(1);
-        var domainEvent = article.DomainEvents.First();
-        domainEvent.Should().BeOfType<ArticleFavoritedEvent>();
-        
-        var favoritedEvent = (ArticleFavoritedEvent)domainEvent;
-        favoritedEvent.IsFavorite.Should().BeTrue();
-    }
-
-    [Fact]
-    public void ToggleFavorite_WhenFavorite_ShouldSetToNotFavoriteAndAddEvent()
-    {
-        // Arrange
-        var article = CreateTestArticle();
-        article.ToggleFavorite(); // Make it favorite first
-        article.ClearDomainEvents();
-
-        // Act
-        article.ToggleFavorite();
-
-        // Assert
-        article.IsFavorite.Should().BeFalse();
-        
-        article.DomainEvents.Should().HaveCount(1);
-        var domainEvent = article.DomainEvents.First();
-        domainEvent.Should().BeOfType<ArticleFavoritedEvent>();
-        
-        var favoritedEvent = (ArticleFavoritedEvent)domainEvent;
-        favoritedEvent.IsFavorite.Should().BeFalse();
-    }
-
-    [Fact]
-    public void ToggleArchive_WhenNotArchived_ShouldSetToArchivedAndAddEvent()
-    {
-        // Arrange
-        var article = CreateTestArticle();
-        article.ClearDomainEvents();
-
-        // Act
-        article.ToggleArchive();
-
-        // Assert
         article.IsArchived.Should().BeTrue();
-        
-        article.DomainEvents.Should().HaveCount(1);
-        var domainEvent = article.DomainEvents.First();
-        domainEvent.Should().BeOfType<ArticleArchivedEvent>();
-        
-        var archivedEvent = (ArticleArchivedEvent)domainEvent;
-        archivedEvent.IsArchived.Should().BeTrue();
+        article.SetFavorite(false);
+        article.SetArchived(false);
+        article.ReadingStatus.Should().Be(ReadingStatus.Read);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Progress_OnlyPromotesUnreadAndRetainsCompletedStatus(bool completed)
+    {
+        var article = CreateTestArticle();
+        var now = DateTimeOffset.UtcNow;
+        if (completed) article.MarkRead(now);
+        article.ApplyProgress(new ReadingPosition(23, 2, .4, 61), "session", now);
+        article.ReadingStatus.Should().Be(completed ? ReadingStatus.Read : ReadingStatus.Reading);
+        article.ProgressTextOffset.Should().Be(23);
+        article.ProgressBlockIndex.Should().Be(2);
+        article.ProgressBlockRatio.Should().Be(.4);
+        article.ProgressPercent.Should().Be(61);
+        article.ProgressSessionId.Should().Be("session");
+        article.ProgressUpdatedAt.Should().Be(now);
+        article.LastReadAt.Should().Be(now);
+        article.MarkUnread();
+        article.ReadAt.Should().BeNull();
+        article.ReadingStatus.Should().Be(ReadingStatus.Unread);
+        article.ProgressTextOffset.Should().Be(23);
     }
 
     [Fact]
-    public void ToggleArchive_WhenArchived_ShouldSetToNotArchivedAndAddEvent()
+    public void ResetProgress_ClearsPositionButPreservesStateAndLastReadAt()
     {
-        // Arrange
         var article = CreateTestArticle();
-        article.ToggleArchive(); // Make it archived first
-        article.ClearDomainEvents();
+        var now = DateTimeOffset.UtcNow;
+        article.ApplyProgress(new ReadingPosition(23, 2, .4, 61), "old", now);
+        article.MarkRead(now);
+        article.ResetProgress(null, now.AddMinutes(1));
+        article.ProgressTextOffset.Should().BeNull();
+        article.ProgressBlockIndex.Should().BeNull();
+        article.ProgressBlockRatio.Should().BeNull();
+        article.ProgressPercent.Should().BeNull();
+        article.ProgressSessionId.Should().BeNull();
+        article.ProgressUpdatedAt.Should().Be(now.AddMinutes(1));
+        article.LastReadAt.Should().Be(now);
+        article.ReadingStatus.Should().Be(ReadingStatus.Read);
+        article.ReadAt.Should().Be(now);
+    }
 
-        // Act
-        article.ToggleArchive();
+    [Theory]
+    [InlineData(ReadingStatus.Unread, false, false)]
+    [InlineData(ReadingStatus.Unread, false, true)]
+    [InlineData(ReadingStatus.Unread, true, false)]
+    [InlineData(ReadingStatus.Unread, true, true)]
+    [InlineData(ReadingStatus.Reading, false, false)]
+    [InlineData(ReadingStatus.Reading, false, true)]
+    [InlineData(ReadingStatus.Reading, true, false)]
+    [InlineData(ReadingStatus.Reading, true, true)]
+    [InlineData(ReadingStatus.Read, false, false)]
+    [InlineData(ReadingStatus.Read, false, true)]
+    [InlineData(ReadingStatus.Read, true, false)]
+    [InlineData(ReadingStatus.Read, true, true)]
+    public void TrashAndRestore_PreserveAllArticleDataAndRepeatedDeleteTime(ReadingStatus status, bool favorite, bool archived)
+    {
+        var article = CreateTestArticle();
+        var now = DateTimeOffset.UtcNow;
+        var tag = Tag.Create("tag");
+        var highlight = Highlight.Create(article.Id, "text", "note", 0, 4);
+        article.AddTag(tag);
+        article.AddHighlight(highlight);
+        article.ApplyProgress(new ReadingPosition(23, 2, .4, 61), "session", now);
+        if (status == ReadingStatus.Read) article.MarkRead(now);
+        if (status == ReadingStatus.Unread) article.MarkUnread();
+        article.SetFavorite(favorite);
+        article.SetArchived(archived);
+        var before = System.Text.Json.JsonSerializer.Serialize(article);
+        article.MoveToTrash(now);
+        article.MoveToTrash(now.AddDays(1));
+        article.DeletedAt.Should().Be(now);
+        article.Restore();
+        System.Text.Json.JsonSerializer.Serialize(article).Should().Be(before);
+        article.Restore();
+        article.Tags.Should().Contain(tag);
+        article.Highlights.Should().Contain(highlight);
+    }
 
-        // Assert
-        article.IsArchived.Should().BeFalse();
-        
-        article.DomainEvents.Should().HaveCount(1);
-        var domainEvent = article.DomainEvents.First();
-        domainEvent.Should().BeOfType<ArticleArchivedEvent>();
-        
-        var archivedEvent = (ArticleArchivedEvent)domainEvent;
-        archivedEvent.IsArchived.Should().BeFalse();
+    [Fact]
+    public void ReplaceContent_ChangesContentAndKindWithoutChangingUserData()
+    {
+        var article = CreateTestArticle();
+        article.SetFavorite(true);
+        article.MarkRead(DateTimeOffset.UtcNow);
+        var replacement = Content.Create("new original", "new readable", 12);
+        article.ReplaceContent(replacement, ContentKind.SummaryOnly);
+        article.OriginalContent.Should().Be("new original");
+        article.ReadableContent.Should().Be("new readable");
+        article.Length.Should().Be(12);
+        article.ContentKind.Should().Be(ContentKind.SummaryOnly);
+        article.IsFavorite.Should().BeTrue();
+        article.ReadingStatus.Should().Be(ReadingStatus.Read);
     }
 
     [Fact]

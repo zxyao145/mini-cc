@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.scss";
-import 'simpledotcss/simple.min.css';
 
 import ClientLayout from "./layout/ClientLayout";
 

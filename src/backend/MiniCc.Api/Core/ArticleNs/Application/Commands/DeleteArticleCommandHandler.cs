@@ -31,8 +31,8 @@ public class DeleteArticleCommandHandler : IRequestHandler<DeleteArticleCommand,
             {
                 return Result.Failure("article not found");
             }
-            await _unitOfWork.Articles.DeleteAsync(article);
-            await _unitOfWork.SaveChangesAsync();
+            article.MoveToTrash(DateTimeOffset.UtcNow);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result.Success();
         }

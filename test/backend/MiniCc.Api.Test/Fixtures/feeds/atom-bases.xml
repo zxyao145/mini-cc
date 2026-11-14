@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xml:base="https://example.org/blog/">
+<title>Base-aware feed</title><id>urn:bases</id><updated>2026-01-01T00:00:00Z</updated>
+<link href="index.html"/>
+<entry xml:base="posts/"><id>urn:one</id><title>One</title><link href="one"/>
+<content type="xhtml" xml:base="https://cdn.example.org/assets/"><div xmlns="http://www.w3.org/1999/xhtml"><img src="cover.jpg"/><section xml:base="nested/"><a href="article.html">nested</a><img xml:base="../pictures/" src="photo.jpg"/><a xml:base="" href="inherited.html">empty base inherits</a></section></div></content>
+</entry>
+<entry xml:base="posts/"><title>Link base</title><link xml:base="../other/" href="two"/><summary type="html" xml:base="https://media.example.org/summary/">&lt;img src="preview.png"/&gt;Summary</summary></entry>
+</feed>

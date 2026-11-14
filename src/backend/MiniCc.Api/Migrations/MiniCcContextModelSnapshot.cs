@@ -39,6 +39,21 @@ namespace MiniCc.Api.Migrations
                     b.ToTable("ArticleTags");
                 });
 
+            modelBuilder.Entity("FeedTags", b =>
+                {
+                    b.Property<Guid>("FeedId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("FeedId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("FeedTags");
+                });
+
             modelBuilder.Entity("MiniCc.Api.Core.ApiKeys.Domain.AggregatesModel.ApiKey", b =>
                 {
                     b.Property<Guid>("Id")
@@ -94,13 +109,20 @@ namespace MiniCc.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int>("ContentKind")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("text");
 
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
@@ -108,12 +130,43 @@ namespace MiniCc.Api.Migrations
                     b.Property<bool>("IsFavorite")
                         .HasColumnType("boolean");
 
+                    b.Property<DateTimeOffset?>("LastReadAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("Length")
                         .HasColumnType("integer");
+
+                    b.Property<string>("NormalizedUrl")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("");
 
                     b.Property<string>("OriginalContent")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int?>("ProgressBlockIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("ProgressBlockRatio")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("ProgressPercent")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ProgressSessionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int?>("ProgressTextOffset")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("ProgressUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("ReadAt")
                         .HasColumnType("timestamp with time zone");
@@ -122,12 +175,20 @@ namespace MiniCc.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("ReadingStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTimeOffset?>("SavedFromExtensionAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<NpgsqlTsVector>("SearchVector")
                         .IsRequired()
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("tsvector")
                         .HasAnnotation("Npgsql:TsVectorConfig", "mixed_zh_en")
-                        .HasAnnotation("Npgsql:TsVectorProperties", new[] { "Title", "ReadableContent", "Author" });
+                        .HasAnnotation("Npgsql:TsVectorProperties", new[] { "Title", "Summary", "ReadableContent", "Author" });
 
                     b.Property<string>("Summary")
                         .IsRequired()
@@ -141,9 +202,31 @@ namespace MiniCc.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DeletedAt")
+                        .HasFilter("\"DeletedAt\" IS NOT NULL");
+
+                    b.HasIndex("NormalizedUrl");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("NormalizedUrl"), "hash");
+
                     b.HasIndex("SearchVector");
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("SearchVector"), "GIN");
+
+                    b.HasIndex("LastReadAt", "Id")
+                        .IsDescending()
+                        .HasDatabaseName("IX_Articles_LastReadAt");
+
+                    NpgsqlIndexBuilderExtensions.HasNullSortOrder(b.HasIndex("LastReadAt", "Id"), new[] { NullSortOrder.NullsLast, NullSortOrder.Unspecified });
+
+                    b.HasIndex("PublishedAt", "Id")
+                        .IsDescending()
+                        .HasDatabaseName("IX_Articles_PublishedAt");
+
+                    NpgsqlIndexBuilderExtensions.HasNullSortOrder(b.HasIndex("PublishedAt", "Id"), new[] { NullSortOrder.NullsLast, NullSortOrder.Unspecified });
+
+                    b.HasIndex("DeletedAt", "IsArchived", "CreatedAt", "Id")
+                        .IsDescending(false, false, true, true);
 
                     b.ToTable("Articles");
                 });
@@ -153,6 +236,9 @@ namespace MiniCc.Api.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<int>("AnchorStatus")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("ArticleId")
                         .HasColumnType("uuid");
@@ -185,6 +271,132 @@ namespace MiniCc.Api.Migrations
                     b.HasIndex("ArticleId");
 
                     b.ToTable("Highlights");
+                });
+
+            modelBuilder.Entity("MiniCc.Api.Core.FeedNs.Domain.Feed", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ConsecutiveFailures")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ETag")
+                        .HasColumnType("text");
+
+                    b.Property<string>("FeedUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FeedUrlHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int>("Format")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("LastFetchedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastModified")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("LastSuccessAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MinIntervalMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("NextFetchAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("OriginalTitle")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("SiteUrl")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FeedUrlHash")
+                        .IsUnique();
+
+                    b.HasIndex("NextFetchAt");
+
+                    b.ToTable("Feeds", (string)null);
+                });
+
+            modelBuilder.Entity("MiniCc.Api.Core.FeedNs.Domain.FeedEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ArticleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("Dismissed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("EntryKey")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EntryKeyHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("EntryUrl")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("FeedId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ArticleId");
+
+                    b.HasIndex("FeedId", "EntryKeyHash")
+                        .IsUnique();
+
+                    b.ToTable("FeedEntries", (string)null);
                 });
 
             modelBuilder.Entity("MiniCc.Api.Core.TagNs.Domain.AggregatesModel.Tag", b =>
@@ -241,6 +453,9 @@ namespace MiniCc.Api.Migrations
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
 
+                    b.Property<string>("ReaderPreferences")
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("UserName")
                         .IsRequired()
                         .HasMaxLength(128)
@@ -269,6 +484,21 @@ namespace MiniCc.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("FeedTags", b =>
+                {
+                    b.HasOne("MiniCc.Api.Core.FeedNs.Domain.Feed", null)
+                        .WithMany()
+                        .HasForeignKey("FeedId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MiniCc.Api.Core.TagNs.Domain.AggregatesModel.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("MiniCc.Api.Core.ApiKeys.Domain.AggregatesModel.ApiKey", b =>
                 {
                     b.HasOne("MiniCc.Api.Core.UserNs.Domain.AggregatesModel.User", "User")
@@ -289,8 +519,7 @@ namespace MiniCc.Api.Migrations
 
                             b1.Property<string>("Value")
                                 .IsRequired()
-                                .HasMaxLength(2000)
-                                .HasColumnType("character varying(2000)")
+                                .HasColumnType("text")
                                 .HasColumnName("Url");
 
                             b1.HasKey("ArticleId");
@@ -314,6 +543,24 @@ namespace MiniCc.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Article");
+                });
+
+            modelBuilder.Entity("MiniCc.Api.Core.FeedNs.Domain.FeedEntry", b =>
+                {
+                    b.HasOne("MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.Article", "Article")
+                        .WithMany("FeedEntries")
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("MiniCc.Api.Core.FeedNs.Domain.Feed", "Feed")
+                        .WithMany("Entries")
+                        .HasForeignKey("FeedId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Article");
+
+                    b.Navigation("Feed");
                 });
 
             modelBuilder.Entity("MiniCc.Api.Core.TagNs.Domain.AggregatesModel.Tag", b =>
@@ -343,7 +590,14 @@ namespace MiniCc.Api.Migrations
 
             modelBuilder.Entity("MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.Article", b =>
                 {
+                    b.Navigation("FeedEntries");
+
                     b.Navigation("Highlights");
+                });
+
+            modelBuilder.Entity("MiniCc.Api.Core.FeedNs.Domain.Feed", b =>
+                {
+                    b.Navigation("Entries");
                 });
 
             modelBuilder.Entity("MiniCc.Api.Core.UserNs.Domain.AggregatesModel.User", b =>

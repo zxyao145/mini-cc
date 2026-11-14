@@ -4,7 +4,6 @@ namespace MiniCc.Api.Core.ArticleNs.Domain.Services;
 
 public interface IArticleDomainService
 {
-    Task<Article> CreateArticleFromUrlAsync(string url);
-
-    Task<Article> CreateArticleFromContentAsync(string url, string originalContent, string title, string author, string summary, string imageUrl);
+    Article CreateArticleFromContent(string url, string originalContent, string readableContent, string title, string author, string summary, string imageUrl);
+    Article CreateLink(string url, string title, string author, string summary, string imageUrl);
 }

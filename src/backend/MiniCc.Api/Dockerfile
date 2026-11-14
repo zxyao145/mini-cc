@@ -29,7 +29,6 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["src/backend/MiniCc.Api/MiniCc.Api.csproj", "src/backend/MiniCc.Api/"]
-COPY ["src/backend/ContentHandler/ContentHandler.csproj", "src/backend/ContentHandler/"]
 RUN dotnet restore "./src/backend/MiniCc.Api/MiniCc.Api.csproj"
 COPY . .
 WORKDIR "/src/src/backend/MiniCc.Api"

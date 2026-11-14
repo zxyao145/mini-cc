@@ -1,6 +1,4 @@
-using ContentHandler;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using MiniCc.Api.Acl;
 using MiniCc.Api.Authentication;
 using MiniCc.Api.Componments;
 using MiniCc.Api.Core;
@@ -32,6 +30,8 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.WriteIndented = false;
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(
+            System.Text.Json.JsonNamingPolicy.CamelCase, allowIntegerValues: false));
     });
 
 builder.Services.AddOpenApi();
@@ -67,37 +67,16 @@ builder.Services.AddMapping()
     .AddValidators()
     .AddMediator();
 
-builder.Services.AddHttpClient("default", (httpClient) =>
-{
-    httpClient.DefaultRequestHeaders
-        .Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.4472.124 Safari/537.36");
-});
-
-var readabilityApi = Environment.GetEnvironmentVariable("MiniCC_ReadabilityApi");
-if (string.IsNullOrWhiteSpace(readabilityApi))
-{
-    readabilityApi = "http://127.0.0.1:5002";
-}
-builder.Services.AddHttpClient<IReadabilityApi, ReadabilityApi>((httpClient) =>
-{
-    httpClient.BaseAddress = new Uri(readabilityApi);
-});
-
-builder.Services.AddContentHandlers();
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", builder =>
     {
-        builder.WithOrigins("http://localhost:3000", "https://localhost:3000", "http://localhost:5000")
+        builder.WithOrigins("http://localhost:4000", "https://localhost:4000", "http://localhost:5000")
                .AllowAnyMethod()
                .AllowAnyHeader()
                .AllowCredentials();
     });
 });
-
-builder.Services.AddOptions<ReadabilityApiOptions>()
-    .Bind(builder.Configuration.GetSection("ReadabilityApi"));
 
 var app = builder.Build();
 

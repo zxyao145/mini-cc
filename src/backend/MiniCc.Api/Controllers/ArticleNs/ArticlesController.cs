@@ -27,43 +27,25 @@ public class ArticlesController : ApiControllerBase
         _logger = logger;
     }
 
+    [HttpPost("batch")]
+    public async Task<ActionResult<BatchArticleResult>> Batch([FromBody] BatchArticleCommand command, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+            return result.IsFailure ? BadRequest(result.Error) : Ok(result.Value);
+        }
+        catch (FluentValidation.ValidationException ex) { return BadRequest(ex.Message); }
+    }
+
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ArticleDto>>> GetArticles(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        [FromQuery] string? search = null)
+    public async Task<ActionResult<ArticleListPage>> GetArticles([FromQuery] ArticleListRequest request)
     {
-        var query = new GetArticlesQuery(page, pageSize, search);
-        var result = await _mediator.Send(query);
-
-        if (result.IsFailure)
-        {
-            _logger.LogError("Error getting articles: {Error}", result.Error);
-            return BadRequest(result.Error);
-        }
-
-        return Ok(result.Value);
+        var result = await _mediator.Send(new GetArticleListQuery(request));
+        return result.IsFailure ? BadRequest(result.Error) : Ok(result.Value);
     }
 
-    [HttpGet("light")]
-    public async Task<ActionResult<IEnumerable<ArticleLightDto>>> GetArticlesLight(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20,
-        [FromQuery] string? search = null)
-    {
-        var query = new GetArticlesLightQuery(page, pageSize, search);
-        var result = await _mediator.Send(query);
-
-        if (result.IsFailure)
-        {
-            _logger.LogError("Error getting articles light: {Error}", result.Error);
-            return BadRequest(result.Error);
-        }
-
-        return Ok(result.Value);
-    }
-
-    [HttpGet("{id}")]
+    [HttpGet("{id:guid}")]
     public async Task<ActionResult<ArticleDto>> GetArticle(Guid id)
     {
         var query = new GetArticleByIdQuery(id);
@@ -81,20 +63,6 @@ public class ArticlesController : ApiControllerBase
         return Ok(result.Value);
     }
 
-    [HttpPost]
-    public async Task<ActionResult<ArticleDto>> SaveArticle([FromBody] SaveArticleCommand command)
-    {
-        var result = await _mediator.Send(command);
-
-        if (result.IsFailure)
-        {
-            _logger.LogError("Error saving article: {Error}", result.Error);
-            return BadRequest(result.Error);
-        }
-
-        return CreatedAtAction(nameof(GetArticle), new { id = result.Value.Id }, result.Value);
-    }
-
     [DisableRequestSizeLimit]
     [HttpPost("content")]
     public async Task<ActionResult<ArticleDto>> SaveArticleContent([FromBody] SaveArticleContentCommand command)
@@ -108,6 +76,27 @@ public class ArticlesController : ApiControllerBase
         }
 
         return CreatedAtAction(nameof(GetArticle), new { id = result.Value.Id }, result.Value);
+    }
+
+    [HttpPost("link")]
+    public async Task<ActionResult<ArticleDto>> SaveLink([FromBody] SaveLinkCommand command, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _mediator.Send(command, cancellationToken);
+
+            if (result.IsFailure)
+            {
+                _logger.LogError("Error saving link: {Error}", result.Error);
+                return BadRequest(result.Error);
+            }
+
+            return CreatedAtAction(nameof(GetArticle), new { id = result.Value.Id }, result.Value);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     [HttpPut("{id}")]
@@ -128,57 +117,65 @@ public class ArticlesController : ApiControllerBase
         return Ok(result.Value);
     }
 
-    [HttpPost("{id}/favorite")]
-    public async Task<ActionResult<ArticleDto>> ToggleFavorite(Guid id)
+    [HttpPatch("{id}/state")]
+    public async Task<ActionResult<ArticleListItemDto>> UpdateState(Guid id, [FromBody] UpdateArticleStateCommand command)
     {
-        var command = new ToggleFavoriteCommand(id);
-        var result = await _mediator.Send(command);
-
-        if (result.IsFailure)
+        command.ArticleId = id;
+        try
         {
-            if (result.Error.Contains("not found"))
-                return NotFound(result.Error);
-
-            _logger.LogError("Error toggling favorite for article {Id}: {Error}", id, result.Error);
-            return BadRequest(result.Error);
+            var result = await _mediator.Send(command);
+            if (result.IsFailure)
+            {
+                if (result.Error.Contains("not found")) return NotFound(result.Error);
+                return BadRequest(result.Error);
+            }
+            return Ok(result.Value);
         }
-
-        return Ok(result.Value);
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
-    [HttpPost("{id}/archive")]
-    public async Task<ActionResult<ArticleDto>> ToggleArchive(Guid id)
+    [HttpPut("{id}/progress")]
+    public async Task<ActionResult<ProgressSaveDto>> UpdateProgress(Guid id, [FromBody] UpdateProgressCommand command)
     {
-        var command = new ToggleArchiveCommand(id);
-        var result = await _mediator.Send(command);
-
-        if (result.IsFailure)
-        {
-            if (result.Error.Contains("not found"))
-                return NotFound(result.Error);
-
-            _logger.LogError("Error toggling archive for article {Id}: {Error}", id, result.Error);
-            return BadRequest(result.Error);
-        }
-
-        return Ok(result.Value);
+        command.ArticleId = id;
+        return await SaveProgress(command);
     }
 
-    [HttpPost("{id}/read")]
-    public async Task<ActionResult<ArticleDto>> MarkAsRead(Guid id)
-    {
-        var command = new ToggleArchiveCommand(id);
-        var result = await _mediator.Send(command);
+    [HttpPost("{id}/progress/reset")]
+    public async Task<ActionResult<ProgressSaveDto>> ResetProgress(Guid id, [FromBody] ResetProgressRequest request) =>
+        await SaveProgress(new UpdateProgressCommand { ArticleId = id, SessionId = request.SessionId, Reset = true });
 
+    private async Task<ActionResult<ProgressSaveDto>> SaveProgress(UpdateProgressCommand command)
+    {
+        try
+        {
+            var result = await _mediator.Send(command);
+            if (result.IsFailure)
+            {
+                if (result.Error.Contains("not found")) return NotFound(result.Error);
+                return BadRequest(result.Error);
+            }
+            if (result.Value.Current != null) return Conflict(new { current = result.Value.Current });
+            return Ok(result.Value);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("{id}/restore")]
+    public async Task<ActionResult<ArticleListItemDto>> RestoreArticle(Guid id)
+    {
+        var result = await _mediator.Send(new RestoreArticleCommand(id));
         if (result.IsFailure)
         {
-            if (result.Error.Contains("not found"))
-                return NotFound(result.Error);
-
-            _logger.LogError("Error marking article as read {Id}: {Error}", id, result.Error);
+            if (result.Error.Contains("not found")) return NotFound(result.Error);
             return BadRequest(result.Error);
         }
-
         return Ok(result.Value);
     }
 

@@ -12,6 +12,8 @@ public class Highlight : Entity
 
     public string Color { get; set; } = "#FBBF24";
 
+    public AnchorStatus AnchorStatus { get; set; }
+
     public int StartOffset { get; set; }
 
     public int EndOffset { get; set; }
@@ -55,3 +57,4 @@ public class Highlight : Entity
         Note = note ?? string.Empty;
     }
 }
+public enum AnchorStatus { Ok, Pending, Orphaned }

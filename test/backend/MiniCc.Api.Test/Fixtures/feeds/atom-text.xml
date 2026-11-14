@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Literal text</title><id>urn:literal</id><updated>2026-01-01T00:00:00Z</updated>
+<entry><id>urn:explicit</id><title>Explicit text</title><link href="https://example.com/explicit"/><content type="text">Literal &lt;strong&gt;code&lt;/strong&gt; and &lt;script&gt;sample&lt;/script&gt;.</content><summary type="text">Summary &lt;b&gt;literal&lt;/b&gt; &amp; words</summary></entry>
+<entry><id>urn:default</id><title>Default text</title><link href="https://example.com/default"/><content>Literal &lt;strong&gt;code&lt;/strong&gt; and &lt;script&gt;sample&lt;/script&gt;.</content></entry>
+<entry><id>urn:summary</id><title>Summary only</title><link href="https://example.com/summary"/><summary>Summary &lt;b&gt;literal&lt;/b&gt; &amp; words</summary></entry>
+<entry><id>urn:html</id><title>HTML</title><link href="https://example.com/html"/><content type="html">&lt;p&gt;Formatted &lt;strong&gt;code&lt;/strong&gt;&lt;/p&gt;</content><summary type="html">&lt;p&gt;Formatted &lt;b&gt;summary&lt;/b&gt;&lt;/p&gt;</summary></entry>
+</feed>

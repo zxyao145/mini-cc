@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MiniCc.Api.Core.UserNs.Application.Commands;
 using MiniCc.Api.Core.UserNs.Application.DTOs;
+using MiniCc.Api.Core.UserNs.Application.Queries;
 using MiniCc.Api.Infra;
 using MiniCc.Api.Shared;
 using System.Security.Claims;
@@ -23,6 +24,28 @@ public class AccountController : ApiControllerBase
         _mediator = mediator;
         _logger = logger;
         _signInService = signInService;
+    }
+
+    [HttpGet("reader-preferences")]
+    public async Task<ActionResult> GetReaderPreferences()
+    {
+        var result = await _mediator.Send(new GetReaderPreferencesQuery(User.Identity?.Name ?? ""));
+        return result.IsFailure ? BadRequest(result.Error) : Ok(result.Value);
+    }
+
+    [HttpPut("reader-preferences")]
+    public async Task<ActionResult> UpdateReaderPreferences([FromBody] UpdateReaderPreferencesCommand command)
+    {
+        command.UserName = User.Identity?.Name ?? "";
+        try
+        {
+            var result = await _mediator.Send(command);
+            return result.IsFailure ? BadRequest(result.Error) : Ok(result.Value);
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
 
     // 获取当前用户信息

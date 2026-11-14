@@ -1,93 +1,113 @@
-$tagHight: 24px;
-
 .container {
-  margin: 12px 0;
-
-  &.compact {
-    margin: 6px 0;
-  }
+  margin: 8px 0;
 }
 
 .tagList {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
   align-items: center;
-  margin-bottom: 12px;
-  font-size: 12px;
+  gap: 8px;
 }
 
-.tag{
-  line-height: 0 !important;
-  height: 2rem;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
+.tag {
+  display: inline-flex;
   align-items: center;
-  padding: 0px 10px;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 2px 4px 2px 9px;
+  border: 1px solid var(--chip-border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: var(--chip-bg);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tagDot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.tagName {
+  overflow-wrap: anywhere;
 }
 
 .removeBtn {
-  background: none;
-  border: none;
+  display: grid;
+  place-items: center;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-  border-radius: 1rem;
-  &:hover {
-    background-color: transparent !important
-  }
+  border: 0;
+  border-radius: 50%;
+  color: var(--text-muted);
+  background: transparent;
+}
+
+.removeBtn:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
 }
 
 .addBtn {
-  background: none;
-  border: 2px dashed #ccc;
-  color: #666;
-  padding: 4px 12px;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin: 0;
-  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 2px 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: transparent;
+  font-size: 12px;
+}
 
-  &:hover {
-    border-color: #3b82f6;
-    color: #3b82f6;
-  }
+.addBtn:hover {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
 }
 
 .addForm {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
+  margin-top: 12px;
   padding: 16px;
-  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .inputGroup {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.inputLabel {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .tagInput {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--text-primary);
+  background: var(--surface);
   font-size: 14px;
-  margin-bottom: 12px;
 
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-  }
-
-  &:disabled {
-    background-color: #f5f5f5;
-    cursor: not-allowed;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-ring);
   }
 }
 
@@ -96,44 +116,28 @@ $tagHight: 24px;
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+  margin-top: 12px;
 }
 
 .colorOption {
   width: 24px;
   height: 24px;
+  padding: 0;
+  border: 3px solid var(--surface);
   border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
-  transition: all 0.2s ease;
+}
 
-  &:hover {
-    transform: scale(1.1);
-  }
-
-  &.selected {
-    border-color: #333;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-  }
+.colorOption.selected {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 1px;
 }
 
 .customColor {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid #ddd;
-  cursor: pointer;
-  padding: 0;
-
-  &::-webkit-color-swatch-wrapper {
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-  }
-
-  &::-webkit-color-swatch {
-    border: none;
-    border-radius: 50%;
-  }
+  width: 28px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
 }
 
 .formActions {
@@ -141,63 +145,56 @@ $tagHight: 24px;
   gap: 8px;
 }
 
+.saveBtn, .cancelBtn {
+  min-height: 36px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .saveBtn {
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+  background: var(--brand);
+  color: var(--surface);
+}
 
-  &:hover:not(:disabled) {
-    background-color: #2563eb;
-  }
-
-  &:disabled {
-    background-color: #9ca3af;
-    cursor: not-allowed;
-  }
+.saveBtn:hover {
+  background: var(--brand-hover);
 }
 
 .cancelBtn {
-  background: none;
-  color: #666;
-  border: 1px solid #ddd;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border: 1px solid var(--line-strong);
+  color: var(--text-secondary);
+  background: var(--surface);
+}
 
-  &:hover:not(:disabled) {
-    background-color: #f5f5f5;
-    border-color: #999;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+.cancelBtn:hover {
+  background: var(--surface-muted);
 }
 
 .compact {
-  .tagList {
-    margin-bottom: 8px;
-  }
+  margin: 0 0 8px;
+}
 
-  .addForm {
-    padding: 12px;
+@media (pointer: coarse) {
+  .removeBtn {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
   }
-
-  .tag {
-    padding: 2px 6px;
-    font-size: 11px;
+  .addBtn, .saveBtn, .cancelBtn {
+    min-height: 44px;
   }
-
-  .addBtn {
-    padding: 2px 8px;
-    font-size: 11px;
+  .colorOption {
+    width: 44px;
+    height: 44px;
+    border-width: 10px;
+  }
+  .customColor {
+    width: 44px;
+    height: 44px;
+  }
+  .tagInput {
+    font-size: 16px;
   }
 }

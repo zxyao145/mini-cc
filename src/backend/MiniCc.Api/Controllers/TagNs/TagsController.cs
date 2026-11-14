@@ -1,4 +1,5 @@
-using Mapster;
+using MediatR;
+using MiniCc.Api.Core.ArticleNs.Application.Queries;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,11 +16,13 @@ namespace MiniCc.Api.Controllers.TagNs;
 public class TagsController : ApiControllerBase
 {
     private readonly ITagService _tagService;
+    private readonly IMediator _mediator;
     private readonly ILogger<TagsController> _logger;
 
-    public TagsController(ITagService tagService, ILogger<TagsController> logger)
+    public TagsController(ITagService tagService, ILogger<TagsController> logger, IMediator mediator)
     {
         _tagService = tagService;
+        _mediator = mediator;
         _logger = logger;
     }
 
@@ -68,21 +71,12 @@ public class TagsController : ApiControllerBase
     /// 获取标签关联的文章列表
     /// </summary>
     [HttpGet("{id}/articles")]
-    public async Task<ActionResult<IEnumerable<ArticleDto>>> GetTagArticles(
-        Guid id,
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+    public async Task<ActionResult<ArticleListPage>> GetTagArticles(Guid id, [FromQuery] ArticleListRequest request)
     {
-        try
-        {
-            var articles = await _tagService.GetTagArticlesAsync(id, page, pageSize);
-            return Ok(articles.Adapt<List<ArticleDto>>());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting articles for tag {Id}", id);
-            return StatusCode(500, "Internal server error");
-        }
+        request.View = "all";
+        request.Tags = id.ToString();
+        var result = await _mediator.Send(new GetArticleListQuery(request));
+        return result.IsFailure ? BadRequest(result.Error) : Ok(result.Value);
     }
 
     /// <summary>
