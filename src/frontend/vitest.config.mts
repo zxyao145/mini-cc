@@ -8,6 +8,7 @@ export default defineConfig({
   oxc: { jsx: { runtime: 'automatic' } },
   test: {
     environment: 'happy-dom',
+    setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
   },
 });

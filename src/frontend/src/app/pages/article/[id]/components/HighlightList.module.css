@@ -1,0 +1,114 @@
+.highlightList {
+  margin-top: var(--space-10);
+  overflow: hidden;
+  border: 1px solid var(--reader-border);
+  border-radius: var(--radius-panel);
+  color: var(--reader-fg);
+  background: var(--reader-bg);
+  box-shadow: var(--shadow-resting);
+}
+
+.header {
+  display: flex;
+  width: 100%;
+  min-height: var(--control-height-md);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  border: 0;
+  border-radius: 0;
+  color: var(--reader-fg);
+  background: transparent;
+  text-align: left;
+}
+
+.header:hover { background: var(--reader-code-bg); }
+
+.header > span { width: 100%; }
+.header > span > span { width: 100%; }
+.header > span > span > span { width: 100%; justify-content: space-between; }
+
+.header strong {
+  margin: 0;
+  color: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.highlightItems {
+  max-height: 480px;
+  overflow-y: auto;
+  border-top: 1px solid var(--reader-border);
+  scrollbar-width: thin;
+}
+
+.highlightItem {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--reader-border);
+}
+
+.highlightItem:last-child { border-bottom: 0; }
+
+.highlightText {
+  display: block;
+  width: 100%;
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border-left: 3px solid var(--hl, var(--reader-border-strong));
+  border-radius: 0 var(--radius-control) var(--radius-control) 0;
+  color: var(--reader-fg);
+  background: color-mix(in oklab, var(--hl, var(--reader-mark-bg)) 20%, var(--reader-bg));
+  font-size: var(--text-base);
+  line-height: 1.6;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.highlightText:hover { background: color-mix(in oklab, var(--hl, var(--reader-mark-bg)) 30%, var(--reader-bg)); }
+.highlightText small { color: var(--reader-muted); font-size: var(--text-xs); }
+
+.highlightMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.date { color: var(--reader-muted); font-size: var(--text-xs); }
+.noteDisplay { margin-bottom: var(--space-3); }
+
+.note {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  color: var(--reader-fg);
+  background: var(--reader-code-bg);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.note strong { color: var(--reader-muted); font-weight: 600; }
+.noNote { margin: 0; color: var(--reader-muted); font-size: var(--text-sm); }
+.noteEdit { display: grid; gap: var(--space-2); margin-bottom: var(--space-3); }
+.noteTextarea { min-height: 88px; }
+.noteActions, .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.editButton { color: var(--reader-muted); }
+.saveButton, .cancelButton { min-height: var(--control-height-md); }
+
+.highlighted { animation: highlightPulse var(--duration-considered) var(--ease-standard) 2; }
+
+@keyframes highlightPulse {
+  50% { box-shadow: 0 0 0 4px color-mix(in oklab, var(--reader-fg) 18%, transparent); }
+}
+
+@media (max-width: 768px) {
+  .highlightList { margin-top: var(--space-6); }
+  .highlightItem { padding: var(--space-3); }
+}
+
+@media (max-width: 600px), (pointer: coarse) {
+  .highlightText { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) { .highlighted { animation: none; } }

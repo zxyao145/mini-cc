@@ -1,0 +1,73 @@
+.toolbar {
+  position: sticky;
+  --toolbar-top: 12px;
+  top: calc(var(--reader-header-offset, 0px) + var(--toolbar-top));
+  z-index: 20;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin: 0 0 var(--space-6);
+  padding: 5px;
+  isolation: isolate;
+  background: transparent;
+}
+
+.toolbar::before {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid var(--reader-border);
+  border-radius: var(--radius-panel);
+  background: color-mix(in oklab, var(--reader-bg) 88%, transparent);
+  box-shadow: var(--shadow-resting);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  backdrop-filter: blur(12px);
+}
+
+.toolbar button {
+  min-height: var(--control-height-sm);
+}
+
+.label {
+  white-space: nowrap;
+}
+
+.iconButton {
+  min-width: var(--control-height-sm);
+}
+
+.deleteButton:not(:hover) { border-color: transparent; background: transparent; }
+
+.spacer { flex: 1 1 auto; }
+
+.sync {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline: var(--space-2);
+  color: var(--reader-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.sync::before {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--warning);
+  content: "";
+}
+
+.toolbar:has(button[aria-expanded="true"]) { z-index: 50; }
+
+@media (max-width: 767px) {
+  .toolbar { --toolbar-top: 4px; }
+}
+
+@media (max-width: 600px), (pointer: coarse) {
+  .toolbar button { min-width: 44px; min-height: 44px; }
+  .iconButton { min-width: 44px; }
+}

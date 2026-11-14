@@ -1,0 +1,143 @@
+.highlight {
+  position: relative;
+  padding: 1px 2px;
+  border-radius: 3px;
+  color: inherit;
+  background: color-mix(in oklab, var(--hl, var(--reader-mark-bg)) 45%, transparent);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.highlight:hover {
+  background: color-mix(in oklab, var(--hl, var(--reader-mark-bg)) 70%, transparent);
+}
+
+.noteIcon {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--reader-bg);
+  border-radius: var(--radius-pill);
+  background: var(--reader-fg);
+  pointer-events: none;
+}
+
+.selectionTooltip {
+  --foreground: var(--neutral-1);
+  --text-secondary: var(--foreground);
+  --surface-muted: color-mix(in oklab, var(--neutral-0) 12%, transparent);
+  --focus-outline: var(--foreground);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--neutral-9);
+  border-radius: var(--radius-control);
+  color: var(--foreground);
+  background: var(--neutral-10);
+  box-shadow: var(--shadow-floating);
+}
+
+.cancelTooltipButton { min-width: var(--control-height-sm); }
+.highlightButton svg { color: var(--warning); }
+
+.tooltipArrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid var(--neutral-9);
+  border-bottom: 1px solid var(--neutral-9);
+  background: var(--neutral-10);
+  transform: rotate(45deg);
+}
+
+.highlightOptions { z-index: 1001; width: min(240px, calc(100vw - 24px)); }
+
+.highlightMenu {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--reader-border);
+  border-radius: var(--radius-panel);
+  color: var(--reader-fg);
+  background: var(--reader-bg);
+  box-shadow: var(--shadow-floating);
+}
+
+.highlightMenuHeader {
+  display: -webkit-box;
+  max-height: 3em;
+  overflow: hidden;
+  margin: var(--space-2) var(--space-3) var(--space-3);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--reader-border-strong);
+  color: var(--reader-muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.highlightMenuActions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-1);
+}
+
+.menuButton {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.menuButton kbd {
+  margin-left: auto;
+  color: var(--reader-muted);
+  font: var(--text-xs) var(--font-display);
+}
+
+.menuArrow {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--reader-border);
+  background: var(--reader-bg);
+  transform: rotate(45deg);
+}
+
+.mergeNotification {
+  position: fixed;
+  z-index: 1002;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: min(360px, calc(100vw - 32px));
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--reader-border);
+  border-radius: var(--radius-panel);
+  color: var(--reader-fg);
+  background: var(--reader-bg);
+  box-shadow: var(--shadow-floating);
+  font-size: var(--text-sm);
+}
+
+.mergeNotification svg { flex: 0 0 auto; color: var(--success); }
+
+@media (pointer: coarse) {
+  .highlightButton,
+  .cancelTooltipButton,
+  .menuButton { min-height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .highlight { transition: none; }
+}

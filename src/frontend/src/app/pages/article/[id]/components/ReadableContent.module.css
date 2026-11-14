@@ -1,0 +1,177 @@
+.content {
+  min-width: 0;
+  color: var(--reader-fg);
+  font-family: var(--reader-font);
+  font-size: var(--reader-font-size);
+  line-height: var(--reader-line-height);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.content :global(article),
+.content :global(section),
+.content :global(aside) {
+  float: none;
+  width: auto;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.content :global(article > *) {
+  margin-block-end: var(--space-3);
+}
+
+.content :global(h1),
+.content :global(h2),
+.content :global(h3),
+.content :global(h4),
+.content :global(h5),
+.content :global(h6) {
+  margin-block: var(--space-8) var(--space-3);
+  color: var(--reader-fg);
+  font-family: var(--reader-font);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: var(--tracking-display);
+  scroll-margin-top: calc(var(--reader-header-offset, 0px) + var(--reader-toolbar-height, 52px) + var(--space-10));
+  overflow-wrap: anywhere;
+}
+
+.content :global(h1) { font-size: var(--text-3xl); }
+.content :global(h2) { font-size: var(--text-2xl); }
+.content :global(h3) { font-size: var(--text-xl); }
+.content :global(h4) { font-size: var(--text-lg); }
+.content :global(h5) { font-size: var(--text-base); }
+.content :global(h6) { font-size: var(--text-sm); }
+
+.content :global(p) {
+  margin-block: 0 var(--space-4);
+  color: var(--reader-fg);
+}
+
+.content :global(a) {
+  color: var(--reader-link);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--reader-link) 40%, transparent);
+  text-underline-offset: 3px;
+}
+
+.content :global(a:hover) { text-decoration-color: currentColor; }
+
+.content :global(ul),
+.content :global(ol) {
+  margin: var(--space-3) 0 var(--space-4) 1.5em;
+  padding: 0;
+}
+
+.content :global(ul) { list-style: disc; }
+.content :global(ol) { list-style: decimal; }
+.content :global(ul ul) { list-style: circle; }
+.content :global(ul ul ul) { list-style: square; }
+.content :global(li) { margin-block: var(--space-1); padding-inline-start: var(--space-1); }
+.content :global(li > p) { margin-block: var(--space-1); }
+
+.content :global(blockquote) {
+  margin: var(--space-6) 0;
+  padding: var(--space-1) 0 var(--space-1) var(--space-4);
+  border-inline-start: 3px solid var(--reader-border-strong);
+  color: var(--reader-muted);
+}
+
+.content :global(pre),
+.content :global(code),
+.content :global(kbd),
+.content :global(samp) {
+  font-family: var(--reader-mono);
+}
+
+.content :global(code),
+.content :global(kbd),
+.content :global(samp) {
+  padding: 1px 5px;
+  border: 1px solid var(--reader-border);
+  border-radius: 6px;
+  color: var(--reader-fg);
+  background: var(--reader-code-bg);
+  font-size: .88em;
+}
+
+.content :global(pre) {
+  max-width: 100%;
+  margin-block: var(--space-5);
+  padding: var(--space-4);
+  overflow: auto;
+  border: 1px solid var(--reader-border);
+  border-radius: var(--radius-panel);
+  color: var(--reader-fg);
+  background: var(--reader-code-bg);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  overflow-wrap: normal;
+  white-space: pre;
+}
+
+.content :global(pre code) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: inherit;
+}
+
+.content :global(table) {
+  width: max-content;
+  max-width: 100%;
+  border-collapse: collapse;
+  color: var(--reader-fg);
+}
+
+.content :global(th),
+.content :global(td) {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--reader-border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.content :global(th) {
+  background: var(--reader-code-bg);
+  font-weight: 600;
+}
+
+.content :global(tr:nth-child(even) td) {
+  background: color-mix(in oklab, var(--reader-code-bg) 55%, var(--reader-bg));
+}
+
+.content :global(.reader-table) {
+  max-width: 100%;
+  margin-block: var(--space-5);
+  overflow-x: auto;
+  border-radius: var(--radius-control);
+  scrollbar-width: thin;
+}
+
+.content :global(hr) {
+  height: 1px;
+  margin: var(--space-8) 0;
+  border: 0;
+  background: var(--reader-border);
+}
+
+.content :global(mark) {
+  padding-inline: 2px;
+  border-radius: 3px;
+  color: var(--reader-fg);
+  background: var(--reader-mark-bg);
+}
+
+.content :global(figure) { margin: var(--space-6) 0; }
+.content :global(figcaption) { margin-top: var(--space-2); color: var(--reader-muted); font-size: var(--text-sm); }
+.content :global(img),
+.content :global(video) { display: block; max-width: 100%; height: auto; border-radius: var(--radius-panel); }
+.content :global(details) { margin-block: var(--space-4); }
+.content :global(summary) { cursor: pointer; font-weight: 600; }
+.content :global(small) { font-size: .9em; }

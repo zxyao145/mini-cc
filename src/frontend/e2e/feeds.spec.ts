@@ -33,7 +33,7 @@ async function add(page: Page, kind: 'rss' | 'atom', title: string, discover = f
 }
 async function checkFeedNavigation(page: Page, title: string, mobile: boolean) {
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-  const sidebar = page.getByRole('complementary', { name: 'Sidebar' });
+  const sidebar = page.getByRole('complementary', { name: '侧边栏' });
   const sidebarBox = await sidebar.boundingBox(); expect(sidebarBox).not.toBeNull();
   if (mobile) {
     expect(sidebarBox!.height).toBeLessThanOrEqual(150);
@@ -95,8 +95,12 @@ test('RSS discovery and Atom import twenty each; refresh, edit, pause, unsubscri
   expect((await page.request.get(`/api/articles/${deleted}`)).status()).toBe(404);
   expect((await page.request.post('/api/articles/batch', { data: { ids: [deleted], action: 'purge' } })).ok()).toBe(true);
   expect((await page.request.post(`/api/feeds/${rss}/refresh`)).ok()).toBe(true); expect((await remember(page.request, rss)).length).toBe(19);
-  page.once('dialog', async dialog => { expect(dialog.message()).toContain('已导入的文章会保留'); await dialog.accept(); });
-  await row.getByRole('button', { name: '取消订阅', exact: true }).click(); await expect(row).toHaveCount(0);
+  const unsubscribe = page.getByRole('dialog', { name: '取消订阅', exact: true });
+  const unsubscribeMessage = '取消订阅“' + rssTitle + '”？已导入的文章会保留。';
+  await row.getByRole('button', { name: '取消订阅', exact: true }).click();
+  await expect(unsubscribe).toContainText(unsubscribeMessage);
+  await unsubscribe.getByRole('button', { name: '取消订阅', exact: true }).click();
+  await expect(row).toHaveCount(0);
   expect((await page.request.get(`/api/articles/${entries[1].id}`)).ok()).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
@@ -126,7 +130,7 @@ test('plugin completes an open summary, preserves notes and state, then resolves
   }).toEqual(['ok', 'orphaned']);
   const fresh = await (await page.request.get(`/api/articles/${summary.id}`)).json();
   expect(fresh.isFavorite).toBe(true); expect(fresh.isArchived).toBe(true); expect(fresh.readingStatus).toBe('read');
-  await page.getByRole('button', { name: 'Expand highlights', exact: true }).click();
+  await page.getByRole('button', { name: '展开高亮', exact: true }).click();
   await expect(page.getByText(/原文位置已失效/)).toBeVisible(); await expect(page.getByText('keep summary', { exact: false })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: testInfo.outputPath('feed-completed-article.png'), fullPage: true });
@@ -182,13 +186,14 @@ test('RSS feed selector preserves Favorites search tags status dates and sort', 
   const filters = new URLSearchParams({ view: 'favorites', q: 'Preview', tags: tag.id, status: 'unread', savedFrom: '2020-01-01T00:00:00Z', savedTo: '2099-01-01T00:00:00Z', range: 'custom', sort: 'published_desc' });
   await page.goto(`/?${filters}`); await expect(page.locator('[data-article-id]')).toHaveCount(2);
   await expect(page.getByRole('combobox', { name: '订阅源', exact: true })).toHaveCount(0);
-  await page.getByRole('combobox', { name: '来源', exact: true }).selectOption('feed'); filters.set('source', 'feed');
+  const source = page.getByRole('combobox', { name: '来源', exact: true });
+  await source.click(); await page.getByRole('option', { name: 'RSS', exact: true }).click(); filters.set('source', 'feed');
   const selector = page.getByRole('combobox', { name: '订阅源', exact: true }); await expect(selector).toBeVisible();
-  await selector.selectOption(ownFeeds[0]);
+  await selector.click(); await page.getByRole('option', { name: `Filter rss ${run}`, exact: true }).click();
   await expect(page.locator('[data-article-id]')).toHaveCount(1); await expect(page.locator(`[data-article-id="${chosenArticles[0]}"]`)).toBeVisible();
   await expect.poll(() => new URL(page.url()).searchParams.get('feedId')).toBe(ownFeeds[0]);
   filters.forEach((value, key) => expect(new URL(page.url()).searchParams.get(key)).toBe(value));
-  await selector.selectOption(''); await expect(page.locator('[data-article-id]')).toHaveCount(2);
+  await selector.click(); await page.getByRole('option', { name: '全部订阅', exact: true }).click(); await expect(page.locator('[data-article-id]')).toHaveCount(2);
   expect(new URL(page.url()).searchParams.has('feedId')).toBe(false);
   filters.forEach((value, key) => expect(new URL(page.url()).searchParams.get(key)).toBe(value));
 });

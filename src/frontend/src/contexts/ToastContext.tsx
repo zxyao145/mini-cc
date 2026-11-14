@@ -1,8 +1,11 @@
  'use client';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { X } from 'lucide-react';
+import { Button } from '@/components/arc/button/button';
+import { Tooltip } from '@/components/arc/tooltip/tooltip';
 import { articleApi } from '@/lib/api';
 import { notifyLibraryMutation } from '@/lib/library-mutations';
-import styles from './ToastContext.module.scss';
+import styles from './ToastContext.module.css';
 import { useAuth } from './AuthContext';
 interface Toast { id: number; message: string; actionLabel?: string; action?: () => Promise<void> | void; pending?: boolean }
 interface ToastContextValue {
@@ -60,9 +63,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   };
   return <Context.Provider value={{ show, deleted, trashRetentionDays: settings.trashRetentionDays }}>{children}
     <div className={styles.region} aria-live="polite" aria-relevant="additions text">{toasts.map(toast => <div className={styles.toast} key={toast.id}>
-      <span>{toast.pending ? '处理中…' : toast.message}</span>
-      {toast.action && <button disabled={toast.pending} onClick={() => void run(toast)}>{toast.actionLabel}</button>}
-      <button aria-label="关闭提示" disabled={toast.pending} onClick={() => dismiss(toast.id)}>×</button>
+      <span className={styles.message}>{toast.pending ? '处理中…' : toast.message}</span>
+      {toast.action && <Button variant="secondary" size="sm" disabled={toast.pending} onClick={() => void run(toast)}>{toast.actionLabel}</Button>}
+      <Tooltip content="关闭提示">
+        <Button variant="ghost" size="sm" iconOnly aria-label="关闭提示" disabled={toast.pending} onClick={() => dismiss(toast.id)}>
+          <X size={16} aria-hidden="true" />
+        </Button>
+      </Tooltip>
     </div>)}</div>
   </Context.Provider>;
 }

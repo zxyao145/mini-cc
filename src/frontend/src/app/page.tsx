@@ -2,17 +2,19 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, LoaderCircle } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import ArticleList from '@/app/components/ArticleList';
 import LibraryToolbar from '@/app/components/LibraryToolbar';
 import { ArticleListItem } from '@/types';
 import { articleApi } from '@/lib/api';
 import { isFiltered, LibraryQuery, parseLibraryQuery, serializeLibraryQuery } from '@/lib/library-query';
 import { useArticleList } from '@/hooks/useArticleList';
-import styles from './page.module.scss';
+import styles from './page.module.css';
 import BatchToolbar, { actionLabels } from '@/app/components/BatchToolbar';
 import { BatchAction, notifyLibraryMutation } from '@/lib/library-mutations';
 import { useToast } from '@/contexts/ToastContext';
+import { useConfirm } from '@/contexts/ConfirmContext';
+import { Button } from '@/components/arc/button/button';
 
 const viewLabels = { inbox: '收件箱', all: '全部文章', favorites: '收藏', archive: '归档', trash: '回收站', feeds: '订阅' };
 const emptyLabels = { inbox: '没有待处理的文章', all: '还没有保存文章', favorites: '还没有收藏文章', archive: '还没有归档文章', trash: '回收站是空的', feeds: '还没有订阅文章' };
@@ -24,7 +26,13 @@ function ContinueReading() {
     return () => controller.abort();
   }, []);
   if (!items.length) return null;
-  return <section className={styles.continue} aria-label="继续阅读"><h2><BookOpen size={16} aria-hidden="true" />继续阅读</h2><div>{items.map(item => <Link key={item.id} href={`/pages/article/${item.id}`} scroll={false}><span>{item.title}</span><span>{Math.round(item.progressPercent || 0)}%</span></Link>)}</div></section>;
+  return <section className={styles.continue} aria-label="继续阅读"><h2><BookOpen size={16} aria-hidden="true" />继续阅读</h2><div>{items.map(item => {
+    const progress = Math.max(0, Math.min(100, Math.round(item.progressPercent || 0)));
+    return <Link key={item.id} href={`/pages/article/${item.id}`} scroll={false}>
+      <span>{item.title}</span>
+      <span className={styles.progress}><span className={styles.progressTrack} aria-hidden="true"><span style={{ width: `${progress}%` }} /></span><span>{progress}%</span></span>
+    </Link>;
+  })}</div></section>;
 }
 function Library() {
   const params = useSearchParams();
@@ -32,6 +40,7 @@ function Library() {
   const query = parseLibraryQuery(new URLSearchParams(params.toString()));
   const { items, total, loading, loadingMore, error, hasMore, loadMore, updateItem, removeItems } = useArticleList(query);
   const toast = useToast();
+  const confirm = useConfirm();
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -42,6 +51,7 @@ function Library() {
   const querySession = useRef({ key: queryKey, generation: 0 });
   if (querySession.current.key !== queryKey) querySession.current = { key: queryKey, generation: querySession.current.generation + 1 };
   useEffect(() => { setSelectionMode(false); setSelected([]); setFailedRows([]); }, [queryKey]);
+  useEffect(() => () => { querySession.current.generation += 1; }, []);
   const [articleStyle, setArticleStyle] = useState<'grid' | 'list'>('grid');
   const navigate = useCallback((next: LibraryQuery, replace: boolean) => {
     const value = serializeLibraryQuery(next);
@@ -53,8 +63,12 @@ function Library() {
   const perform = async (action: BatchAction, tagIds?: string[], retryIds?: string[], retryGeneration?: number) => {
     const ids = retryIds || selected;
     if (busyRef.current || !ids.length) return;
-    const requestGeneration = retryGeneration ?? querySession.current.generation;
-    if (action === 'purge' && !confirm(`将永久删除 ${ids.length} 篇文章，无法恢复。`)) return;
+    const currentGeneration = querySession.current.generation;
+    const requestGeneration = retryGeneration ?? currentGeneration;
+    if (action === 'purge') {
+      const accepted = await confirm(`将永久删除 ${ids.length} 篇文章，无法恢复。`, { title: '永久删除文章？', confirmLabel: '永久删除' });
+      if (!accepted || busyRef.current || currentGeneration !== querySession.current.generation) return;
+    }
     busyRef.current = true; setBusy(true); setProcessed(0);
     try {
       const result: import('@/lib/library-mutations').BatchResult = { succeeded: [], failed: [] };
@@ -77,10 +91,14 @@ function Library() {
   };
   const emptyTrash = async () => {
     if (busyRef.current) return;
-    busyRef.current = true; setBusy(true);
+    const generation = querySession.current.generation;
+    busyRef.current = true;
     try {
       const page = await articleApi.getArticles(new URLSearchParams('view=trash&pageSize=1'));
-      if (!confirm(`将永久删除 ${page.total} 篇文章，无法恢复。`)) return;
+      if (generation !== querySession.current.generation) return;
+      const accepted = await confirm(`将永久删除 ${page.total} 篇文章，无法恢复。`, { title: '清空回收站？', confirmLabel: '清空回收站' });
+      if (!accepted || generation !== querySession.current.generation) return;
+      setBusy(true);
       const result = await articleApi.emptyTrash(); notifyLibraryMutation(); setSelected([]); setFailedRows([]); setSelectionMode(false); toast.show(`已永久删除 ${result.purged} 篇文章`); }
     catch { toast.show('清空回收站失败，请重试'); } finally { busyRef.current = false; setBusy(false); }
   };
@@ -91,10 +109,10 @@ function Library() {
     <header className={styles.header}><LibraryToolbar query={query} onChange={navigate} articleStyle={articleStyle} onStyleChange={setArticleStyle} onSelect={() => setSelectionMode(true)} /></header>
     {query.view === 'inbox' && !filtered && <ContinueReading />}
     <div className={styles.main}>
-      <div className={styles.sectionHeading}><h1>{viewLabels[query.view]}</h1>{query.view === 'trash' && <button type="button" disabled={busy || !total} onClick={emptyTrash} style={{ minHeight: 44 }}>清空回收站</button>}<span className={styles.count} role="status" aria-atomic="true">{loading ? '正在加载…' : hasMore ? `共 ${total} 篇，已加载 ${items.length} 篇` : `共 ${total} 篇`}</span></div>
+      <div className={styles.sectionHeading}><h1>{viewLabels[query.view]}</h1><span className={styles.count} role="status" aria-atomic="true">{loading ? '正在加载…' : hasMore ? `共 ${total} 篇，已加载 ${items.length} 篇` : `共 ${total} 篇`}</span>{query.view === 'trash' && <Button className={styles.emptyTrash} variant="danger" size="sm" disabled={busy || !total} onClick={emptyTrash}>清空回收站</Button>}</div>
       {!loading && !displayedItems.length && !error ? <div className={styles.empty}><BookOpen size={32} strokeWidth={1.5} aria-hidden="true" /><h2>{filtered ? '没有符合筛选条件的文章' : emptyLabels[query.view]}</h2><p>{filtered ? '调整上方筛选条件，或清除筛选后重试。' : '使用浏览器插件保存文章，在这里阅读和管理。'}</p></div> : <ArticleList articles={displayedItems} selectionMode={selectionMode} selected={selected} selectionDisabled={busy} onSelect={toggleSelection} loading={loading} onDelete={handleDelete} onUpdate={updateItem} articleStyle={articleStyle} />}
       {error && <p className={styles.error} role="alert">{error}</p>}
-      {(hasMore || error) && <div className={styles.loadMore}><button type="button" onClick={loadMore} disabled={loading || loadingMore}>{loadingMore ? <><LoaderCircle size={16} className={styles.spinning} aria-hidden="true" />正在加载…</> : error ? '加载失败，重试' : '加载更多'}</button></div>}
+      {(hasMore || error) && <div className={styles.loadMore}><Button variant="secondary" size="md" onClick={loadMore} disabled={loading || loadingMore} loading={loadingMore}>{error ? '加载失败，重试' : '加载更多'}</Button></div>}
     </div>
   </div>;
 }

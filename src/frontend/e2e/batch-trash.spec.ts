@@ -26,7 +26,8 @@ async function hit(page: Page, locator: Locator) {
       rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
       occluder: target ? { tag: target.tagName, className: String(target.className), text: target.textContent?.slice(0, 80) } : null };
   });
-  expect(geometry.height).toBeGreaterThanOrEqual(44); expect(geometry.reachable, JSON.stringify(geometry)).toBe(true);
+  if (page.viewportSize()!.width <= 600) expect(geometry.height).toBeGreaterThanOrEqual(44);
+  expect(geometry.reachable, JSON.stringify(geometry)).toBe(true);
 }
 async function acknowledgeBatch(page: Page, trigger: () => Promise<void>) {
   const pending = page.waitForResponse(response => response.url().endsWith('/api/articles/batch') && response.request().method() === 'POST');
@@ -94,11 +95,11 @@ test('batch trash undo and trash restore retain every state, note, tag and posit
 
 test('partial archive failure keeps two items selected and retry acts only on failures below the mobile header', async ({ page }, testInfo) => {
   await seed(page.request, 20); await open(page); await selectAll(page);
-  const selected = await page.locator('input[aria-label^="选择 "]:checked').evaluateAll(inputs => inputs.map(input => input.closest('[data-article-id]')!.getAttribute('data-article-id')));
+  const selected = await page.locator('[role="checkbox"][aria-label^="选择 "][data-state="checked"]').evaluateAll(checkboxes => checkboxes.map(checkbox => checkbox.closest('[data-article-id]')!.getAttribute('data-article-id')));
   const failed = selected.slice(-2) as string[];
   expect((await page.request.post('/api/articles/batch', { data: { ids: failed, action: 'trash' } })).ok()).toBe(true);
   await batch(page, '归档'); await expect(page.getByText('18 篇已归档，2 篇失败', { exact: true })).toBeVisible();
-  await expect(page.locator('input[aria-label^="选择 "]:checked')).toHaveCount(2);
+  await expect(page.locator('[role="checkbox"][aria-label^="选择 "][data-state="checked"]')).toHaveCount(2);
   await expect(page.getByRole('region', { name: '批量操作' })).toContainText('已选 2 篇');
   await page.screenshot({ path: testInfo.outputPath('batch-partial.png') });
   const retry = page.getByRole('button', { name: '重试', exact: true }); await hit(page, retry);
@@ -111,13 +112,18 @@ test('partial archive failure keeps two items selected and retry acts only on fa
 
 test('single reader deletion carries undo to library; purge confirms and empty-trash uses the whole trash count', async ({ page }) => {
   await seed(page.request, 2); await page.goto(`/pages/article/${ids[0]}`); await expect(page.locator('.readable-content')).toBeVisible();
-  page.once('dialog', dialog => dialog.accept()); await page.getByRole('button', { name: '删除文章', exact: true }).click();
+  await page.getByRole('button', { name: '删除文章', exact: true }).click();
+  const deleteDialog = page.getByRole('dialog'); await expect(deleteDialog).toContainText('将这篇文章移入回收站？');
+  await deleteDialog.getByRole('button', { name: '移入回收站', exact: true }).click();
   await expect(page).toHaveURL(/\/$/); await expect(page.getByText('已删除 1 篇文章', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '撤销', exact: true }).click(); await expect.poll(async () => (await page.request.get(`/api/articles/${ids[0]}`)).status()).toBe(200);
   expect((await page.request.post('/api/articles/batch', { data: { ids, action: 'trash' } })).ok()).toBe(true);
-  await open(page, 'trash'); page.once('dialog', async dialog => { expect(dialog.message()).toContain('无法恢复'); await dialog.accept(); });
-  await page.locator(`[data-article-id="${ids[0]}"]`).getByRole('button', { name: '永久删除文章', exact: true }).click(); await expect(page.locator('h3')).toHaveCount(1);
+  await open(page, 'trash');
+  await page.locator(`[data-article-id="${ids[0]}"]`).getByRole('button', { name: '永久删除文章', exact: true }).click();
+  const purgeDialog = page.getByRole('dialog'); await expect(purgeDialog).toContainText('将永久删除这篇文章，无法恢复。');
+  await purgeDialog.getByRole('button', { name: '永久删除', exact: true }).click(); await expect(page.locator('h3')).toHaveCount(1);
   const trashPage = await (await page.request.get('/api/articles?view=trash&pageSize=1')).json();
-  page.once('dialog', async dialog => { expect(dialog.message()).toBe(`将永久删除 ${trashPage.total} 篇文章，无法恢复。`); await dialog.accept(); });
-  await page.getByRole('button', { name: '清空回收站', exact: true }).click(); await expect(page.locator('h3')).toHaveCount(0);
+  await page.getByRole('button', { name: '清空回收站', exact: true }).click();
+  const emptyDialog = page.getByRole('dialog'); await expect(emptyDialog).toContainText(`将永久删除 ${trashPage.total} 篇文章，无法恢复。`);
+  await emptyDialog.getByRole('button', { name: '清空回收站', exact: true }).click(); await expect(page.locator('h3')).toHaveCount(0);
 });

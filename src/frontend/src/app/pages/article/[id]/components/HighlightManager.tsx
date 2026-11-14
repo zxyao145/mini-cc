@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFloating, autoUpdate, offset, flip, shift, arrow } from '@floating-ui/react';
 import { CircleCheck, Highlighter, Trash2, X } from 'lucide-react';
+import { Button } from '@/components/arc/button/button';
+import { Tooltip } from '@/components/arc/tooltip/tooltip';
 import { nearestAnchor } from '@/lib/highlight-anchor';
 import { articleApi, highlightApi } from '@/lib/api';
 import { Highlight } from '@/types';
 import { calculateTextOffset, getTextContent, textNodes } from '@/lib/text-offsets';
-import styles from './HighlightManager.module.scss';
+import styles from './HighlightManager.module.css';
 
 const DEFAULT_HIGHLIGHT_COLOR = '#ffeb3b';
 
@@ -62,6 +64,11 @@ export default function HighlightManager({
     setTooltipVisible(false);
     setSelectedText('');
   }, []);
+
+  const handleCancel = useCallback(() => {
+    hideTooltip();
+    window.getSelection()?.removeAllRanges();
+  }, [hideTooltip]);
 
   useEffect(() => {
     const handleMouseUp = () => {
@@ -123,14 +130,27 @@ export default function HighlightManager({
       }
     };
 
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || document.querySelector('[role="dialog"]')) return;
+      if (clickedHighlight) {
+        event.preventDefault();
+        setClickedHighlight(null);
+      } else if (tooltipVisible) {
+        event.preventDefault();
+        handleCancel();
+      }
+    };
+
     document.addEventListener('mouseup', handleMouseUp);
     document.addEventListener('click', handleClick);
+    document.addEventListener('keydown', handleKeyDown);
     
     return () => {
       document.removeEventListener('mouseup', handleMouseUp);
       document.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [hideTooltip, clickedHighlight, menuRefs, tooltipRefs]);
+  }, [hideTooltip, handleCancel, clickedHighlight, menuRefs, tooltipVisible, tooltipRefs]);
 
   const latestHighlights = useRef({ highlights, onHighlightsChange });
   latestHighlights.current = { highlights, onHighlightsChange };
@@ -195,7 +215,7 @@ export default function HighlightManager({
             span.className = styles.highlight;
             span.style.setProperty('--hl', highlight.color || DEFAULT_HIGHLIGHT_COLOR);
             span.setAttribute('data-highlight-id', highlight.id);
-            span.title = highlight.note ? `Note: ${highlight.note}` : 'Click to delete highlight';
+            span.title = highlight.note ? `笔记：${highlight.note}` : '点击管理高亮';
 
             try {
               range.surroundContents(span);
@@ -277,7 +297,7 @@ export default function HighlightManager({
           console.log(`Found ${adjacentHighlights.length} adjacent highlights, merging...`);
           
           // 显示合并通知
-          setMergeNotification(`Merging with ${adjacentHighlights.length} existing highlight(s)`);
+          setMergeNotification(`已与 ${adjacentHighlights.length} 个相邻高亮合并`);
           setTimeout(() => setMergeNotification(null), 3000);
           
           // 需要合并高亮
@@ -352,14 +372,6 @@ export default function HighlightManager({
     }
   };
 
-  const handleCancel = () => {
-    hideTooltip();
-    const selection = window.getSelection();
-    if (selection) {
-      selection.removeAllRanges();
-    }
-  };
-
   return (
     <>
       {tooltipVisible && (
@@ -368,12 +380,12 @@ export default function HighlightManager({
           className={styles.selectionTooltip}
           style={tooltipStyles}
         >
-          <button onClick={handleCreateHighlight} className={styles.highlightButton}>
-            <Highlighter size={15} aria-hidden="true" /> Highlight
-          </button>
-          <button onClick={handleCancel} className={styles.cancelTooltipButton} aria-label="Cancel" title="Cancel">
+          <Button onClick={handleCreateHighlight} variant="ghost" size="sm" className={styles.highlightButton}>
+            <Highlighter size={15} aria-hidden="true" />高亮
+          </Button>
+          <Tooltip content="取消选择"><Button onClick={handleCancel} variant="ghost" size="sm" iconOnly className={styles.cancelTooltipButton} aria-label="取消选择">
             <X size={15} aria-hidden="true" />
-          </button>
+          </Button></Tooltip>
           <div ref={arrowRef} className={styles.tooltipArrow} />
         </div>
       )}
@@ -390,23 +402,15 @@ export default function HighlightManager({
           className={styles.highlightOptions}
           style={menuStyles}
         >
-          <div className={styles.highlightMenu}>
-            <div className={styles.highlightMenuHeader}>
-              Highlight Options
-            </div>
+          <div className={styles.highlightMenu} role="group" aria-label="高亮选项">
+            <div className={styles.highlightMenuHeader}>{highlights.find(h => h.id === clickedHighlight)?.text}</div>
             <div className={styles.highlightMenuActions}>
-              <button
-                onClick={() => handleDeleteHighlight(clickedHighlight)}
-                className={styles.deleteButton}
-              >
-                <Trash2 size={15} aria-hidden="true" /> Delete Highlight
-              </button>
-              <button
-                onClick={() => setClickedHighlight(null)}
-                className={styles.cancelButton}
-              >
-                Cancel
-              </button>
+              <Button onClick={() => setClickedHighlight(null)} variant="ghost" size="sm" className={styles.menuButton}>
+                <X size={15} aria-hidden="true" />关闭<kbd aria-hidden="true">Esc</kbd>
+              </Button>
+              <Button onClick={() => void handleDeleteHighlight(clickedHighlight)} variant="danger" size="sm" className={styles.menuButton}>
+                <Trash2 size={15} aria-hidden="true" />删除高亮
+              </Button>
             </div>
             <div ref={highlightMenuArrowRef} className={styles.menuArrow} />
           </div>

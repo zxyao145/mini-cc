@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, PencilLine, Trash2 } from 'lucide-react';
+import { Button } from '@/components/arc/button/button';
+import { Textarea } from '@/components/arc/textarea/textarea';
 import { Highlight } from '@/types';
 import { articleApi, highlightApi } from '@/lib/api';
-import styles from './HighlightList.module.scss';
+import styles from './HighlightList.module.css';
 
 interface HighlightListProps {
   highlights: Highlight[];
@@ -48,102 +50,58 @@ export default function HighlightList({ highlights, onHighlightsChange }: Highli
 
   const scrollToHighlight = (highlightId: string) => {
     const element = document.querySelector(`[data-highlight-id="${highlightId}"]`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Briefly highlight the element
-      element.classList.add(styles.highlighted);
-      setTimeout(() => {
-        element.classList.remove(styles.highlighted);
-      }, 2000);
-    }
+    if (!element) return;
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    element.classList.add(styles.highlighted);
+    setTimeout(() => element.classList.remove(styles.highlighted), 2000);
   };
 
-  if (highlights.length === 0) {
-    return null;
-  }
+  if (highlights.length === 0) return null;
 
   return (
-    <div className={styles.highlightList}>
-      <div className={styles.header} onClick={() => setIsExpanded(!isExpanded)}>
-        <h3>Highlights ({highlights.length})</h3>
-        <button className={styles.toggleButton} aria-expanded={isExpanded} aria-label={isExpanded ? 'Collapse highlights' : 'Expand highlights'}>
-          {isExpanded ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
-        </button>
-      </div>
-      
-      {isExpanded && (
-        <div className={styles.highlightItems}>
-          {highlights.map((highlight) => (
-            <div key={highlight.id} className={styles.highlightItem}>
-              <div 
-                className={styles.highlightText}
-                style={{ '--hl': highlight.color || '#ffeb3b' } as React.CSSProperties}
-                onClick={() => scrollToHighlight(highlight.id)}
-                title="Click to scroll to highlight"
-              >
-                {highlight.text}
-                {highlight.anchorStatus === "orphaned" && <small> · 原文位置已失效</small>}
-              </div>
-              
-              <div className={styles.highlightMeta}>
-                <span className={styles.date}>
-                  {new Date(highlight.createdAt).toLocaleDateString()}
-                </span>
-              </div>
-              
-              {editingNote === highlight.id ? (
-                <div className={styles.noteEdit}>
-                  <textarea
-                    value={noteText}
-                    onChange={(e) => setNoteText(e.target.value)}
-                    placeholder="Add a note..."
-                    className={styles.noteTextarea}
-                  />
-                  <div className={styles.noteActions}>
-                    <button 
-                      onClick={() => handleSaveNote(highlight.id)}
-                      className={styles.saveButton}
-                    >
-                      Save
-                    </button>
-                    <button 
-                      onClick={handleCancelEdit}
-                      className={styles.cancelButton}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className={styles.noteDisplay}>
-                  {highlight.note ? (
-                    <div className={styles.note}>
-                      <strong>Note:</strong> {highlight.note}
-                    </div>
-                  ) : (
-                    <div className={styles.noNote}>No note</div>
-                  )}
-                </div>
-              )}
-              
-              <div className={styles.actions}>
-                <button
-                  onClick={() => handleEditNote(highlight)}
-                  className={styles.editButton}
-                >
-                  <PencilLine size={14} aria-hidden="true" /> {highlight.note ? 'Edit Note' : 'Add Note'}
-                </button>
-                <button
-                  onClick={() => handleDeleteHighlight(highlight.id)}
-                  className={styles.deleteButton}
-                >
-                  <Trash2 size={14} aria-hidden="true" /> Delete
-                </button>
-              </div>
+    <section className={styles.highlightList} aria-label="高亮笔记">
+      <Button variant="ghost" className={styles.header} aria-expanded={isExpanded} aria-label={isExpanded ? '收起高亮' : '展开高亮'} onClick={() => setIsExpanded(!isExpanded)}>
+        <strong>高亮笔记（{highlights.length}）</strong>
+        {isExpanded ? <ChevronDown size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+      </Button>
+
+      {isExpanded && <div className={styles.highlightItems}>
+        {highlights.map((highlight) => (
+          <article key={highlight.id} className={styles.highlightItem}>
+            <button type="button" className={styles.highlightText} style={{ '--hl': highlight.color || '#ffeb3b' } as React.CSSProperties} onClick={() => scrollToHighlight(highlight.id)} title="跳转到正文高亮">
+              {highlight.text}
+              {highlight.anchorStatus === 'orphaned' && <small> · 原文位置已失效</small>}
+            </button>
+
+            <div className={styles.highlightMeta}>
+              <time className={styles.date} dateTime={highlight.createdAt}>{new Date(highlight.createdAt).toLocaleDateString('zh-CN')}</time>
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+
+            {editingNote === highlight.id ? (
+              <div className={styles.noteEdit}>
+                <Textarea label="笔记" value={noteText} onChange={(event) => setNoteText(event.target.value)} placeholder="添加笔记…" className={styles.noteTextarea} />
+                <div className={styles.noteActions}>
+                  <Button onClick={() => void handleSaveNote(highlight.id)} variant="primary" size="sm" className={styles.saveButton}>保存</Button>
+                  <Button onClick={handleCancelEdit} variant="secondary" size="sm" className={styles.cancelButton}>取消</Button>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.noteDisplay}>
+                {highlight.note ? <p className={styles.note}><strong>笔记：</strong>{highlight.note}</p> : <p className={styles.noNote}>暂无笔记</p>}
+              </div>
+            )}
+
+            <div className={styles.actions}>
+              <Button onClick={() => handleEditNote(highlight)} variant="ghost" size="sm" className={styles.editButton}>
+                <PencilLine size={14} aria-hidden="true" />{highlight.note ? '编辑笔记' : '添加笔记'}
+              </Button>
+              <Button onClick={() => void handleDeleteHighlight(highlight.id)} variant="danger" size="sm">
+                <Trash2 size={14} aria-hidden="true" />删除
+              </Button>
+            </div>
+          </article>
+        ))}
+      </div>}
+    </section>
   );
 }

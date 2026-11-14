@@ -4,10 +4,15 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useFeeds } from "@/contexts/FeedsContext";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { X, AlertTriangle, ChevronDown, ChevronRight, Rss, Archive, BookOpen, Heart, Inbox, Trash2, Highlighter, Library, LogOut, PanelLeftClose, PanelLeftOpen, Settings, Tags } from "lucide-react";
+import { Sun, Moon, Monitor, AlertTriangle, ChevronDown, ChevronRight, Rss, Archive, BookOpen, Heart, Inbox, Trash2, Highlighter, Library, LogOut, PanelLeftClose, PanelLeftOpen, Settings, Tags } from "lucide-react";
 import { parseLibraryQuery, serializeLibraryQuery, LibraryView } from "@/lib/library-query";
 import { useAuth } from "@/contexts/AuthContext";
-import styles from "./Sidebar.module.scss";
+import { Avatar } from "@/components/arc/avatar/avatar";
+import { Button } from "@/components/arc/button/button";
+import { Dialog, DialogContent } from "@/components/arc/dialog/dialog";
+import { Tooltip } from "@/components/arc/tooltip/tooltip";
+import { useTheme } from "@/contexts/ThemeContext";
+import styles from "./Sidebar.module.css";
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -23,9 +28,38 @@ const libraryViews = [
 ] as const;
 const navItems = [
   { href: '/pages/feeds', label: '管理订阅', icon: Rss },
-  { href: '/pages/highlights', label: 'Highlights', icon: Highlighter },
-  { href: '/pages/tags', label: 'Tags', icon: Tags },
+  { href: '/pages/highlights', label: '高亮笔记', icon: Highlighter },
+  { href: '/pages/tags', label: '标签', icon: Tags },
 ];
+const themes = [
+  { value: 'light', label: '浅色', icon: Sun },
+  { value: 'dark', label: '深色', icon: Moon },
+  { value: 'system', label: '跟随系统', icon: Monitor },
+] as const;
+
+function ThemeControls({ compact }: { compact: boolean }) {
+  const { preference, setPreference } = useTheme();
+  if (compact) {
+    const index = themes.findIndex(theme => theme.value === preference);
+    const { label, icon: Icon } = themes[index];
+    const next = themes[(index + 1) % themes.length];
+    const description = `主题：${label}，切换到${next.label}`;
+    return <Tooltip content={description} side="bottom">
+      <Button variant="ghost" size="sm" iconOnly aria-label={description} onClick={() => setPreference(next.value)}>
+        <Icon size={16} aria-hidden="true" />
+      </Button>
+    </Tooltip>;
+  }
+  return <div className={styles.themeSwitch} role="group" aria-label="界面主题">
+    {themes.map(({ value, label, icon: Icon }) => (
+      <Tooltip key={value} content={label}>
+        <Button variant="ghost" size="sm" iconOnly aria-label={label} aria-pressed={preference === value} onClick={() => setPreference(value)}>
+          <Icon size={16} aria-hidden="true" />
+        </Button>
+      </Tooltip>
+    ))}
+  </div>;
+}
 
 export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const pathname = usePathname();
@@ -38,19 +72,36 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
   const [feedsOpen, setFeedsOpen] = useState(true);
   const [mobile, setMobile] = useState(false);
   const [mobileFeedsOpen, setMobileFeedsOpen] = useState(false);
-  const feedDialog = useRef<HTMLDialogElement>(null);
+  const feedsButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 767px)');
-    const change = () => { setMobile(media.matches); if (!media.matches) { feedDialog.current?.close(); setMobileFeedsOpen(false); } };
+    const change = () => { setMobile(media.matches); if (!media.matches) setMobileFeedsOpen(false); };
     change(); media.addEventListener('change', change);
     return () => media.removeEventListener('change', change);
   }, []);
-  const closeFeeds = () => { feedDialog.current?.close(); setMobileFeedsOpen(false); };
+
   const toggleFeeds = () => {
-    if (mobile) { feedDialog.current?.showModal(); setMobileFeedsOpen(true); }
+    if (mobile) setMobileFeedsOpen(true);
     else setFeedsOpen(open => !open);
   };
-  const feedLinks = (close?: () => void) => <><li><Link href="/?view=feeds" className={styles.navLink} onClick={close}>全部订阅文章</Link></li>{feeds.map(feed => <li key={feed.id}><Link href={`/?view=feeds&feedId=${feed.id}`} scroll={false} onClick={close} className={`${styles.navLink} ${query.feedId === feed.id && pathname === '/' ? styles.active : ''}`} title={feed.title}><span className={styles.feedTitle}>{feed.title}</span>{feed.health === 'failing' && <AlertTriangle size={14} aria-label="更新失败"/>}<span className={styles.feedCount}>{feed.unreadCount}</span></Link></li>)}</>;
+  const compact = mobile || !isOpen;
+  const feedLinks = (close?: () => void) => <>
+    <li>
+      <Link href="/?view=feeds" className={styles.navLink} onClick={close} aria-current={pathname === '/' && query.view === 'feeds' && !query.feedId ? 'page' : undefined}>
+        全部订阅文章
+      </Link>
+    </li>
+    {feeds.map(feed => (
+      <li key={feed.id}>
+        <Link href={`/?view=feeds&feedId=${feed.id}`} scroll={false} onClick={close} className={styles.navLink}
+          aria-current={query.feedId === feed.id && pathname === '/' ? 'page' : undefined} title={feed.title}>
+          <span className={styles.feedTitle}>{feed.title}</span>
+          {feed.health === 'failing' && <AlertTriangle className={styles.feedIssue} size={14} aria-label="更新失败" />}
+          <span className={styles.feedCount}>{feed.unreadCount}</span>
+        </Link>
+      </li>
+    ))}
+  </>;
 
   const handleLogout = async () => {
     try {
@@ -60,64 +111,82 @@ export default function Sidebar({ isOpen = true, onToggle }: SidebarProps) {
       console.error("Logout failed:", error);
     }
   };
+  const toggleLabel = isOpen ? '收起侧边栏' : '展开侧边栏';
+  const feedsExpanded = mobile ? mobileFeedsOpen : feedsOpen && isOpen;
+  const accountLabel = '个人账户';
+  const tooltipSide = mobile ? 'bottom' : 'right';
 
-  return (
-    <aside className={`${styles.sidebar} ${isOpen ? "" : styles.closed}`} aria-label="Sidebar">
-      <div className={styles.header}>
-        <Link href="/" className={styles.brand} aria-label="MiniCc library">
-          <span className={styles.brandMark}><BookOpen size={20} strokeWidth={1.8} aria-hidden="true" /></span>
-          <span className={styles.brandName}>MiniCc<span className={styles.brandDot}>.</span></span>
-        </Link>
-        {onToggle && (
-          <button className={styles.toggle} onClick={onToggle} aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"} aria-expanded={isOpen} title={isOpen ? "Collapse sidebar" : "Expand sidebar"}>
-            {isOpen ? <PanelLeftClose size={18} aria-hidden="true" /> : <PanelLeftOpen size={18} aria-hidden="true" />}
-          </button>
-        )}
-      </div>
+  return <aside className={`${styles.sidebar} ${isOpen ? "" : styles.closed}`} data-app-sidebar aria-label="侧边栏">
+    <div className={styles.header}>
+      <Link href="/" className={styles.brand} aria-label="MiniCc 文库" title="MiniCc 文库">
+        <span className={styles.brandMark}><BookOpen size={18} strokeWidth={1.8} aria-hidden="true" /></span>
+        <span className={styles.brandName}>MiniCc</span>
+      </Link>
+      {onToggle && <Tooltip content={toggleLabel} side="right">
+        <Button variant="ghost" size="sm" iconOnly className={styles.toggle} onClick={onToggle} aria-label={toggleLabel} aria-expanded={isOpen}>
+          {isOpen ? <PanelLeftClose size={17} aria-hidden="true" /> : <PanelLeftOpen size={17} aria-hidden="true" />}
+        </Button>
+      </Tooltip>}
+    </div>
 
-      <nav className={styles.nav} aria-label="Main navigation">
-        <p className={styles.sectionLabel}>WORKSPACE</p>
-        <ul className={styles.navList}>
-          {libraryViews.map(({ view, label, icon: Icon }) => {
-            const active = pathname === '/' && query.view === view;
-            return <li key={view}><Link href={viewLink(view)} scroll={false} className={`${styles.navLink} ${active ? styles.active : ''}`} aria-label={label} title={label} aria-current={active ? 'page' : undefined}><Icon size={19} strokeWidth={1.8} aria-hidden="true" /><span className={styles.label}>{label}</span></Link></li>;
-          })}
-          <li>
-            <button className={`${styles.navLink} ${styles.feedToggle}`} aria-expanded={mobile ? mobileFeedsOpen : feedsOpen && isOpen} aria-haspopup={mobile ? 'dialog' : undefined} aria-controls={mobile ? 'sidebar-feed-dialog' : 'sidebar-feed-list'} onClick={toggleFeeds} title="订阅"><Rss size={19}/><span className={styles.label}>订阅</span>{feedsOpen ? <ChevronDown size={16}/> : <ChevronRight size={16}/>}</button>
-            {feedsOpen && <ul id="sidebar-feed-list" className={styles.feedList}>{feedLinks()}</ul>}
+    <nav className={styles.nav} aria-label="主导航">
+      <p className={styles.sectionLabel}>工作区</p>
+      <ul className={styles.navList}>
+        {libraryViews.map(({ view, label, icon: Icon }) => (
+          <li key={view}>
+            <Tooltip content={label} side={tooltipSide}>
+              <Link href={viewLink(view)} scroll={false} className={styles.navLink} aria-label={label} aria-current={pathname === '/' && query.view === view ? 'page' : undefined}>
+                <Icon size={18} strokeWidth={1.8} aria-hidden="true" /><span className={styles.label}>{label}</span>
+              </Link>
+            </Tooltip>
           </li>
-          {navItems.map(({ href, label, icon: Icon }) => {
-            const active = href === "/" ? pathname === "/" || pathname.startsWith("/pages/article/") : pathname.startsWith(href);
-            return (
-              <li key={href}>
-                <Link href={href} scroll={false} className={`${styles.navLink} ${active ? styles.active : ""}`} aria-label={label} aria-current={active ? "page" : undefined} title={label}>
-                  <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
-                  <span className={styles.label}>{label}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
+        ))}
+        <li>
+          <Tooltip content="订阅" side={tooltipSide}>
+            <button type="button" ref={feedsButton} className={`${styles.navLink} ${styles.feedToggle}`} aria-label="订阅" aria-expanded={feedsExpanded}
+              aria-haspopup={mobile ? 'dialog' : undefined} aria-controls={feedsExpanded ? (mobile ? 'sidebar-feed-dialog' : 'sidebar-feed-list') : undefined} onClick={toggleFeeds}>
+              <Rss size={18} strokeWidth={1.8} aria-hidden="true" /><span className={styles.label}>订阅</span>
+              <span className={styles.chevron} aria-hidden="true">{feedsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
+            </button>
+          </Tooltip>
+          {feedsOpen && <ul id="sidebar-feed-list" className={styles.feedList}>{feedLinks()}</ul>}
+        </li>
+        {navItems.map(({ href, label, icon: Icon }) => (
+          <li key={href}>
+            <Tooltip content={label} side={tooltipSide}>
+              <Link href={href} scroll={false} className={styles.navLink} aria-label={label} aria-current={pathname.startsWith(href) ? "page" : undefined}>
+                <Icon size={18} strokeWidth={1.8} aria-hidden="true" /><span className={styles.label}>{label}</span>
+              </Link>
+            </Tooltip>
+          </li>
+        ))}
+      </ul>
+    </nav>
 
-      <dialog ref={feedDialog} id="sidebar-feed-dialog" className={styles.feedDialog} aria-label="订阅来源" onClose={() => setMobileFeedsOpen(false)}>
-        <div className={styles.feedDialogHeader}><strong>订阅来源</strong><button aria-label="关闭订阅来源" onClick={closeFeeds}><X size={20}/></button></div>
-        <ul className={styles.feedMenuList}>{feedLinks(closeFeeds)}</ul>
-      </dialog>
+    <Dialog open={mobileFeedsOpen} onOpenChange={setMobileFeedsOpen}>
+      <DialogContent id="sidebar-feed-dialog" title="订阅来源" closeLabel="关闭订阅来源" className={styles.feedDialog}
+        onInteractOutside={event => event.preventDefault()}
+        onCloseAutoFocus={event => { event.preventDefault(); feedsButton.current?.focus(); }}>
+        <ul className={styles.feedMenuList}>{feedLinks(() => setMobileFeedsOpen(false))}</ul>
+      </DialogContent>
+    </Dialog>
 
-      {user && (
-        <div className={styles.userSection}>
-          <Link href="/pages/account" className={styles.accountLink} aria-label={`Account settings for ${user.userName}`} title="Account settings" aria-current={pathname === "/pages/account" ? "page" : undefined}>
-            <span className={styles.avatar} aria-hidden="true">{user.userName.slice(0, 1).toUpperCase()}</span>
-            <span className={styles.userInfo}><span className={styles.userName}>{user.userName}</span><span className={styles.userCaption}>Personal account</span></span>
-            <Settings size={17} className={styles.settingsIcon} aria-hidden="true" />
+    <div className={styles.footer}>
+      {user && <div className={styles.userSection}>
+        <Tooltip content={accountLabel} side={tooltipSide}>
+          <Link href="/pages/account" className={styles.accountLink} aria-label={accountLabel} aria-current={pathname === "/pages/account" ? "page" : undefined}>
+            <Avatar name={user.userName} size="sm" aria-hidden="true" />
+            <span className={styles.userInfo}><span className={styles.userName}>{user.userName}</span><span className={styles.userCaption}>{accountLabel}</span></span>
+            <Settings size={16} className={styles.settingsIcon} aria-hidden="true" />
           </Link>
-          <button onClick={handleLogout} className={styles.logoutButton} aria-label="Sign out" title="Sign out">
-            <LogOut size={18} strokeWidth={1.8} aria-hidden="true" />
-            <span className={styles.label}>Sign out</span>
-          </button>
-        </div>
-      )}
-    </aside>
-  );
+        </Tooltip>
+        <Tooltip content="退出登录" side={tooltipSide}>
+          <Button variant="ghost" size="sm" iconOnly={compact} onClick={handleLogout} className={styles.logoutButton} aria-label="退出登录">
+            <LogOut size={16} aria-hidden="true" /><span className={styles.label}>退出登录</span>
+          </Button>
+        </Tooltip>
+      </div>}
+      <ThemeControls compact={compact} />
+    </div>
+  </aside>;
 }

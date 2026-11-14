@@ -1,8 +1,11 @@
 'use client';
 import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { List } from 'lucide-react';
+import { Button } from '@/components/arc/button/button';
+import { Tooltip } from '@/components/arc/tooltip/tooltip';
 import { collectReaderHeadings, ReaderHeading } from '@/lib/reader-toc';
 import ReaderPanel from './ReaderPanel';
+import styles from './ReaderToc.module.css';
 export function useReaderToc(contentRef:RefObject<HTMLElement|null>,html:string|undefined){
   const [headings,setHeadings]=useState<ReaderHeading[]>([]),[active,setActive]=useState('');
   useEffect(()=>{
@@ -27,8 +30,8 @@ export function useReaderToc(contentRef:RefObject<HTMLElement|null>,html:string|
   return {headings,active,jump};
 }
 type Toc=ReturnType<typeof useReaderToc>;
-function Entries({toc,onJump}:{toc:Toc;onJump?:()=>void}){return <nav aria-label="文章目录"><ol>{toc.headings.map(h=><li key={h.id} className={h.level>Math.min(...toc.headings.map(h=>h.level))?'reader-toc-nested':''}><a href={`#${h.id}`} aria-current={toc.active===h.id?'location':undefined} onClick={event=>{event.preventDefault();toc.jump(h);onJump?.();}}>{h.text}</a></li>)}</ol></nav>;}
-export function ReaderTocSidebar({toc}:{toc:Toc}){return toc.headings.length?<aside className="reader-toc-sidebar"><strong>目录</strong><Entries toc={toc}/></aside>:null;}
+function Entries({toc,onJump}:{toc:Toc;onJump?:()=>void}){const minLevel=Math.min(...toc.headings.map(h=>h.level));return <nav className={styles.entries} aria-label="文章目录"><ol>{toc.headings.map(h=><li key={h.id} className={h.level>minLevel?`${styles.nested} reader-toc-nested`:undefined}><a className={styles.entry} href={`#${h.id}`} aria-current={toc.active===h.id?'location':undefined} onClick={event=>{event.preventDefault();toc.jump(h);onJump?.();}}><span className={styles.entryLabel}>{h.text}</span></a></li>)}</ol></nav>;}
+export function ReaderTocSidebar({toc}:{toc:Toc}){return toc.headings.length?<aside className={`${styles.sidebar} reader-toc-sidebar`}><strong className={styles.sidebarTitle}><List size={14} aria-hidden="true"/>目录</strong><Entries toc={toc}/></aside>:null;}
 export function ReaderTocButton({toc}:{toc:Toc}){
   const [open,setOpen]=useState(false),trigger=useRef<HTMLButtonElement>(null),close=useCallback(()=>setOpen(false),[]);
   useEffect(()=>{
@@ -37,5 +40,5 @@ export function ReaderTocButton({toc}:{toc:Toc}){
     media.addEventListener('change',change);return ()=>media.removeEventListener('change',change);
   },[close]);
   if(!toc.headings.length)return null;
-  return <div className="reader-toc-control"><button ref={trigger} aria-label="目录" title="目录" aria-expanded={open} onClick={()=>setOpen(!open)}><List size={18}/></button>{open&&<ReaderPanel label="目录" drawerBreakpoint={1200} trigger={trigger} onClose={close} className="reader-toc-panel"><Entries toc={toc} onJump={close}/></ReaderPanel>}</div>;
+  return <div className={`${styles.control} reader-toc-control`}><Tooltip content="目录"><Button ref={trigger} variant="ghost" size="sm" iconOnly aria-label="目录" aria-expanded={open} onClick={()=>setOpen(!open)}><List size={18}/></Button></Tooltip>{open&&<ReaderPanel label="目录" drawerBreakpoint={1200} trigger={trigger} onClose={close} className={styles.tocPanel}><Entries toc={toc} onJump={close}/></ReaderPanel>}</div>;
 }

@@ -4,7 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { TagWithArticleCount } from "@/types";
 import { tagApi } from "@/lib/api";
-import styles from "./tags.module.scss";
+import { Search, Tag as TagIcon } from "lucide-react";
+import { Button } from "@/components/arc/button/button";
+import { Input } from "@/components/arc/input/input";
+import styles from "./tags.module.css";
 
 interface TagGroup {
   letter: string;
@@ -29,7 +32,7 @@ export default function TagsPage() {
       setTags(tagsData);
     } catch (err) {
       console.error("Error loading tags:", err);
-      setError("Failed to load tags");
+      setError("加载标签失败");
     } finally {
       setLoading(false);
     }
@@ -42,7 +45,7 @@ export default function TagsPage() {
       setTags(tagsData);
     } catch (err) {
       console.error("Error searching tags:", err);
-      setError("Failed to search tags");
+      setError("搜索标签失败");
     }
   };
 
@@ -74,89 +77,68 @@ export default function TagsPage() {
   }, []).sort((a, b) => a.letter.localeCompare(b.letter));
 
   if (loading) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.loading}>
-          <h1 className="sr-only">Tags</h1>
-          <p>Loading tags...</p>
-        </div>
-      </div>
-    );
+    return <div className={styles.container}><h1 className="sr-only">标签</h1><p className={styles.state}>正在加载标签…</p></div>;
   }
 
   if (error) {
     return (
       <div className={styles.container}>
-        <div className={styles.error}>
-          <h1 className="sr-only">Tags</h1>
-          <p>{error}</p>
-          <button onClick={loadTags} className={styles.retryButton}>
-            Retry
-          </button>
-        </div>
+        <h1 className="sr-only">标签</h1>
+        <p className={styles.error} role="alert">{error}</p>
+        <Button onClick={() => void loadTags()}>重试</Button>
       </div>
     );
   }
 
   return (
     <div className={styles.container}>
-      <h1 className="sr-only">Tags</h1>
+      <header className={styles.header}>
+        <div>
+          <h1><TagIcon size={24} aria-hidden="true" />标签</h1>
+        </div>
+        <div className={styles.stats}>
+          <span>{filteredTags.length} 个标签</span>
+          <span>{filteredTags.reduce((sum, tag) => sum + tag.articleCount, 0)} 篇文章</span>
+        </div>
+      </header>
 
       <div className={styles.controls}>
-        <div className={styles.searchContainer}>
-          <input
-            type="text"
-            placeholder="Search tags..."
-            aria-label="Search tags"
-            value={searchTerm}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className={styles.searchInput}
-          />
-        </div>
-        
-        <div className={styles.stats}>
-          <span>{filteredTags.length} tags</span>
-          <span>{filteredTags.reduce((sum, tag) => sum + tag.articleCount, 0)} articles</span>
-        </div>
+        <Input
+          type="search"
+          label="搜索标签"
+          hideLabel
+          leading={<Search size={16} aria-hidden="true" />}
+          value={searchTerm}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder="搜索标签…"
+          className={styles.searchInput}
+          wrapperClassName={styles.searchField}
+        />
       </div>
 
       <div className={styles.main}>
         {filteredTags.length === 0 ? (
-          <div className={styles.empty}>
-            <h2>No tags found</h2>
-            <p>
-              {searchTerm 
-                ? "Try adjusting your search terms." 
-                : "Start adding tags to your articles to see them here."
-              }
-            </p>
-          </div>
+          <section className={styles.empty}>
+            <h2>{searchTerm ? '没有找到标签' : '还没有标签'}</h2>
+            <p>{searchTerm ? '试试其他关键词。' : '给文章添加标签后，它们会显示在这里。'}</p>
+          </section>
         ) : (
           <div className={styles.tagGroups}>
-            {groupedTags.map((group) => (
-              <div key={group.letter} className={styles.tagGroup}>
-                <h3 className={styles.groupLetter}>{group.letter}</h3>
+            {groupedTags.map(group => (
+              <section key={group.letter} className={styles.tagGroup} aria-label={`标签 ${group.letter}`}>
+                <h2 className={styles.groupLetter}>{group.letter}</h2>
                 <div className={styles.tagsGrid}>
-                  {group.tags.map((tag) => (
-                    <Link 
-                      key={tag.id} 
-                      href={`/pages/tags/${tag.id}`} 
-                      className={styles.tagCard}
-                    >
-                      <div 
-                        className={styles.tagColor} 
-                        style={{ backgroundColor: tag.color }}
-                      />
-                      <div className={styles.tagInfo}>
+                  {group.tags.map(tag => (
+                    <Link key={tag.id} href={`/pages/tags/${tag.id}`} className={styles.tagCard}>
+                      <span className={styles.tagColor} style={{ backgroundColor: tag.color }} aria-hidden="true" />
+                      <span className={styles.tagInfo}>
                         <span className={styles.tagName}>{tag.name}</span>
-                        <span className={styles.articleCount}>
-                          {tag.articleCount} article{tag.articleCount !== 1 ? 's' : ''}
-                        </span>
-                      </div>
+                        <span className={styles.articleCount}>{tag.articleCount} 篇</span>
+                      </span>
                     </Link>
                   ))}
                 </div>
-              </div>
+              </section>
             ))}
           </div>
         )}

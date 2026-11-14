@@ -1,0 +1,119 @@
+.container { margin: var(--space-2) 0; }
+.compact { margin: 0 0 var(--space-2); }
+
+.tagList {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tag {
+  display: inline-flex;
+  max-width: 100%;
+  min-height: 28px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px 4px 2px var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-secondary);
+  background: var(--surface-muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.tagDot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+}
+
+.tagName { overflow-wrap: anywhere; }
+.removeBtn { flex: 0 0 auto; }
+
+.addBtn {
+  min-height: 28px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-pill);
+  padding-inline: var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.addBtn:hover { color: var(--foreground); background: var(--surface-muted); }
+
+.addForm {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 460px;
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-resting);
+}
+
+.inputGroup { display: grid; gap: var(--space-3); }
+.tagInputField { min-width: 0; }
+.tagInputField input { min-height: var(--control-height-md); }
+
+.colorPicker {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+}
+
+.colorPicker legend {
+  width: 100%;
+  margin-bottom: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+
+.colorOption {
+  width: var(--space-6);
+  min-width: var(--space-6);
+  height: var(--space-6);
+  min-height: var(--space-6);
+  padding: 0;
+  border: 2px solid var(--surface);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.colorOption.selected { outline: 2px solid var(--foreground); outline-offset: 2px; }
+
+.customColorLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.customColor {
+  width: var(--space-8);
+  height: var(--space-8);
+  padding: 2px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+}
+
+.formActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.saveBtn, .cancelBtn { min-height: var(--control-height-md); }
+
+@media (pointer: coarse), (max-width: 600px) {
+  .addBtn { min-height: 44px; }
+  .colorOption { width: 44px; min-width: 44px; height: 44px; min-height: 44px; }
+  .customColor { width: 44px; height: 44px; }
+}
