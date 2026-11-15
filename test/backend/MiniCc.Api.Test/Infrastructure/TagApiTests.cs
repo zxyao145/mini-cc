@@ -344,6 +344,23 @@ public partial class LibraryApiTests
     }
 
     [Fact]
+    public async Task RemoveTagFromArticle_RemovesTheAssociationAndKeepsTheTag()
+    {
+        using var factory = CreateFactory();
+        using var client = AuthenticatedClient(factory);
+        var tag = Tag.Create($"Remove {Guid.NewGuid():N}", TagColor.Create("#ef4444"));
+        var article = await fixture.SeedArticleAsync(a => a.AddTag(tag));
+
+        using var response = await client.DeleteAsync($"/api/articles/{article.Id}/tags/{tag.Id}");
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        await using var db = fixture.CreateContext();
+        var saved = await db.Articles.Include(a => a.Tags).SingleAsync(a => a.Id == article.Id);
+        saved.Tags.Should().BeEmpty();
+        (await db.Tags.AnyAsync(t => t.Id == tag.Id)).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task DeleteTag_RemovesActiveTrashedAndFeedAssociationsOnly()
     {
         using var factory = CreateFactory();
