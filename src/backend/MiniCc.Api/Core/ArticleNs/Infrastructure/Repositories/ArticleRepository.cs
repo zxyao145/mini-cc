@@ -13,9 +13,9 @@ public class ArticleRepository : IArticleRepository
         _context = context;
     }
 
-    // Called inside the progress transaction: PostgreSQL holds this row lock until commit.
+    // The progress transaction holds a row lock on PostgreSQL or a database write lock on SQLite until commit.
     public Task<Article?> GetByIdForProgressUpdateAsync(Guid id, CancellationToken cancellationToken = default) =>
-        _context.Articles.FromSqlInterpolated($"SELECT * FROM \"Articles\" WHERE \"Id\" = {id} AND \"DeletedAt\" IS NULL FOR UPDATE")
+        _context.Articles.FromSqlForUpdate($"SELECT * FROM \"Articles\" WHERE \"Id\" = {id} AND \"DeletedAt\" IS NULL")
             .SingleOrDefaultAsync(cancellationToken);
 
     public async Task<Article?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
@@ -38,7 +38,7 @@ public class ArticleRepository : IArticleRepository
 
     public async Task<Article?> GetByUrlAsync(string url, CancellationToken cancellationToken = default)
     {
-        return await _context.Articles.FromSqlInterpolated($"SELECT * FROM \"Articles\" WHERE \"NormalizedUrl\" = {url} ORDER BY \"CreatedAt\", \"Id\" LIMIT 1 FOR UPDATE").IgnoreQueryFilters()
+        return await _context.Articles.FromSqlForUpdate($"SELECT * FROM \"Articles\" WHERE \"NormalizedUrl\" = {url} ORDER BY \"CreatedAt\", \"Id\" LIMIT 1").IgnoreQueryFilters()
             // Load annotations after acquiring the article lock so a waiting save sees the latest anchors.
             .AsSplitQuery()
             .Include(a => a.Tags)

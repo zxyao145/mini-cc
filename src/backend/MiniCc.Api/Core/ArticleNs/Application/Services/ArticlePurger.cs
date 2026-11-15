@@ -13,7 +13,7 @@ public class ArticlePurger(MiniCcDbContext db, IUnitOfWork unitOfWork)
         try
         {
             await unitOfWork.LockArticleCreationAsync(cancellationToken);
-            var article = await db.Articles.FromSqlInterpolated($"SELECT * FROM \"Articles\" WHERE \"Id\" = {id} FOR UPDATE")
+            var article = await db.Articles.FromSqlForUpdate($"SELECT * FROM \"Articles\" WHERE \"Id\" = {id}")
                 .IgnoreQueryFilters().AsNoTracking().SingleOrDefaultAsync(cancellationToken);
             string? reason = article == null ? "notFound" : article.DeletedAt == null ? "notInTrash"
                 : expiredBefore.HasValue && article.DeletedAt > expiredBefore ? "notExpired" : null;

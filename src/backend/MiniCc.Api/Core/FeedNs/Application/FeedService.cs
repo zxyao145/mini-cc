@@ -55,8 +55,8 @@ public class FeedService(MiniCcDbContext db, IUnitOfWork unitOfWork, FeedFetcher
         try
         {
             // Serialize feed identity creation separately, always before feed-row and article-creation locks.
-            await db.Database.ExecuteSqlRawAsync("SELECT pg_advisory_xact_lock(70453126)", ct);
-            var feed = await db.Feeds.FromSqlInterpolated($"SELECT * FROM \"Feeds\" WHERE \"FeedUrlHash\" = {hash} FOR UPDATE").SingleOrDefaultAsync(ct);
+            await db.Database.AcquireTransactionLockAsync(DatabaseLocks.FeedIdentityLockKey, ct);
+            var feed = await db.Feeds.FromSqlForUpdate($"SELECT * FROM \"Feeds\" WHERE \"FeedUrlHash\" = {hash}").SingleOrDefaultAsync(ct);
             CheckIdentity(feed, normalized);
             if (feed != null && feed.Status != FeedStatus.Unsubscribed) { await unitOfWork.RollbackTransactionAsync(ct); return new(null, 0, feed.Id); }
             var tags = await db.Tags.Where(t => tagIds.Contains(t.Id)).ToListAsync(ct);
@@ -81,7 +81,7 @@ public class FeedService(MiniCcDbContext db, IUnitOfWork unitOfWork, FeedFetcher
         await unitOfWork.BeginTransactionAsync(ct);
         try
         {
-            var feed = await db.Feeds.FromSqlInterpolated($"SELECT * FROM \"Feeds\" WHERE \"Id\" = {id} FOR UPDATE").SingleOrDefaultAsync(ct);
+            var feed = await db.Feeds.FromSqlForUpdate($"SELECT * FROM \"Feeds\" WHERE \"Id\" = {id}").SingleOrDefaultAsync(ct);
             if (feed == null || feed.Status == FeedStatus.Unsubscribed) { await unitOfWork.RollbackTransactionAsync(ct); return null; }
             if (title != null) feed.Title = title;
             if (tagIds != null)
