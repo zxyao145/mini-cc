@@ -5,7 +5,7 @@ namespace MiniCc.Api.Core.ArticleNs.Application.Queries;
 
 public static class ArticleListFilter
 {
-    public static IQueryable<Article> Apply(IQueryable<Article> query, ArticleListRequest request)
+    public static IQueryable<Article> Apply(IQueryable<Article> query, ArticleListRequest request, bool useLikeSearch = false)
     {
         request.Validate();
         query = request.View switch
@@ -20,7 +20,13 @@ public static class ArticleListFilter
         {
             var text = request.Q.Trim();
             var pattern = "%" + text.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
-            query = query.Where(a => a.SearchVector.Matches(EF.Functions.PlainToTsQuery("mixed_zh_en", text)) || EF.Functions.ILike(a.Title, pattern, "\\"));
+            if (useLikeSearch)
+                query = query.Where(a => EF.Functions.Like(a.Title, pattern, "\\")
+                    || EF.Functions.Like(a.Summary, pattern, "\\")
+                    || EF.Functions.Like(a.Author, pattern, "\\")
+                    || EF.Functions.Like(a.ReadableContent, pattern, "\\"));
+            else
+                query = query.Where(a => a.SearchVector.Matches(EF.Functions.PlainToTsQuery("mixed_zh_en", text)) || EF.Functions.ILike(a.Title, pattern, "\\"));
         }
         var statuses = request.Statuses;
         // C# 14 can bind array.Contains to the span overload, which EF Core 9 cannot evaluate in this expression.

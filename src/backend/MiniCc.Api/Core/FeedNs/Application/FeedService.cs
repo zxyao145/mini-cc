@@ -115,7 +115,8 @@ public class FeedService(MiniCcDbContext db, IUnitOfWork unitOfWork, FeedFetcher
             var articles = db.Articles.Where(a => a.FeedEntries.Any(e => e.FeedId == id));
             var eligible = articles.Where(a => a.SavedFromExtensionAt == null && !a.FeedEntries.Any(e => e.FeedId != id));
             var total = await articles.CountAsync(ct);
-            var trashed = await eligible.ExecuteUpdateAsync(s => s.SetProperty(a => a.DeletedAt, DateTimeOffset.UtcNow), ct);
+            var now = DateTimeOffset.UtcNow;
+            var trashed = await eligible.ExecuteUpdateAsync(s => s.SetProperty(a => a.DeletedAt, now), ct);
             await unitOfWork.CommitTransactionAsync(ct); return new(trashed, total - trashed);
         }
         catch { await unitOfWork.RollbackTransactionAsync(CancellationToken.None); throw; }

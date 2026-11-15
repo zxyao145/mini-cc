@@ -38,6 +38,21 @@ public class ArticleListItemDto
         Feeds = a.FeedEntries.Select(e => new ArticleFeedDto(e.Feed.Id, e.Feed.Title)).Distinct().ToList(),
         HighlightCount = a.Highlights.Count()
     };
+
+    internal static readonly Expression<Func<Article, ArticleListItemDto>> ListProjection = CreateListProjection();
+
+    private static Expression<Func<Article, ArticleListItemDto>> CreateListProjection()
+    {
+        // SQL list queries deduplicate feeds after reading the page to avoid APPLY.
+        var initializer = (MemberInitExpression)Projection.Body;
+        var feeds = (MemberAssignment)initializer.Bindings.Single(binding => binding.Member.Name == nameof(Feeds));
+        var toList = (MethodCallExpression)feeds.Expression;
+        var distinct = (MethodCallExpression)toList.Arguments[0];
+        var allFeeds = Expression.Bind(feeds.Member, toList.Update(toList.Object, distinct.Arguments));
+        var bindings = initializer.Bindings.Select(binding => binding == feeds ? allFeeds : binding);
+
+        return Projection.Update(initializer.Update(initializer.NewExpression, bindings), Projection.Parameters);
+    }
 }
 
 public record ArticleFeedDto(Guid Id, string Title);

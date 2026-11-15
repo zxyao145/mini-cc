@@ -17,7 +17,7 @@ public class GetArticleListQueryHandler(MiniCcDbContext db, ImageProxyService im
         var request = query.Request;
         try
         {
-            var filtered = ArticleListFilter.Apply(db.Articles.AsNoTracking(), request);
+            var filtered = ArticleListFilter.Apply(db.Articles.AsNoTracking(), request, useLikeSearch: db.Database.IsSqlite());
             var sort = request.EffectiveSort;
             var cursor = request.Cursor == null ? null : ArticleCursor.Decode(request.Cursor, sort);
             var total = await filtered.CountAsync(cancellationToken);
@@ -32,7 +32,7 @@ public class GetArticleListQueryHandler(MiniCcDbContext db, ImageProxyService im
             var ordered = sort == "saved_asc"
                 ? filtered.OrderBy(a => a.CreatedAt).ThenBy(a => a.Id)
                 : filtered.OrderBy(NullKey(key)).ThenByDescending(key).ThenByDescending(a => a.Id);
-            var items = await ordered.Take(request.PageSize + 1).Select(ArticleListItemDto.Projection).ToListAsync(cancellationToken);
+            var items = await ordered.Take(request.PageSize + 1).Select(ArticleListItemDto.ListProjection).ToListAsync(cancellationToken);
             var hasMore = items.Count > request.PageSize;
             if (hasMore) items.RemoveAt(items.Count - 1);
             var last = items.LastOrDefault();
@@ -40,7 +40,11 @@ public class GetArticleListQueryHandler(MiniCcDbContext db, ImageProxyService im
             {
                 "read_desc" => last.LastReadAt, "published_desc" => last.PublishedAt, "trash" => last.DeletedAt, _ => last.CreatedAt
             }, last.Id) : null;
-            foreach (var item in items) item.ImageUrl = images.GetUrl(item.ImageUrl);
+            foreach (var item in items)
+            {
+                item.Feeds = item.Feeds.Distinct().ToList();
+                item.ImageUrl = images.GetUrl(item.ImageUrl);
+            }
             return Result<ArticleListPage>.Success(new(items, total, next));
         }
         catch (ArgumentException ex) { return Result<ArticleListPage>.Failure(ex.Message); }
