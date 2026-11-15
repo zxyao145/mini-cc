@@ -11,6 +11,7 @@ RUN sed -i -e 's|http://archive.ubuntu.com|http://mirrors.aliyun.com|g' \
     apt-get update && apt-get install -y curl wget && apt-get clean
 
 
+RUN mkdir -p /app/data && chown $APP_UID /app/data
 USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
