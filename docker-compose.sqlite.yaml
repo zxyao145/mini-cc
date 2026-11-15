@@ -5,7 +5,7 @@ services:
     image: minicc-api
     build:
       context: .
-      dockerfile: ./src/backend/MiniCc.Api/Dockerfile
+      dockerfile: ./src/server/Dockerfile
     container_name: minicc-api
     # ports:
     #   - "5001:8080"
@@ -18,8 +18,8 @@ services:
 
   minicc-web:
     build:
-      context: ./src/frontend
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: ./src/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:5000/api
     image: minicc-web
@@ -46,7 +46,7 @@ services:
 
   lb:
     build:
-      context: ./src/lb/ng
+      context: ./src/ng
       dockerfile: ./Dockerfile
     image: minicc-lb
     container_name: minicc-lb

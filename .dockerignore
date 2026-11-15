@@ -1,6 +1,8 @@
 **/.classpath
 **/.dockerignore
 **/.env
+**/.env.*
+**/.next
 **/.git
 **/.gitignore
 **/.project
@@ -28,4 +30,7 @@ README.md
 !.git/config
 !.git/packed-refs
 !.git/refs/heads/**
-src/backend/MiniCc.Api/data/
+src/server/data/
+src/web/certificates/
+src/web/test-results/
+src/web/playwright-report/

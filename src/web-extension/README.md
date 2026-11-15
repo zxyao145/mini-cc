@@ -15,19 +15,19 @@ A Chrome extension for saving articles and links to your MiniCC read-later appli
 
 ## Installation
 
-1. From the repository root, install dependencies in the SDK and extension independently.
+1. Install the workspace dependencies from the repository root.
 
    ```bash
-   pnpm --dir src/content-handler install
-   pnpm --dir src/web-extension install
+   pnpm install --frozen-lockfile
    ```
 
-   If pnpm 12 reports `ERR_PNPM_IGNORED_BUILDS`, use `PNPM_CONFIG_STRICT_DEP_BUILDS=false pnpm install --ignore-scripts` in each package.
+2. Build the extension from the repository root.
 
-2. Build from `src/web-extension`.
    ```bash
-   pnpm build
+   pnpm build:ext
    ```
+
+   The build fetches the Chrome manifest schema. With a Node.js version that supports it, set `NODE_USE_ENV_PROXY=1` when HTTPS requests use a proxy.
 
 3. Load the extension in Chrome:
    - Open Chrome and go to `chrome://extensions/`
@@ -37,6 +37,8 @@ A Chrome extension for saving articles and links to your MiniCC read-later appli
    - After rebuilding, reload the extension and the article tab
 
 ## Development
+
+After installing the workspace dependencies, run these commands from `src/web-extension`.
 
 - `pnpm dev` - Watch mode for development
 - `pnpm build` - Build for production

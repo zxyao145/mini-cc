@@ -32,24 +32,19 @@
 ## Project Structure
 
 ```
-src/
-├── backend/
-│   └── MiniCc.Api/
-│       ├── Controllers/     # API controllers
-│       ├── Data/           # Entity Framework context
-│       ├── Models/         # Domain models
-│       ├── Services/       # Business logic services
-│       └── Migrations/     # Database migrations
-├── frontend/
-│   ├── src/
-│   │   ├── app/           # Next.js app directory
-│   │   ├── components/    # React components
-│   │   ├── lib/           # Utilities and API client
-│   │   └── types/         # TypeScript type definitions
-│   └── public/            # Static assets
-│
-└── web-extension/
-    └── src/               # source file
+.
+├── Directory.Build.props      # Shared .NET build settings
+├── Directory.Packages.props   # NuGet package versions
+├── package.json              # Web dependencies and root build commands
+├── pnpm-workspace.yaml        # JavaScript workspace
+├── pnpm-lock.yaml             # Shared JavaScript lockfile
+└── src/
+    ├── server/                # ASP.NET Core API
+    ├── web/                   # Next.js app and static assets
+    ├── web-extension/         # Chrome extension
+    ├── content-handler/       # Content extraction SDK
+    ├── image-proxy/           # Image proxy
+    └── ng/                    # Nginx configuration
 ```
 
 ## Getting Started With Podman
@@ -72,14 +67,14 @@ Open http://localhost:5000. The SQLite database lives in the `sqlite-data` volum
 
 ### Prerequisites
 - .NET 10.0 SDK
-- Node.js 18+ and pnpm (install pnpm: `npm install -g pnpm`)
+- Node.js 22.13+ and pnpm 12.5.1 (install pnpm with `npm install -g pnpm@12.5.1`)
 - PostgreSQL 16 with zhparser if using PostgreSQL
 
 ### Backend Setup (PostgreSQL)
 
 1. Navigate to the backend directory:
    ```bash
-   cd src/backend/MiniCc.Api
+   cd src/server
    ```
 
 2. Install Entity Framework tools (if not already installed):
@@ -105,7 +100,7 @@ The API will be available at `http://localhost:5001`.
 ### Backend Setup (SQLite)
 
 ```bash
-cd src/backend/MiniCc.Api
+cd src/server
 Database__Provider=sqlite ImageProxy__SignatureKey=your-image-proxy-secret dotnet run
 ```
 
@@ -120,49 +115,25 @@ Use SQLite for a new deployment with one API instance and local storage. SQLite 
 
 ### Frontend Setup
 
-1. Navigate to the frontend directory:
+1. Install the workspace dependencies from the repository root.
+
    ```bash
-   cd src/frontend
+   pnpm install --frozen-lockfile
    ```
 
-2. Install dependencies:
-   ```bash
-   pnpm install
-   ```
+2. Set the API URL in `src/web/.env.local` if needed.
 
-3. Update the API URL in `.env.local` if needed:
-   ```
+   ```dotenv
    NEXT_PUBLIC_API_URL=http://localhost:5001/api
    ```
 
-4. Run the development server:
-   ```bash
-   pnpm dev
-   ```
-
-The frontend will be available at `http://localhost:4000`.
+3. Run `pnpm dev` from the root and open http://localhost:4000.
 
 ### Web Extension
 
-1. Navigate to the web-extension directory:
-
-   ```bash
-   cd src/web-extension
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   pnpm install
-   ```
-
-3. Build the extension:
-
-   ```bash
-   pnpm build
-   ```
-
-4. Open `chrome://extensions/`, enable Developer mode, and load `src/web-extension/dist` as an unpacked extension. Set the API URL and an API key in the extension Settings. Reload the extension and article tabs after rebuilding.
+1. From the repository root, run `pnpm install --frozen-lockfile` if you have yet to install the workspace.
+2. Run `pnpm build:ext` from the root.
+3. Open `chrome://extensions/`, enable Developer mode, and load `src/web-extension/dist` as an unpacked extension. Set the API URL and an API key in the extension Settings. Reload the extension and article tabs after rebuilding.
 
 The extension extracts and sanitizes the current page, then sends the original HTML, readable HTML, and metadata to the API. The API stores the article and signs image URLs; it does not fetch the source page. Existing saved articles remain unchanged.
 
@@ -189,12 +160,15 @@ The extension extracts and sanitizes the current page, then sends the original H
 
 ### Backend Commands
 ```bash
-# Run the API in development mode
-dotnet run
-
-# Run tests (if any)
+# From the repository root
+dotnet build
+dotnet run --project src/server/MiniCc.Api.csproj
 dotnet test
+```
 
+For EF migrations, run these commands in `src/server`.
+
+```bash
 # Generate both migrations when changing the model
 Database__Provider=postgres dotnet ef migrations add MigrationName --context MiniCcDbContext
 dotnet ef migrations add MigrationName --context SqliteMiniCcDbContext --output-dir Migrations/Sqlite
@@ -209,44 +183,29 @@ dotnet ef database update --context SqliteMiniCcDbContext --connection "Data Sou
 The SQLite tests use temporary local database files and run without Docker.
 
 ```bash
-dotnet test test/backend/MiniCc.Api.Test --filter "FullyQualifiedName~Sqlite|FullyQualifiedName~Database"
+dotnet test test/MiniCc.Api.Test --filter "FullyQualifiedName~Sqlite|FullyQualifiedName~Database"
 ```
 
 ### Frontend Commands
+
+Run these commands from the repository root.
+
 ```bash
-# Install all dependencies
-pnpm install:all
-
-# Development server
 pnpm dev
-
-# Production build
-pnpm build
-
-# Start production server
+pnpm build:web        # Production build in src/web/.next
 pnpm start
-
-# Linting
 pnpm lint
+pnpm test
 ```
 
 ### Web Extension Commands
 
 ```bash
-# Install all dependencies
-pnpm install:all
-
-# Development server
-pnpm dev
-
-# Production build
-pnpm build
-
-# Linting
-pnpm lint
+pnpm build:ext        # Chrome extension in src/web-extension/dist
+pnpm --filter minicc-extension dev
+pnpm --filter minicc-extension lint
+pnpm --filter minicc-extension test
 ```
-
-
 
 ## Database Schema
 

@@ -6,8 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Docker (Recommended)
 ```bash
-./docker-build.sh  # Build all services
-./docker-run.sh    # Start the PostgreSQL stack (nginx:5000)
+podman compose -f docker-compose.yaml up -d --build
 ```
 
 ```bash
@@ -15,23 +14,21 @@ podman compose -f docker-compose.sqlite.yaml up -d --build
 ```
 
 ### Manual Setup
+
+Run these commands from the repository root.
+
 ```bash
-# Backend (src/backend/MiniCc.Api/)
-dotnet run                 # Start the PostgreSQL API and apply migrations
+# Start the PostgreSQL API and apply migrations
+dotnet run --project src/server/MiniCc.Api.csproj
 
-# For SQLite, start the API with a local database file
-Database__Provider=sqlite ImageProxy__SignatureKey=your-image-proxy-secret dotnet run
+# Start the API with a local SQLite file
+Database__Provider=sqlite ImageProxy__SignatureKey=your-image-proxy-secret dotnet run --project src/server/MiniCc.Api.csproj
 
-# Frontend (src/frontend/)
-pnpm install
+# Install Web, SDK, and extension dependencies
+pnpm install --frozen-lockfile
+
 pnpm dev                   # Start Next.js (http://localhost:4000)
-
-# Content Handler SDK (src/content-handler/)
-pnpm install
-
-# Web Extension (src/web-extension/)
-pnpm install
-pnpm build                 # Build extension, then load dist/ in Chrome
+pnpm build:ext             # Load src/web-extension/dist in Chrome
 ```
 
 ## Architecture Overview
@@ -45,7 +42,7 @@ pnpm build                 # Build extension, then load dist/ in Chrome
 
 ### Clean Architecture Layers
 ```
-src/backend/MiniCc.Api/Core/
+src/server/Core/
 ├── {Domain}/Application/   # CQRS handlers, DTOs
 ├── {Domain}/Domain/        # Entities, value objects
 └── {Domain}/Infrastructure/# Repositories, configurations
@@ -61,7 +58,7 @@ src/backend/MiniCc.Api/Core/
 - **Article Display**: Enhanced readability with syntax highlighting
 - **Code Blocks**: Prism.js integration with multiple language support
 - **Copy Functionality**: One-click code copying with visual feedback
-- **UI and Styling**: Arc UI primitives in `src/frontend/src/components/arc`, styled with CSS Modules and a small global reset. The Web frontend builds without Sass, Simple.css or Tailwind. Geist and Inter are bundled locally.
+- **UI and Styling**: Arc UI primitives in `src/web/src/components/arc`, styled with CSS Modules and a small global reset. The Web frontend builds without Sass, Simple.css or Tailwind. Geist and Inter are bundled locally.
 - **Theme**: Light, dark and system modes are available in the sidebar. The app stores the selection in `localStorage["app-theme"]` and applies it before first paint. The reader's system preference follows the resolved app theme.
 - **Localization**: App controls and dates use Chinese (`zh-CN`). Shared confirmation dialogs use Arc Dialog with focus restored to the opener on dismissal.
 - **Tag Management**: `/pages/tags` creates tags through an Arc Dialog (name 1–100, 10 shared colors in `lib/tag-colors.ts`, 409 shows 已有同名标签) and deletes from each card after confirmation. Each card's edit button opens the same dialog in edit mode to rename and recolor the tag. With a mouse, the card actions float over the card's end on hover instead of reserving space. Deletion and edits call `notifyLibraryMutation()` to refresh library caches and feeds. The reader and library card share an ARIA combobox with case-insensitive matching in `lib/tag-suggestions.ts`; its form opens in an Arc Popover so library cards keep their height. A new name offers 创建「X」 with a color, and the form stays open for the next tag. Selected color swatches draw a `box-shadow` ring, because `foundation.css` removes the outline from a pointer-focused button.
@@ -152,10 +149,22 @@ DELETE /api/tags/{id}             # Delete tag and its ArticleTags and FeedTags 
 ## Development Commands
 
 ### Backend
+
+Run these commands from the repository root. NuGet package versions are in `Directory.Packages.props`.
+
 ```bash
-# Build and run
-dotnet build                    # Build solution
-dotnet run                      # Start API in development
+dotnet build
+dotnet run --project src/server/MiniCc.Api.csproj
+dotnet test
+dotnet test --logger "console;verbosity=detailed"
+
+# Single test project
+dotnet test test/MiniCc.Api.Test/MiniCc.Api.Test.csproj
+```
+
+Run EF commands in `src/server`.
+
+```bash
 # Generate both migrations for model changes
 Database__Provider=postgres dotnet ef migrations add <name> --context MiniCcDbContext
 dotnet ef migrations add <name> --context SqliteMiniCcDbContext --output-dir Migrations/Sqlite
@@ -163,25 +172,17 @@ dotnet ef migrations add <name> --context SqliteMiniCcDbContext --output-dir Mig
 # Manually apply migrations if needed
 Database__Provider=postgres dotnet ef database update --context MiniCcDbContext
 dotnet ef database update --context SqliteMiniCcDbContext --connection "Data Source=/absolute/path/to/mini_cc.db"
-
-# Testing
-dotnet test                     # Run all tests
-dotnet test --logger "console;verbosity=detailed"  # Detailed test output
-
-# Single test project
-dotnet test test/backend/MiniCc.Api.Test/MiniCc.Api.Test.csproj
 ```
 
-### Frontend  
+### Frontend
+
+Run these commands from the repository root. Next.js reads local environment settings from `src/web/.env.local`.
+
 ```bash
-# Development
-pnpm install                   # Install dependencies
 pnpm dev                       # Start development server (http://localhost:4000)
 pnpm dev:debug                 # Next.js debug mode
 pnpm dev:https                 # HTTPS development
-
-# Production
-pnpm build                     # Production build
+pnpm build:web                 # Production build in src/web/.next
 pnpm start                     # Start production server
 pnpm lint                      # ESLint check
 pnpm test                      # Vitest + happy-dom component regressions
@@ -189,37 +190,32 @@ pnpm test                      # Vitest + happy-dom component regressions
 
 ### Content Handler SDK
 
-Run from `src/content-handler`. The SDK takes a `Document` and clones it before site-specific DOM handling. It preserves the original HTML and uses a caller-supplied fetch for URL hooks. Markdown extraction is synchronous.
+The SDK takes a `Document` and clones it before site-specific DOM handling. It preserves the original HTML and uses a caller-supplied fetch for URL hooks. Markdown extraction is synchronous.
 
 ```bash
-pnpm install
-pnpm test                      # jsdom extraction and URL handler tests
-pnpm typecheck
-pnpm lint
+pnpm --filter @minicc/content-handler test
+pnpm --filter @minicc/content-handler typecheck
+pnpm --filter @minicc/content-handler lint
 ```
 
 ### Web Extension
 
-The extension links to `@minicc/content-handler` through `link:../content-handler`. Run `pnpm install` in both packages. See the [extension setup](src/web-extension/README.md#installation) for the pnpm 12 install option.
+The extension links to `@minicc/content-handler` through `workspace:*`.
 
 ```bash
-pnpm install
-pnpm dev                       # Development build with watch
-pnpm build                     # Production build
-pnpm lint
-pnpm test                      # Popup, background and clipboard tests
-pnpm typecheck
+pnpm build:ext                 # Production build in src/web-extension/dist
+pnpm --filter minicc-extension dev
+pnpm --filter minicc-extension lint
+pnpm --filter minicc-extension test
+pnpm --filter minicc-extension typecheck
 ```
 
 ### Docker Development
-```bash
-# Using Podman (aliased as docker)
-./docker-build.sh              # Build all service images
-./docker-run.sh                # Start full stack with docker-compose
 
-# Manual compose
-podman compose -f ./docker-compose.yaml up -d --build
-podman compose -f ./docker-compose.yaml down
+```bash
+bash docker-build.sh           # Build the API and Web images
+podman compose -f docker-compose.yaml up -d --build
+podman compose -f docker-compose.yaml down
 ```
 
 ## Environment Setup
@@ -295,8 +291,7 @@ podman compose -f ./docker-compose.yaml down
 ### Test Structure
 ```
 test/
-├── backend/
-│   └── MiniCc.Api.Test/        # API, article persistence, image signing tests
+└── MiniCc.Api.Test/            # API, article persistence, image signing tests
 
 src/content-handler/test/       # Site fixtures and SDK regressions
 src/web-extension/test/        # Popup, background and clipboard tests
@@ -317,10 +312,10 @@ The SQLite tests run with temporary local database files and require only the .N
 dotnet test
 
 # Specific project
-dotnet test test/backend/MiniCc.Api.Test/
+dotnet test test/MiniCc.Api.Test/
 
 # SQLite and provider configuration tests, using temporary database files
-dotnet test test/backend/MiniCc.Api.Test --filter "FullyQualifiedName~Sqlite|FullyQualifiedName~Database"
+dotnet test test/MiniCc.Api.Test --filter "FullyQualifiedName~Sqlite|FullyQualifiedName~Database"
 
 # With coverage
 dotnet test --collect:"XPlat Code Coverage"
