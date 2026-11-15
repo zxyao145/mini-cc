@@ -169,7 +169,7 @@ mini-cc 现在只能使用 PostgreSQL。PostgreSQL 必须单独安装并运行�
 - `q` 对 `Title`、`Summary`、`Author`、`ReadableContent` 分别做 `LIKE '%q%' ESCAPE '\'`，四个条件用 OR 连接。转义规则沿用现有代码。这四个字段就是 PostgreSQL 的 tsvector 和标题兜底合起来覆盖的范围。
 - 大小写：英文字母不区分大小写，这是 SQLite 的默认行为；非 ASCII 字母区分大小写。不修改 `case_sensitive_like`。
 - 只做筛选，不排序，与 PostgreSQL 相同。总数统计也应用同样的条件。
-- 数据库类型怎样传给 `ArticleListFilter`（它现在是只接收 `IQueryable` 的静态方法）由实现者决定。
+- 数据层根据当前数据库提供程序构造搜索条件。文章列表处理器通过同一个入口应用搜索和其他筛选，计数和分页查询共用筛选结果。
 - **已知限制（写进文档）：**
   - `ReadableContent` 是 HTML。搜索 `div`、`class`、`href`、`img` 这类标签名或属性名，几乎会命中所有完整文章。
   - 正文里的 `&`、`<`、`>` 以实体形式存储，所以搜 `A&B` 搜不到正文里的“A&B”。
@@ -229,7 +229,7 @@ mini-cc 现在只能使用 PostgreSQL。PostgreSQL 必须单独安装并运行�
 
 ### 4.2 新增 SQLite 后端测试
 
-这部分测试不依赖 Docker。每个测试类使用临时目录下的数据库文件（不使用 `:memory:`，因为并发测试需要多个连接共用同一个文件），先运行 `DbSeeder.InitAsync`，结束后删除文件。
+这部分测试不依赖 Docker。`Sqlite` 测试集合共用临时目录里的数据库文件，可以从多个连接执行并发用例。集合夹具负责调用 `DbSeeder.InitAsync` 并在结束后清理目录。启动测试按场景另建临时路径。
 
 - **启动和迁移：**
   - 目录为空时，启动会自动创建文件、应用迁移并生成默认用户；
@@ -292,7 +292,7 @@ mini-cc 现在只能使用 PostgreSQL。PostgreSQL 必须单独安装并运行�
 ## 5. 留给实现者决定
 
 - 3.5 中数据层辅助方法的具体形式和命名，以及原生 SQL 字符串在两种数据库之间怎样复用。
-- 数据库类型怎样传给 `ArticleListFilter`。
+- 数据层搜索辅助方法的具体接口。
 - SQLite 初始迁移的名称，以及设计时工厂的写法。
 - 测试的文件组织方式，以及 SQLite 测试夹具的结构。
 - 3.7 第 3 项是否需要改写，由测试结果决定；需要改写时具体怎么改。

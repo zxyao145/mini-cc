@@ -71,7 +71,7 @@
 | Create `Core/FeedNs/Infrastructure/FeedLeases.cs` | 两种数据库的租约 SQL。 |
 | Create `Shared/Data/DatabaseErrors.cs` | 识别两种数据库的唯一约束冲突。 |
 | Modify `ArticleRepository.cs`、`ArticlePurger.cs`、`UnitOfWork.cs`、`FeedRefresher.cs`、`FeedImportService.cs`、`FeedService.cs` | 改用上述辅助方法。 |
-| Modify `ArticleListFilter.cs`、`GetArticleListQueryHandler.cs` | SQLite 的 `LIKE` 搜索。 |
+| Create `Core/ArticleNs/Infrastructure/ArticleSearch.cs`；Modify `ArticleListFilter.cs`、`GetArticleListQueryHandler.cs` | 在数据层按提供程序构造搜索条件。 |
 | Modify `ApiKeyService.cs`、`FeedService.cs:118` | 把查询里的当前时间提到查询之前计算。 |
 | Modify `TagWriter.cs` | 改用 `DatabaseErrors`。 |
 | Create `docker-compose.sqlite.yaml`；Modify `README.md`、`CLAUDE.md` | SQLite 部署和文档。 |
@@ -565,7 +565,8 @@
 ### Task 5: 搜索、查询时钟、标签冲突与列表投影
 
 **Files:**
-- Modify: `Core/ArticleNs/Application/Queries/ArticleListFilter.cs:8,19-24`、`GetArticleListQueryHandler.cs:20`
+- Create: `Core/ArticleNs/Infrastructure/ArticleSearch.cs`
+- Modify: `Core/ArticleNs/Application/Queries/ArticleListFilter.cs`、`GetArticleListQueryHandler.cs`
 - Modify: `Core/ApiKeys/Application/Services/ApiKeyService.cs:32-36`、`Core/FeedNs/Application/FeedService.cs:118`
 - Create: `Shared/Data/DatabaseErrors.cs`；Modify: `Core/TagNs/Infrastructure/TagWriter.cs:6,42-43`
 - Modify（只在 Step 5 的条件成立时）：`Core/ArticleNs/Application/DTOs/ArticleListItemDto.cs`
@@ -575,7 +576,7 @@
 - Consumes：Task 3 的 `SqliteFixture`、`SqliteApi`。
 - Produces：
   ```csharp
-  public static IQueryable<Article> Apply(IQueryable<Article> query, ArticleListRequest request, bool useLikeSearch = false); // ArticleListFilter
+  public static IQueryable<Article> Apply(MiniCcDbContext db, ArticleListRequest request); // ArticleListFilter
   namespace MiniCc.Api.Shared.Data;
   public static class DatabaseErrors
   {
@@ -637,10 +638,8 @@
 
 - [ ] **Step 3: 实现搜索和查询时钟**
 
-  - `ArticleListFilter.Apply` 增加 `useLikeSearch` 参数：
-    - 为 true 时：`EF.Functions.Like(a.Title, pattern, "\\") || Like(a.Summary, …) || Like(a.Author, …) || Like(a.ReadableContent, …)`，`pattern` 沿用现有的转义代码；
-    - 为 false 时：保留原来的表达式，一个字符都不改。
-  - `GetArticleListQueryHandler.cs:20` 传入 `db.Database.IsSqlite()`。
+  - `ArticleListFilter.Apply(db, request)` 校验请求并组合搜索和其他筛选。列表处理器调用一次，计数和分页共用返回的查询。`IQueryable` 重载用于内存筛选测试，传入非空白搜索词时显式报错。
+  - `ArticleSearch.Apply` 根据 `db.Database` 选择搜索表达式。SQLite 用 `LIKE` 搜索标题、摘要、作者和正文，沿用现有的转义代码。PostgreSQL 保留原有的全文搜索和标题兜底表达式。
   - `ApiKeyService`：在 `AnyAsync` 之前写 `var now = DateTimeOffset.UtcNow;`，条件改为 `x.ExpiredTime > now`。
   - `FeedService.cs:118`：同样先取 `var now = DateTimeOffset.UtcNow;`，再 `SetProperty(a => a.DeletedAt, now)`。
 
@@ -654,9 +653,10 @@
   Run: 同 Step 2。
 
   如果 `List_ProjectsEachFeedOnce` 或其他列表用例报 `InvalidOperationException`，并且消息提到 APPLY：
-  - 在 `ArticleListItemDto` 中新增 `ListProjection`：与 `Projection` 相同，只是 `Feeds` 去掉 `.Distinct()`；
-  - `GetArticleListQueryHandler` 改用 `ListProjection`，物化之后执行 `foreach (var item in items) item.Feeds = item.Feeds.Distinct().ToList();`；
-  - Mapster 使用的 `Projection` 保持不变。
+  - 在 `ArticleListItemDto` 中用 lambda 直接定义 `ProjectionWithAllFeedEntries`，让 `Feeds` 投影出每个订阅源条目。
+  - SQLite 和 PostgreSQL 共用此列表投影。在物化分页结果后用 `item.Feeds.Distinct().ToList()` 去重。Mapster 继续使用原有的 `Projection`。
+
+  实施时执行上述命令，`SqliteLibraryTests.List_ProjectsEachFeedOnce` 在原 `Feeds.Select(...).Distinct().ToList()` 投影下失败，报错为 `InvalidOperationException: Translating this query requires the SQL APPLY operation, which is not supported on SQLite.`。
 
   Expected：全部通过。
 
@@ -664,6 +664,8 @@
 
   Run: `dotnet test test/backend/MiniCc.Api.Test --filter "FullyQualifiedName~ArticleList|FullyQualifiedName~LibraryApiTests|FullyQualifiedName~Tag"`
   Expected：全部通过（包括 PostgreSQL 的中文搜索、`%_` 字面匹配和标签 409 测试）。
+
+  新增 `ArticleListFeedProjectionPostgresTests.List_ProjectsEachFeedOnce`。从两个订阅源写入三条指向同一篇文章的条目，断言列表只返回两个不同的订阅源及其 ID。测试数据由事务回滚清理。
 
 - [ ] **Step 7: Commit**
 
@@ -682,7 +684,7 @@
 - Modify：测试暴露出的问题所在的生产代码。
 
 **Interfaces:**
-- Consumes：`SqliteApi`、`SqliteFixture`、`LibraryApiTests.FeedHttpHandler`。
+- Consumes：`SqliteApi`、`SqliteFixture`、`FeedApiTests.FeedHttpHandler`。
 
 各请求的格式，照抄 `LibraryApiTests`、`FeedApiTests`、`LinkApiTests`、`TagApiTests`、`ReaderPreferencesPostgresTests` 中对应的写法。
 
@@ -697,7 +699,7 @@
       - 会话 B 以这个字符串作为 `baseUpdatedAt` 保存，返回 **200**；
       - 会话 C 以 `null` 作为 base 保存，返回 **409**；
       - 重置进度，返回 200；
-    - 创建高亮，返回 201；
+    - 创建高亮，返回 200；
     - 用不同的正文重新保存这篇文章：高亮变为 Pending；`PUT /api/highlights/{id}/anchor` 写入新的偏移量，带上新的 `contentRevision`，返回成功（写法照抄 `FeedApiTests` 中更新锚点的部分）；
     - 移入回收站（204），再恢复（200）；
     - 批量 `addTags`、`removeTags`；
@@ -782,8 +784,8 @@
 
 - [ ] **Step 3: 确认重启后数据仍在**
 
-  Run: `podman compose -f docker-compose.sqlite.yaml down && podman compose -f docker-compose.sqlite.yaml up -d`，然后重新登录，重复 Step 2 中的搜索请求。
-  Expected：`"total":1`。
+  记录 Step 2 搜索返回的文章 ID。执行 `podman compose -f docker-compose.sqlite.yaml down && podman compose -f docker-compose.sqlite.yaml up -d`，然后重新登录并重复搜索。
+  Expected：`"total":1`，文章 ID 与重建前一致。
 
 - [ ] **Step 4: 运行 Playwright**
 
@@ -861,6 +863,18 @@ podman --connection podman-machine-default-root image inspect localhost/minicc-a
   --format '{{.ID}} {{index .Labels "org.opencontainers.image.revision"}}'
 ```
 
-复核中将标签解除、恢复竞态、脚本权限与换行及 C# 14 状态筛选修复放进独立提交。两个测试提交分别按 .NET 10 的实际 HTTP 401 更新认证断言，以及等待桌面目录抽屉完成入场后再检查位置。高亮创建冒烟使用现有的 HTTP 200 契约。
+标签解除（`cafd657`）、恢复竞态（`c40b837`）和 C# 14 状态筛选（`6869e56`）是两种数据库共用的独立修复。脚本权限与换行在 `9e2e4ba` 单独处理。Playwright 的 `a810b4f` 等待桌面目录抽屉完成入场后再检查位置。
+
+设计 §4.1 保留原来的测试改动限制。当前分支还有三项与该条款有关的差异。独立提交 `8011269` 按 .NET 10 的实际 HTTP 401 更新了未登录断言。SQLite HTTP 冒烟将现有 `FeedHttpHandler` 的可见性改为 `internal` 以便复用。标签解除和恢复竞态的独立修复增加了各自的 PostgreSQL 回归用例。[ASP.NET Core 兼容性文档](https://learn.microsoft.com/en-us/aspnet/core/breaking-changes/10/cookie-authentication-api-endpoints?view=aspnetcore-10.0)
+
+SQLite 夹具和 HTTP 工厂独立配置临时文件及服务，PostgreSQL 测试沿用已有夹具和种子方法。设计时工厂在 API 项目里配置 AES，以便 `dotnet ef` 创建上下文。列表查询和 Mapster 分别声明投影，SQL 分页完成后才对列表的订阅源去重。
+
+`FeedRefresher.ClaimDueAsync` 为刷新循环和并发测试提供共同入口，租约 SQL 由 `FeedLeases` 构造。`FromSqlForUpdate` 从 `DbSet` 所属的上下文读取提供程序。列表的两个日期索引先在共享模型中注册，再为同一索引配置 PostgreSQL 的空值顺序。
+
+搜索和投影调整后，在 `e4c9a8e` 的工作区重新运行后端全量测试（456/456）、SQLite 和 Database 筛选（43/43）及 Vitest（176/176）。两个 EF 上下文均无待处理的模型变更。通过临时 Compose 覆盖端口在 `localhost:15000` 重建 SQLite 容器，前后都查到文章 `01a1ddeb-0aec-702b-81cc-166367f9a51c`，数据库文件归属 `1654:1654`。同一部署上的 Playwright 为 30/30，所用 API 镜像为 `localhost/minicc-api:sqlite-search-review-compose`（`c73faeaeadd4`）。
+
+合并查询入口并新增两个回归用例后，后端全量 458/458、Vitest 176/176，两个 EF 上下文均无待处理的模型变更。
+
+默认端口复验使用原始 `docker-compose.sqlite.yaml` 的 `5000:80` 映射。在 Podman Linux 虚拟机里访问 `http://localhost:5000`，登录和前端页面均返回 200，保存返回 201，数据库文件归属 `1654:1654`。保留卷重建容器后，搜索返回同一文章 ID `01a1de0a-56dd-7576-a656-dc2ea567536d`。Playwright 首轮 29/30，失败的请求收到 nginx 502。同一部署复跑三个 spec，桌面和移动共 30/30。所用 API 镜像为 `localhost/minicc-api:sqlite-default-port-review`（`25b84a7d91fc`）。
 
 EF Core SQLite 9.0.7 的传递依赖 `SQLitePCLRaw.lib.e_sqlite3` 2.1.10 仍触发 `NU1903`。[安全公告](https://github.com/advisories/GHSA-2m69-gcr7-jv3q)
