@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using MiniCc.Api.Core.ArticleNs.Application.DTOs;
 using MiniCc.Api.Shared;
 using MiniCc.Api.Shared.Data.Repositories;
@@ -14,7 +15,16 @@ public class RestoreArticleCommandHandler(IUnitOfWork unitOfWork, IMapper mapper
         if (article == null) return Result<ArticleListItemDto>.Failure("article not found");
 
         article.Restore();
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // The article was permanently deleted after it was loaded.
+            return Result<ArticleListItemDto>.Failure("article not found");
+        }
+
         return Result<ArticleListItemDto>.Success(mapper.Map<ArticleListItemDto>(article));
     }
 }
