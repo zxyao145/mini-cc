@@ -1,11 +1,20 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
+using MiniCc.Api.Core.ArticleNs.Infrastructure;
+using MiniCc.Api.Shared.Data;
 
 namespace MiniCc.Api.Core.ArticleNs.Application.Queries;
 
 public static class ArticleListFilter
 {
-    public static IQueryable<Article> Apply(IQueryable<Article> query, ArticleListRequest request, bool useLikeSearch = false)
+    public static IQueryable<Article> Apply(MiniCcDbContext db, ArticleListRequest request) =>
+        Apply(db.Articles.AsNoTracking(), request, db.Database);
+
+    public static IQueryable<Article> Apply(IQueryable<Article> query, ArticleListRequest request) =>
+        Apply(query, request, null);
+
+    private static IQueryable<Article> Apply(IQueryable<Article> query, ArticleListRequest request, DatabaseFacade? database)
     {
         request.Validate();
         query = request.View switch
@@ -18,15 +27,8 @@ public static class ArticleListFilter
         };
         if (!string.IsNullOrWhiteSpace(request.Q))
         {
-            var text = request.Q.Trim();
-            var pattern = "%" + text.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
-            if (useLikeSearch)
-                query = query.Where(a => EF.Functions.Like(a.Title, pattern, "\\")
-                    || EF.Functions.Like(a.Summary, pattern, "\\")
-                    || EF.Functions.Like(a.Author, pattern, "\\")
-                    || EF.Functions.Like(a.ReadableContent, pattern, "\\"));
-            else
-                query = query.Where(a => a.SearchVector.Matches(EF.Functions.PlainToTsQuery("mixed_zh_en", text)) || EF.Functions.ILike(a.Title, pattern, "\\"));
+            var searchDatabase = database ?? throw new ArgumentException("Article search requires a database context.", nameof(query));
+            query = ArticleSearch.Apply(query, searchDatabase, request.Q);
         }
         var statuses = request.Statuses;
         // C# 14 can bind array.Contains to the span overload, which EF Core 9 cannot evaluate in this expression.

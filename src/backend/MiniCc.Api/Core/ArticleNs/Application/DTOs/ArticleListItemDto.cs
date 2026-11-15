@@ -39,20 +39,18 @@ public class ArticleListItemDto
         HighlightCount = a.Highlights.Count()
     };
 
-    internal static readonly Expression<Func<Article, ArticleListItemDto>> ListProjection = CreateListProjection();
-
-    private static Expression<Func<Article, ArticleListItemDto>> CreateListProjection()
+    // Deduplicate the feeds after materialization so SQLite can translate the projection.
+    internal static readonly Expression<Func<Article, ArticleListItemDto>> ProjectionWithAllFeedEntries = a => new ArticleListItemDto
     {
-        // SQL list queries deduplicate feeds after reading the page to avoid APPLY.
-        var initializer = (MemberInitExpression)Projection.Body;
-        var feeds = (MemberAssignment)initializer.Bindings.Single(binding => binding.Member.Name == nameof(Feeds));
-        var toList = (MethodCallExpression)feeds.Expression;
-        var distinct = (MethodCallExpression)toList.Arguments[0];
-        var allFeeds = Expression.Bind(feeds.Member, toList.Update(toList.Object, distinct.Arguments));
-        var bindings = initializer.Bindings.Select(binding => binding == feeds ? allFeeds : binding);
-
-        return Projection.Update(initializer.Update(initializer.NewExpression, bindings), Projection.Parameters);
-    }
+        Id = a.Id, Url = a.Url.Value, Title = a.Title, Author = a.Author, Summary = a.Summary,
+        ImageUrl = a.ImageUrl, CreatedAt = a.CreatedAt, PublishedAt = a.PublishedAt, ReadAt = a.ReadAt,
+        LastReadAt = a.LastReadAt, DeletedAt = a.DeletedAt, ReadingStatus = a.ReadingStatus,
+        ProgressPercent = a.ProgressPercent, IsFavorite = a.IsFavorite, IsArchived = a.IsArchived,
+        ContentKind = a.ContentKind, SavedFromExtension = a.SavedFromExtensionAt != null,
+        Tags = a.Tags.Select(t => new TagDto { Id = t.Id, Name = t.Name, Color = t.Color.Value, CreatedAt = t.CreatedAt }).ToList(),
+        Feeds = a.FeedEntries.Select(e => new ArticleFeedDto(e.Feed.Id, e.Feed.Title)).ToList(),
+        HighlightCount = a.Highlights.Count()
+    };
 }
 
 public record ArticleFeedDto(Guid Id, string Title);
