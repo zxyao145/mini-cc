@@ -504,7 +504,7 @@ public partial class LibraryApiTests(PostgresFixture fixture)
         using var factory = CreateFactory();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
         const string path = "/api/account/reader-preferences";
-        (await client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Redirect);
+        (await client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         var login = await client.PostAsync("/api/account/login", new FormUrlEncodedContent(new Dictionary<string,string>
             { ["userName"]="mini_cc", ["password"]="mini_cc_password", ["rememberMe"]="false" }));
         login.StatusCode.Should().Be(HttpStatusCode.OK);
