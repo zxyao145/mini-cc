@@ -266,7 +266,7 @@ podman compose -f docker-compose.yaml down
 ### API Layer
 - **Controllers**: RESTful endpoints with attribute routing
 - **Authentication**: Dual authentication schemes
-- **Documentation**: OpenAPI/Swagger and Scalar UI
+- **Documentation**: OpenAPI and Scalar UI
 
 ### RSS / Atom Subscriptions (P5)
 - Apply `M3_Feeds`: Feeds, FeedEntries, FeedTags, Highlights.AnchorStatus, and Article.Url/ImageUrl text storage. Full canonical feed URLs and entry keys remain text; persisted C# SHA-256 keys provide unique indexes (`FeedUrlHash`, `FeedId + EntryKeyHash`) without PostgreSQL B-tree key-width failures. Every hash match checks the full identity. API article URL inputs remain limited to 2000; feed inputs follow http/https validation and accept canonical preview URLs.

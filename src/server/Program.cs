@@ -37,7 +37,6 @@ builder.Services.AddControllers()
 
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -85,8 +84,6 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
-    app.UseSwagger();
-    app.UseSwaggerUI();
 }
 
 app.UseSerilogRequestLogging();
