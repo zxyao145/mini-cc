@@ -11,7 +11,7 @@ public class TagColor : ValueObject
         Value = value;
     }
 
-    public static TagColor Create(string color)
+    public static TagColor Create(string? color)
     {
         if (string.IsNullOrWhiteSpace(color))
             return Default;
@@ -24,13 +24,8 @@ public class TagColor : ValueObject
 
     public static TagColor Default = new("#3B82F6");
 
-    private static bool IsValidHexColor(string color)
-    {
-        if (!color.StartsWith("#") || color.Length != 7)
-            return false;
-
-        return color[1..].All(c => char.IsDigit(c) || c >= 'A' && c <= 'F' || c >= 'a' && c <= 'f');
-    }
+    public static bool IsValidHexColor(string? color) =>
+        color is { Length: 7 } && color[0] == '#' && color[1..].All(char.IsAsciiHexDigit);
 
     protected override IEnumerable<object> GetEqualityComponents()
     {

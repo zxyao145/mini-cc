@@ -40,3 +40,23 @@ it('opens mobile sources in a portal, restores focus, and closes on desktop resi
     vi.restoreAllMocks();
   }
 });
+
+it('shows navigation tooltips only while labels are hidden', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  const focusInbox = () => act(async () => host.querySelector<HTMLElement>('a[aria-label="收件箱"]')!.focus());
+  const tooltip = () => document.body.querySelector('[role="tooltip"]');
+  try {
+    await act(async () => root.render(<Sidebar isOpen />));
+    await focusInbox();
+    expect(tooltip()).toBeNull();
+    await act(async () => root.render(<Sidebar isOpen={false} />));
+    await focusInbox();
+    expect(tooltip()?.textContent).toContain('收件箱');
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
+});

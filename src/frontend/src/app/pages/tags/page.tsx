@@ -1,12 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { TagWithArticleCount } from "@/types";
 import { tagApi } from "@/lib/api";
-import { Search, Tag as TagIcon } from "lucide-react";
+import { Pencil, Plus, Search, Tag as TagIcon, Trash2 } from "lucide-react";
 import { Button } from "@/components/arc/button/button";
 import { Input } from "@/components/arc/input/input";
+import { useConfirm } from "@/contexts/ConfirmContext";
+import { useToast } from "@/contexts/ToastContext";
+import { notifyLibraryMutation } from "@/lib/library-mutations";
+import TagDialog from "./TagDialog";
 import styles from "./tags.module.css";
 
 interface TagGroup {
@@ -19,31 +23,56 @@ export default function TagsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [deletingIds, setDeletingIds] = useState<ReadonlySet<string>>(new Set());
+  const [editingTag, setEditingTag] = useState<TagWithArticleCount | null>(null);
+  const editButtons = useRef(new Map<string, HTMLButtonElement>());
+  const refocusTagId = useRef<string | null>(null);
+  const deletedIds = useRef(new Set<string>());
+  const searchVersion = useRef(0);
+  const confirm = useConfirm();
+  const toast = useToast();
 
-  useEffect(() => {
-    loadTags();
+  const replaceTags = useCallback((next: TagWithArticleCount[]) => {
+    setTags(next.filter(tag => !deletedIds.current.has(tag.id)));
   }, []);
 
-  const loadTags = async () => {
+  const loadTags = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const tagsData = await tagApi.getTags();
-      setTags(tagsData);
+      replaceTags(tagsData);
     } catch (err) {
       console.error("Error loading tags:", err);
       setError("加载标签失败");
     } finally {
       setLoading(false);
     }
-  };
+  }, [replaceTags]);
+
+  useEffect(() => {
+    void loadTags();
+  }, [loadTags]);
+
+  // A rename can move the card into another letter group, which replaces the button the dialog would refocus.
+  useEffect(() => {
+    const id = refocusTagId.current;
+    if (!id) return;
+    refocusTagId.current = null;
+    editButtons.current.get(id)?.focus();
+  }, [tags]);
 
   const searchTags = async (searchTerm: string) => {
+    const version = ++searchVersion.current;
     try {
       setError(null);
       const tagsData = await tagApi.getTags(searchTerm || undefined);
-      setTags(tagsData);
+      if (version === searchVersion.current) {
+        replaceTags(tagsData);
+      }
     } catch (err) {
+      if (version !== searchVersion.current) return;
       console.error("Error searching tags:", err);
       setError("搜索标签失败");
     }
@@ -59,7 +88,43 @@ export default function TagsPage() {
     return () => clearTimeout(timeoutId);
   };
 
-  const filteredTags = tags.filter(tag => 
+  const handleCreated = (tag: TagWithArticleCount) => {
+    setDialogOpen(false);
+    toast.show(`已创建「${tag.name}」`);
+    void searchTags(searchTerm);
+  };
+
+  const handleEdited = (tag: TagWithArticleCount) => {
+    setEditingTag(null);
+    refocusTagId.current = tag.id;
+    setTags(current => current.map(item => item.id === tag.id ? tag : item));
+    notifyLibraryMutation();
+    void searchTags(searchTerm);
+  };
+
+  const handleDelete = async (tag: TagWithArticleCount) => {
+    const message = `删除「${tag.name}」标签？`;
+    const detail = tag.articleCount > 0 ? `它会从 ${tag.articleCount} 篇文章中移除，文章本身不受影响。` : "";
+    if (!await confirm(`${message}${detail}`, { title: "删除标签", confirmLabel: "删除标签" })) return;
+
+    setDeletingIds(ids => new Set(ids).add(tag.id));
+    try {
+      await tagApi.deleteTag(tag.id);
+      deletedIds.current.add(tag.id);
+      setTags(current => current.filter(item => item.id !== tag.id));
+      notifyLibraryMutation();
+    } catch {
+      toast.show("标签删除失败，请重试。");
+    } finally {
+      setDeletingIds(ids => {
+        const remaining = new Set(ids);
+        remaining.delete(tag.id);
+        return remaining;
+      });
+    }
+  };
+
+  const filteredTags = tags.filter(tag =>
     tag.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -114,13 +179,19 @@ export default function TagsPage() {
           className={styles.searchInput}
           wrapperClassName={styles.searchField}
         />
+        <Button onClick={() => setDialogOpen(true)}>
+          <Plus size={16} aria-hidden="true" />新建标签
+        </Button>
       </div>
+
+      {dialogOpen && <TagDialog onClose={() => setDialogOpen(false)} onSaved={handleCreated} />}
+      {editingTag && <TagDialog tag={editingTag} onClose={() => setEditingTag(null)} onSaved={handleEdited} />}
 
       <div className={styles.main}>
         {filteredTags.length === 0 ? (
           <section className={styles.empty}>
             <h2>{searchTerm ? '没有找到标签' : '还没有标签'}</h2>
-            <p>{searchTerm ? '试试其他关键词。' : '给文章添加标签后，它们会显示在这里。'}</p>
+            <p>{searchTerm ? '试试其他关键词。' : '点击「新建标签」先建好标签，也可以在阅读文章时添加。'}</p>
           </section>
         ) : (
           <div className={styles.tagGroups}>
@@ -129,13 +200,40 @@ export default function TagsPage() {
                 <h2 className={styles.groupLetter}>{group.letter}</h2>
                 <div className={styles.tagsGrid}>
                   {group.tags.map(tag => (
-                    <Link key={tag.id} href={`/pages/tags/${tag.id}`} className={styles.tagCard}>
-                      <span className={styles.tagColor} style={{ backgroundColor: tag.color }} aria-hidden="true" />
-                      <span className={styles.tagInfo}>
-                        <span className={styles.tagName}>{tag.name}</span>
-                        <span className={styles.articleCount}>{tag.articleCount} 篇</span>
-                      </span>
-                    </Link>
+                    <div key={tag.id} className={styles.tagCard}>
+                      <Link href={`/pages/tags/${tag.id}`} className={styles.tagLink}>
+                        <span className={styles.tagColor} style={{ backgroundColor: tag.color }} aria-hidden="true" />
+                        <span className={styles.tagInfo}>
+                          <span className={styles.tagName}>{tag.name}</span>
+                          <span className={styles.articleCount}>{tag.articleCount} 篇</span>
+                        </span>
+                      </Link>
+                      <div className={styles.cardActions}>
+                        <Button
+                          ref={node => {
+                            if (node) editButtons.current.set(tag.id, node);
+                            else editButtons.current.delete(tag.id);
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          iconOnly
+                          aria-label={`编辑标签「${tag.name}」`}
+                          onClick={() => setEditingTag(tag)}
+                        >
+                          <Pencil size={15} aria-hidden="true" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          iconOnly
+                          aria-label={`删除标签「${tag.name}」`}
+                          disabled={deletingIds.has(tag.id)}
+                          onClick={() => void handleDelete(tag)}
+                        >
+                          <Trash2 size={15} aria-hidden="true" />
+                        </Button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </section>

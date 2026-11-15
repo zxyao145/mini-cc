@@ -45,21 +45,51 @@
 
 .addBtn:hover { color: var(--foreground); background: var(--surface-muted); }
 
-.addForm {
-  display: grid;
-  gap: var(--space-4);
-  max-width: 460px;
-  margin-top: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-panel);
-  background: var(--surface);
-  box-shadow: var(--shadow-resting);
+/* The form floats over the card, so opening it never changes the card's height. */
+.addPanel {
+  width: 20rem;
+  max-height: var(--radix-popover-content-available-height);
+  overflow: auto;
 }
 
-.inputGroup { display: grid; gap: var(--space-3); }
+.addForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
 .tagInputField { min-width: 0; }
 .tagInputField input { min-height: var(--control-height-md); }
+
+.listbox {
+  max-width: 100%;
+  max-height: 240px;
+  overflow: auto;
+  margin: var(--space-1) 0 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 8px;
+  border-radius: var(--radius-control);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.option > span { min-width: 0; }
+.option[aria-selected="true"], .option:hover { background: var(--surface-muted); }
+.option[aria-disabled="true"] { cursor: default; opacity: .55; }
+.createOption { color: var(--accent-strong); font-weight: 600; }
+.listStatus { padding: 6px 8px; color: var(--text-muted); }
 
 .colorPicker {
   display: flex;
@@ -85,12 +115,7 @@
   height: var(--space-6);
   min-height: var(--space-6);
   padding: 0;
-  border: 2px solid var(--surface);
-  border-radius: var(--radius-pill);
-  box-shadow: 0 0 0 1px var(--border);
 }
-
-.colorOption.selected { outline: 2px solid var(--foreground); outline-offset: 2px; }
 
 .customColorLabel {
   display: inline-flex;
@@ -113,7 +138,7 @@
 .saveBtn, .cancelBtn { min-height: var(--control-height-md); }
 
 @media (pointer: coarse), (max-width: 600px) {
-  .addBtn { min-height: 44px; }
+  .addBtn, .option { min-height: 44px; }
   .colorOption { width: 44px; min-width: 44px; height: 44px; min-height: 44px; }
   .customColor { width: 44px; height: 44px; }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Archive, ArchiveRestore, BookOpen, CheckCheck, Chrome, FileText, Rss, RotateCcw, Heart, Highlighter, LoaderCircle, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowRight, BookOpen, CheckCheck, Chrome, FileText, Rss, RotateCcw, Heart, Highlighter, LoaderCircle, Trash2 } from "lucide-react";
 import { Article, ArticleListItem, Tag } from "@/types";
 import { useToast } from "@/contexts/ToastContext";
 import { trashArticleConfirmation, useConfirm } from "@/contexts/ConfirmContext";
@@ -147,9 +147,12 @@ export default function ArticleCard({ article, onDelete, onUpdate, layout = "gri
               <Tooltip content={archiveLabel}><Button variant="ghost" size="sm" iconOnly aria-label={archiveLabel} aria-pressed={currentArticle.isArchived} disabled={pendingAction !== null} onClick={() => handleToggle("archive")} className={`${styles.actionBtn} ${currentArticle.isArchived ? styles.archived : ""}`}>
                 {pendingAction === "archive" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : currentArticle.isArchived ? <ArchiveRestore size={17} strokeWidth={1.7} aria-hidden="true" /> : <Archive size={17} strokeWidth={1.7} aria-hidden="true" />}
               </Button></Tooltip>
-              <Tooltip content="删除文章"><Button variant="danger" size="sm" iconOnly aria-label="删除文章" disabled={pendingAction !== null} onClick={handleDelete} className={`${styles.actionBtn} ${styles.deleteBtn}`}>
+              <Tooltip content="删除文章"><Button variant="ghost" size="sm" iconOnly aria-label="删除文章" disabled={pendingAction !== null} onClick={handleDelete} className={`${styles.actionBtn} ${styles.deleteBtn}`}>
                 {pendingAction === "delete" ? <LoaderCircle size={17} className={styles.spinning} aria-hidden="true" /> : <Trash2 size={17} strokeWidth={1.7} aria-hidden="true" />}
               </Button></Tooltip>
+              <Tooltip content="阅读文章"><Link href={`/pages/article/${currentArticle.id}`} scroll={false} aria-label="阅读文章" className={`${styles.actionBtn} ${styles.readLink}`}>
+                <ArrowRight size={17} strokeWidth={1.7} aria-hidden="true" />
+              </Link></Tooltip>
             </>}
           </div>
         </div>

@@ -38,6 +38,7 @@ public class TagColorTests
     [InlineData("#GG5733")]       // Invalid hex character
     [InlineData("#ff57zz")]       // Invalid hex character
     [InlineData("not-a-color")]   // Not a color format
+    [InlineData("#١٢٣ABC")]       // Non-ASCII digits
     public void Create_WithInvalidHexColor_ShouldThrowArgumentException(string invalidColor)
     {
         // Act & Assert
