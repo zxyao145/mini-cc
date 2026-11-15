@@ -7,9 +7,9 @@
     <File Path="init-db.sql" />
   </Folder>
   <Folder Name="/src/">
-    <Project Path="src/backend/MiniCc.Api/MiniCc.Api.csproj" />
+    <Project Path="src/server/MiniCc.Api.csproj" />
   </Folder>
   <Folder Name="/test/">
-    <Project Path="test/backend/MiniCc.Api.Test/MiniCc.Api.Test.csproj" Id="1536c2e9-fb9f-4433-8073-b66c77491b2e" />
+    <Project Path="test/MiniCc.Api.Test/MiniCc.Api.Test.csproj" Id="1536c2e9-fb9f-4433-8073-b66c77491b2e" />
   </Folder>
 </Solution>

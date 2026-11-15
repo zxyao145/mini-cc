@@ -25,6 +25,6 @@
     "vite-plugin-web-extension": "^4.4.4"
   },
   "dependencies": {
-    "@minicc/content-handler": "link:../content-handler"
+    "@minicc/content-handler": "workspace:*"
   }
 }

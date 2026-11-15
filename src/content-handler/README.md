@@ -1,6 +1,6 @@
 # MiniCC content handler
 
-`@minicc/content-handler` extracts article and link data from a `Document` and applies site-specific metadata. The extension consumes the package's TypeScript sources directly through a local `link:` dependency.
+`@minicc/content-handler` extracts article and link data from a `Document` and applies site-specific metadata. The extension consumes the package's TypeScript sources directly through a `workspace:*` dependency.
 
 ## Public API
 
@@ -17,14 +17,11 @@ DOM extraction works on a clone and preserves the original document. The SDK ope
 
 ## Development
 
-Run these commands in this directory. Install the extension's dependencies separately in `src/web-extension`.
+Run these commands from the repository root.
 
 ```sh
-pnpm install
-pnpm test
-pnpm typecheck
-pnpm lint
+pnpm install --frozen-lockfile
+pnpm --filter @minicc/content-handler test
+pnpm --filter @minicc/content-handler typecheck
+pnpm --filter @minicc/content-handler lint
 ```
-
-If pnpm 12 reports `ERR_PNPM_IGNORED_BUILDS`, run the install with
-`PNPM_CONFIG_STRICT_DEP_BUILDS=false pnpm install --ignore-scripts`. The same command works for the extension.

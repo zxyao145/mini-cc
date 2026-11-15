@@ -1,11 +1,10 @@
-#! /bin/bash
+#!/bin/bash
+set -e
 
-alias docker=podman
-# pwsh
-# Set-Alias docker podman
+container_engine=docker
+if ! command -v docker >/dev/null 2>&1; then
+    container_engine=podman
+fi
 
-# backend
-docker build -f ./src/backend/MiniCc.Api/Dockerfile  -t minicc-api:latest .
-
-# frontend
-docker build -f ./src/frontend/Dockerfile -t minicc-web:latest ./src/frontend/
+"$container_engine" build -f ./src/server/Dockerfile -t minicc-api:latest .
+"$container_engine" build -f ./src/web/Dockerfile -t minicc-web:latest .

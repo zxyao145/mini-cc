@@ -616,4 +616,4 @@ sketch
 /src/web-extension/dist
 /.superpowers/
 .idea/
-/src/backend/MiniCc.Api/data/
+/src/server/data/

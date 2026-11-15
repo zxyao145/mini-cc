@@ -1,0 +1,14 @@
+packages:
+  - src/content-handler
+  - src/web-extension
+
+publicHoistPattern:
+  - '@next/eslint-plugin-next'
+  - eslint-plugin-react-hooks
+
+allowBuilds:
+  '@parcel/watcher': false
+  esbuild: true
+  sharp: false
+  spawn-sync: false
+  unrs-resolver: false
