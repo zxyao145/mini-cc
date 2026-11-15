@@ -58,6 +58,7 @@ src/backend/MiniCc.Api/Core/
 - **UI and Styling**: Arc UI primitives in `src/frontend/src/components/arc`, styled with CSS Modules and a small global reset. The Web frontend builds without Sass, Simple.css or Tailwind. Geist and Inter are bundled locally.
 - **Theme**: Light, dark and system modes are available in the sidebar. The app stores the selection in `localStorage["app-theme"]` and applies it before first paint. The reader's system preference follows the resolved app theme.
 - **Localization**: App controls and dates use Chinese (`zh-CN`). Shared confirmation dialogs use Arc Dialog with focus restored to the opener on dismissal.
+- **Tag Management**: `/pages/tags` creates tags through an Arc Dialog (name 1–100, 10 shared colors in `lib/tag-colors.ts`, 409 shows 已有同名标签) and deletes from each card after confirmation. Each card's edit button opens the same dialog in edit mode to rename and recolor the tag. With a mouse, the card actions float over the card's end on hover instead of reserving space. Deletion and edits call `notifyLibraryMutation()` to refresh library caches and feeds. The reader and library card share an ARIA combobox with case-insensitive matching in `lib/tag-suggestions.ts`; its form opens in an Arc Popover so library cards keep their height. A new name offers 创建「X」 with a color, and the form stays open for the next tag. Selected color swatches draw a `box-shadow` ring, because `foundation.css` removes the outline from a pointer-focused button.
 - **Performance**: Lazy loading and tree shaking optimization
 
 ### Core Entities
@@ -87,6 +88,10 @@ PUT    /api/account/reader-preferences # Replace all five validated preference f
 POST   /api/articles/{id}/tags    # Add tag
 DELETE /api/articles/{id}/tags    # Remove tag
 POST   /api/articles/{id}/highlights  # Add highlight
+GET    /api/tags                  # Tags with article counts (?search=)
+POST   /api/tags                  # Create tag { name, color? }: 201 | 409 { existingTagId } | 400 { error }
+PUT    /api/tags/{id}             # Edit tag { name, color }: 204 | 404 | 409 { existingTagId } | 400 { error }
+DELETE /api/tags/{id}             # Delete tag and its ArticleTags and FeedTags associations
 ```
 
 ### Library State (P0)

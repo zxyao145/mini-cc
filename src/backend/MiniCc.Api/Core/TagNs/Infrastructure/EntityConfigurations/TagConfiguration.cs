@@ -7,6 +7,8 @@ namespace MiniCc.Api.Core.TagNs.Infrastructure.EntityConfigurations;
 
 public class TagConfiguration : IEntityTypeConfiguration<Tag>
 {
+    internal const string NameIndex = "IX_Tags_Name";
+
     public void Configure(EntityTypeBuilder<Tag> builder)
     {
         builder.HasKey(t => t.Id);
@@ -16,6 +18,7 @@ public class TagConfiguration : IEntityTypeConfiguration<Tag>
             .IsRequired();
 
         builder.HasIndex(t => t.Name)
+            .HasDatabaseName(NameIndex)
             .IsUnique();
 
         builder.OwnsOne(t => t.Color, color =>

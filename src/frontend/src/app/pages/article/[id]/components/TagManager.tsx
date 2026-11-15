@@ -1,12 +1,16 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/arc/button/button";
 import { Input } from "@/components/arc/input/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/arc/popover/popover";
 import { Tooltip } from "@/components/arc/tooltip/tooltip";
-import { Tag, AddTagRequest } from "@/types";
-import { articleApi } from "@/lib/api";
+import { TagColorOptions } from "@/app/components/TagColorOptions";
+import type { Tag } from "@/types";
+import { articleApi, tagApi } from "@/lib/api";
+import { DEFAULT_TAG_COLOR } from "@/lib/tag-colors";
+import { tagSuggestions } from "@/lib/tag-suggestions";
 import { useToast } from "@/contexts/ToastContext";
 import styles from "./TagManager.module.css";
 
@@ -24,59 +28,113 @@ export default function TagManager({
   compact = false,
 }: TagManagerProps) {
   const tagInputId = useId();
+  const listId = `${tagInputId}-options`;
+  const tagInput = useRef<HTMLInputElement>(null);
+  const adding = useRef(false);
   const toast = useToast();
-  const [newTagName, setNewTagName] = useState("");
-  const [newTagColor, setNewTagColor] = useState("#3b82f6");
+  const [query, setQuery] = useState("");
+  const [color, setColor] = useState(DEFAULT_TAG_COLOR);
   const [isAdding, setIsAdding] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [activeIndex, setActiveIndex] = useState(-1);
 
-  const handleAddTag = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTagName.trim()) return;
+  const suggestions = tagSuggestions(allTags, tags, query);
+  const { attachedMatch, exact } = suggestions;
+  const createOption = loadState !== "loading" && suggestions.canCreate
+    ? { id: null, name: query.trim(), color }
+    : null;
+  const options = createOption ? [...suggestions.options, createOption] : suggestions.options;
+  const activeOptionId = options[activeIndex] ? `${listId}-${activeIndex}` : undefined;
+  const defaultOption = attachedMatch ? null : exact ?? createOption;
 
+  useEffect(() => {
+    if (!showAddForm) return;
+
+    let active = true;
+    void tagApi.getTags().then(result => {
+      if (!active) return;
+      setAllTags(result);
+      setLoadState("ready");
+    }).catch(() => {
+      if (active) setLoadState("error");
+    });
+    return () => { active = false; };
+  }, [showAddForm]);
+
+  useEffect(() => {
+    if (showAddForm && !isAdding) tagInput.current?.focus({ preventScroll: true });
+  }, [showAddForm, isAdding]);
+
+  useEffect(() => {
+    if (activeOptionId) {
+      document.getElementById(activeOptionId)?.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeOptionId]);
+
+  function openForm() {
+    setAllTags([]);
+    setLoadState("loading");
+    setShowAddForm(true);
+  }
+
+  function resetForm() {
+    setQuery("");
+    setColor(DEFAULT_TAG_COLOR);
+    setActiveIndex(-1);
+  }
+
+  function closeForm() {
+    if (adding.current) return;
+    resetForm();
+    setShowAddForm(false);
+  }
+
+  async function add(option: Pick<Tag, "name" | "color"> | null) {
+    if (!option || adding.current || loadState === "loading") return;
+    const { name, color: tagColor } = option;
+    adding.current = true;
     setIsAdding(true);
     try {
-      const tagRequest: AddTagRequest = {
-        name: newTagName.trim(),
-        color: newTagColor,
-      };
-
-      const newTag = await articleApi.addTag(articleId, tagRequest);
-      onTagsChange([...tags, newTag]);
-
-      setNewTagName("");
-      setNewTagColor("#3b82f6");
-      setShowAddForm(false);
+      const addedTag = await articleApi.addTag(articleId, { name, color: tagColor });
+      onTagsChange([...tags, addedTag]);
+      setAllTags(current => current.some(tag => tag.id === addedTag.id) ? current : [...current, addedTag]);
+      resetForm();
     } catch (error) {
       console.error("Failed to add tag:", error);
       toast.show("添加标签失败，请重试");
     } finally {
+      adding.current = false;
       setIsAdding(false);
     }
-  };
+  }
+
+  function handleInputKey(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing) return;
+
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void add(options[activeIndex] ?? defaultOption);
+    } else if ((event.key === "ArrowDown" || event.key === "ArrowUp") && options.length > 0) {
+      event.preventDefault();
+      const last = options.length - 1;
+      setActiveIndex(index => event.key === "ArrowDown"
+        ? Math.min(index + 1, last)
+        : index < 0 ? last : Math.max(index - 1, 0));
+    }
+  }
 
   const handleRemoveTag = async (tagId: string) => {
     try {
       await articleApi.removeTag(articleId, tagId);
       onTagsChange(tags.filter((tag) => tag.id !== tagId));
+      setActiveIndex(-1);
     } catch (error) {
       console.error("Failed to remove tag:", error);
       toast.show("移除标签失败，请重试");
     }
   };
-
-  const predefinedColors = [
-    "#3b82f6",
-    "#ef4444",
-    "#10b981",
-    "#f59e0b",
-    "#8b5cf6",
-    "#f97316",
-    "#06b6d4",
-    "#84cc16",
-    "#ec4899",
-    "#6b7280",
-  ];
 
   return (
     <div className={`${styles.container}${compact ? ` ${styles.compact}` : ""}`}>
@@ -93,33 +151,90 @@ export default function TagManager({
           </span>
         ))}
 
-        {!showAddForm && <Button variant="ghost" size="sm" onClick={() => setShowAddForm(true)} className={styles.addBtn} aria-expanded={showAddForm}>
-          <Plus size={14} aria-hidden="true" />添加标签
-        </Button>}
+        <Popover open={showAddForm} onOpenChange={open => (open ? openForm() : closeForm())}>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" className={styles.addBtn}>
+              <Plus size={14} aria-hidden="true" />添加标签
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className={styles.addPanel}
+            aria-label="添加标签"
+            onEscapeKeyDown={event => { if (event.isComposing) event.preventDefault(); }}
+          >
+            <form onSubmit={event => { event.preventDefault(); void add(defaultOption); }} className={styles.addForm}>
+              <div>
+                <Input
+                  id={tagInputId}
+                  ref={tagInput}
+                  label="标签名称"
+                  hideLabel
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={showAddForm}
+                  aria-controls={listId}
+                  aria-activedescendant={activeOptionId}
+                  value={query}
+                  onChange={event => { setQuery(event.target.value); setActiveIndex(-1); }}
+                  onKeyDown={handleInputKey}
+                  placeholder="搜索或新建标签…"
+                  wrapperClassName={styles.tagInputField}
+                  disabled={isAdding}
+                  maxLength={100}
+                />
+                <ul role="listbox" id={listId} className={styles.listbox} aria-label="标签建议" aria-busy={loadState === "loading"}>
+                  {loadState === "loading" && <li role="presentation" className={styles.listStatus}>正在加载标签…</li>}
+                  {loadState === "error" && <li role="presentation" className={styles.listStatus}>标签加载失败</li>}
+                  {attachedMatch
+                    ? <li role="presentation" className={styles.listStatus}>已添加</li>
+                    : loadState === "ready" && suggestions.options.length === 0 &&
+                      <li role="presentation" className={styles.listStatus}>没有匹配的标签</li>}
+                  {options.map((option, index) => {
+                    const isCreateOption = option.id === null;
+                    return (
+                      <li
+                        key={option.id ?? "create"}
+                        id={`${listId}-${index}`}
+                        role="option"
+                        aria-selected={activeIndex === index}
+                        aria-disabled={isAdding || undefined}
+                        className={`${styles.option}${isCreateOption ? ` ${styles.createOption}` : ""}`}
+                        onMouseDown={event => event.preventDefault()}
+                        onClick={() => void add(option)}
+                      >
+                        {isCreateOption ? `创建「${option.name}」` : (
+                          <>
+                            <span className={styles.tagDot} style={{ backgroundColor: option.color }} aria-hidden="true" />
+                            <span>{option.name}</span>
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              {createOption && (
+                <fieldset className={styles.colorPicker} disabled={isAdding}>
+                  <legend>新标签颜色</legend>
+                  <TagColorOptions color={color} onChange={setColor} className={styles.colorOption} />
+                  <label className={styles.customColorLabel}>
+                    <span>自定义</span>
+                    <input type="color" value={color} onChange={event => setColor(event.target.value)} className={styles.customColor} aria-label="自定义标签颜色" />
+                  </label>
+                </fieldset>
+              )}
+
+              <div className={styles.formActions}>
+                <Button type="submit" variant="primary" size="sm" disabled={isAdding || !defaultOption} className={styles.saveBtn}>
+                  {isAdding ? "添加中…" : "添加"}
+                </Button>
+                <Button type="button" variant="secondary" size="sm" onClick={closeForm} className={styles.cancelBtn} disabled={isAdding}>完成</Button>
+              </div>
+            </form>
+          </PopoverContent>
+        </Popover>
       </div>
-
-      {showAddForm && (
-        <form onSubmit={handleAddTag} className={styles.addForm} aria-label="添加标签">
-          <div className={styles.inputGroup}>
-            <Input id={tagInputId} label="标签名称" hideLabel type="text" value={newTagName} onChange={(event) => setNewTagName(event.target.value)} placeholder="标签名称" wrapperClassName={styles.tagInputField} autoFocus disabled={isAdding} maxLength={20} />
-            <fieldset className={styles.colorPicker}>
-              <legend>标签颜色</legend>
-              {predefinedColors.map((color) => <Tooltip key={color} content={`选择颜色 ${color}`}>
-                <Button type="button" variant="ghost" size="sm" iconOnly onClick={() => setNewTagColor(color)} className={`${styles.colorOption}${newTagColor === color ? ` ${styles.selected}` : ""}`} style={{ backgroundColor: color }} aria-label={`选择颜色 ${color}`} aria-pressed={newTagColor === color} />
-              </Tooltip>)}
-              <label className={styles.customColorLabel}>
-                <span>自定义</span>
-                <input type="color" value={newTagColor} onChange={(event) => setNewTagColor(event.target.value)} className={styles.customColor} aria-label="自定义标签颜色" />
-              </label>
-            </fieldset>
-          </div>
-
-          <div className={styles.formActions}>
-            <Button type="submit" variant="primary" size="sm" disabled={isAdding || !newTagName.trim()} className={styles.saveBtn}>{isAdding ? "添加中…" : "添加"}</Button>
-            <Button type="button" variant="secondary" size="sm" onClick={() => { setShowAddForm(false); setNewTagName(""); setNewTagColor("#3b82f6"); }} className={styles.cancelBtn} disabled={isAdding}>取消</Button>
-          </div>
-        </form>
-      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
-import { useFloating, autoUpdate, offset, flip, shift, arrow } from '@floating-ui/react';
+import { useFloating, autoUpdate, offset, flip, shift } from '@floating-ui/react';
 import { CircleCheck, Highlighter, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/arc/button/button';
 import { Tooltip } from '@/components/arc/tooltip/tooltip';
@@ -42,9 +42,6 @@ export default function HighlightManager({
     return () => { bodySession.current = null; };
   }, [articleId, contentRevision]);
 
-  const arrowRef = useRef(null);
-  const highlightMenuArrowRef = useRef(null);
-  
   // Floating UI for selection tooltip
   const { refs: tooltipRefs, floatingStyles: tooltipStyles } = useFloating({
     open: tooltipVisible,
@@ -53,8 +50,7 @@ export default function HighlightManager({
     middleware: [
       offset(10),
       flip(),
-      shift({ padding: 8 }),
-      arrow({ element: arrowRef })
+      shift({ padding: 8 })
     ],
     whileElementsMounted: autoUpdate,
   });
@@ -67,8 +63,7 @@ export default function HighlightManager({
     middleware: [
       offset(5),
       flip(),
-      shift({ padding: 8 }),
-      arrow({ element: highlightMenuArrowRef })
+      shift({ padding: 8 })
     ],
     whileElementsMounted: autoUpdate,
   });
@@ -428,7 +423,6 @@ export default function HighlightManager({
           <Tooltip content="取消选择"><Button onClick={handleCancel} variant="ghost" size="sm" iconOnly className={styles.cancelTooltipButton} aria-label="取消选择">
             <X size={15} aria-hidden="true" />
           </Button></Tooltip>
-          <div ref={arrowRef} className={styles.tooltipArrow} />
         </div>
       )}
       
@@ -450,11 +444,10 @@ export default function HighlightManager({
               <Button onClick={() => setClickedHighlight(null)} variant="ghost" size="sm" className={styles.menuButton}>
                 <X size={15} aria-hidden="true" />关闭<kbd aria-hidden="true">Esc</kbd>
               </Button>
-              <Button onClick={() => void handleDeleteHighlight(clickedHighlight)} variant="danger" size="sm" className={styles.menuButton}>
+              <Button onClick={() => void handleDeleteHighlight(clickedHighlight)} variant="ghost" size="sm" className={`${styles.menuButton} ${styles.menuDanger}`}>
                 <Trash2 size={15} aria-hidden="true" />删除高亮
               </Button>
             </div>
-            <div ref={highlightMenuArrowRef} className={styles.menuArrow} />
           </div>
         </div>
       )}

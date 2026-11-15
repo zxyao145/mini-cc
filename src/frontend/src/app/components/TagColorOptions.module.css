@@ -1,0 +1,10 @@
+.colorOption {
+  border: 2px solid var(--surface);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+/* A ring, not an outline: foundation.css removes the outline from a clicked (focused) button. */
+.colorOption[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px var(--foreground);
+}

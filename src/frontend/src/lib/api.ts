@@ -101,9 +101,18 @@ export const tagApi = {
     return response.data;
   },
 
+  async createTag(name: string, color: string): Promise<TagWithArticleCount> {
+    const response = await api.post('/tags', { name, color });
+    return response.data;
+  },
+
   async getTagArticles(id: string, params = new URLSearchParams(), signal?: AbortSignal): Promise<ArticleListPage> {
     const response = await api.get(`/tags/${id}/articles?${params}`, { signal });
     return response.data;
+  },
+
+  async updateTag(id: string, name: string, color: string): Promise<void> {
+    await api.put(`/tags/${id}`, { name, color });
   },
 
   async deleteTag(id: string): Promise<void> {

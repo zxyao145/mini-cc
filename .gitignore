@@ -615,3 +615,4 @@ sketch
 /.claude
 /src/web-extension/dist
 /.superpowers/
+.idea/

@@ -38,4 +38,12 @@ public class Tag : BaseAuditableEntity, IAggregateRoot
     {
         Color = color;
     }
+
+    public void Rename(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Tag name cannot be null or empty", nameof(name));
+
+        Name = name.Trim();
+    }
 }

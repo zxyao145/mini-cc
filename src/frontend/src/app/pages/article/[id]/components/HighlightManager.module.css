@@ -32,6 +32,8 @@
   --text-secondary: var(--foreground);
   --surface-muted: color-mix(in oklab, var(--neutral-0) 12%, transparent);
   --focus-outline: var(--foreground);
+  /* The toolbar is dark in every theme, so it always uses the dark-theme amber. */
+  --warning: oklch(83% .12 78);
   z-index: 1000;
   display: flex;
   align-items: center;
@@ -46,16 +48,6 @@
 
 .cancelTooltipButton { min-width: var(--control-height-sm); }
 .highlightButton svg { color: var(--warning); }
-
-.tooltipArrow {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-right: 1px solid var(--neutral-9);
-  border-bottom: 1px solid var(--neutral-9);
-  background: var(--neutral-10);
-  transform: rotate(45deg);
-}
 
 .highlightOptions { z-index: 1001; width: min(240px, calc(100vw - 24px)); }
 
@@ -103,13 +95,10 @@
   font: var(--text-xs) var(--font-display);
 }
 
-.menuArrow {
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border: 1px solid var(--reader-border);
-  background: var(--reader-bg);
-  transform: rotate(45deg);
+/* A ghost button in the danger color, so both menu rows share one shape. */
+.menuDanger {
+  --text-secondary: var(--danger);
+  --foreground: var(--danger);
 }
 
 .mergeNotification {
