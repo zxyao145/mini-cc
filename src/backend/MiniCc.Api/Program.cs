@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using MiniCc.Api.Authentication;
 using MiniCc.Api.Componments;
@@ -54,7 +55,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         ApiKeyAuthenticationSchemeOptions.DefaultScheme, options => { });
 
 // Add Clean Architecture layers
-builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment.ContentRootPath);
 
 builder.Services.AddHttpContextAccessor();
 // Legacy services for authentication
@@ -99,6 +100,12 @@ app.UseAuthorization();
 app.MapControllers();
 
 using var scope = app.Services.CreateScope();
+var database = scope.ServiceProvider.GetRequiredService<MiniCcDbContext>().Database;
+var isSqlite = database.IsSqlite();
+app.Logger.LogInformation("Database provider: {Provider}", isSqlite ? "sqlite" : "postgres");
+if (isSqlite)
+    app.Logger.LogInformation("SQLite database: {Path}", database.GetDbConnection().DataSource);
+
 var dbSeeder = scope.ServiceProvider.GetRequiredService<DbSeeder>();
 await dbSeeder.InitAsync();
 
