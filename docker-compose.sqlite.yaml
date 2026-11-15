@@ -1,0 +1,62 @@
+# version: '3.9'
+
+services:
+  minicc-api:
+    image: minicc-api
+    build:
+      context: .
+      dockerfile: ./src/backend/MiniCc.Api/Dockerfile
+    container_name: minicc-api
+    # ports:
+    #   - "5001:8080"
+    environment:
+      Database__Provider: sqlite
+      MiniCC_Db: "Data Source=/app/data/mini_cc.db"
+      ImageProxy__SignatureKey: "${IMAGE_PROXY_SECRET:-my-secret-key-123!@#}"
+    volumes:
+      - sqlite-data:/app/data
+
+  minicc-web:
+    build:
+      context: ./src/frontend
+      dockerfile: ./Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:5000/api
+    image: minicc-web
+    container_name: minicc-web
+    # ports:
+    #   - "5000:3000"  # 假设内部是 3000
+    depends_on:
+      - minicc-api
+
+  image-proxy:
+    build:
+      context: ./src/image-proxy
+      dockerfile: ./Dockerfile
+    image: image-proxy
+    container_name: image-proxy
+    environment:
+      IMAGE_PROXY_SECRET: "${IMAGE_PROXY_SECRET:-my-secret-key-123!@#}"
+    depends_on:
+      - minicc-api
+    volumes:
+      - image-proxy-data:/temp/cache/image-proxy
+    ports:
+      - "5050:8080"
+
+  lb:
+    build:
+      context: ./src/lb/ng
+      dockerfile: ./Dockerfile
+    image: minicc-lb
+    container_name: minicc-lb
+    ports:
+      - "5000:80"
+    depends_on:
+      - minicc-api
+      - minicc-web
+      - image-proxy
+
+volumes:
+  sqlite-data:
+  image-proxy-data:

@@ -51,6 +51,25 @@ public partial class LibraryApiTests(PostgresFixture fixture)
     }
 
     [Fact]
+    public async Task Restore_WhenConcurrentPurgeCommitsFirst_ReturnsNotFound()
+    {
+        using var factory = CreateFactory();
+        using var client = AuthenticatedClient(factory);
+        var article = await fixture.SeedArticleAsync(a => a.MoveToTrash(DateTimeOffset.UtcNow));
+        await using var blocker = fixture.CreateContext();
+        await using var transaction = await blocker.Database.BeginTransactionAsync();
+        (await blocker.Articles.IgnoreQueryFilters().Where(a => a.Id == article.Id).ExecuteDeleteAsync())
+            .Should().Be(1);
+
+        var restore = client.PostAsync($"/api/articles/{article.Id}/restore", null);
+        try { await WaitForArticleLockAsync(); }
+        finally { await transaction.CommitAsync(); }
+
+        using var response = await restore;
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task ExtensionResave_TrashedFull_RestoresAndReplaces()
     {
         var article = await fixture.SeedArticleAsync(a =>
@@ -485,7 +504,7 @@ public partial class LibraryApiTests(PostgresFixture fixture)
         using var factory = CreateFactory();
         using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
         const string path = "/api/account/reader-preferences";
-        (await client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Redirect);
+        (await client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         var login = await client.PostAsync("/api/account/login", new FormUrlEncodedContent(new Dictionary<string,string>
             { ["userName"]="mini_cc", ["password"]="mini_cc_password", ["rememberMe"]="false" }));
         login.StatusCode.Should().Be(HttpStatusCode.OK);

@@ -17,7 +17,7 @@ public class FeedImportService(MiniCcDbContext db, IUnitOfWork unitOfWork)
         await unitOfWork.BeginTransactionAsync(cancellationToken);
         try
         {
-            var feed = await db.Feeds.FromSqlInterpolated($"SELECT * FROM \"Feeds\" WHERE \"Id\" = {feedId} FOR UPDATE").SingleAsync(cancellationToken);
+            var feed = await db.Feeds.FromSqlForUpdate($"SELECT * FROM \"Feeds\" WHERE \"Id\" = {feedId}").SingleAsync(cancellationToken);
             await db.Entry(feed).Collection(f => f.Tags).LoadAsync(cancellationToken);
             var result = await ImportLockedAsync(feed, entries, isInitial, cancellationToken);
             await unitOfWork.SaveChangesAsync(cancellationToken); await unitOfWork.CommitTransactionAsync(cancellationToken);

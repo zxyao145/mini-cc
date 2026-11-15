@@ -55,7 +55,8 @@ test('TOC selects actual h3/h4 levels, navigates without history, tracks section
  if(testInfo.project.name==='desktop'){
   await page.setViewportSize({width:1024,height:800});await page.getByRole('button',{name:'目录',exact:true}).click();
   const tabletToc=page.getByRole('dialog',{name:'目录'});await expect(tabletToc).toHaveAttribute('aria-modal','true');await expect(tabletToc).toHaveCSS('position','fixed');await expect(page.locator('.reader-backdrop-visible')).toBeVisible();
-  expect(Math.round((await tabletToc.boundingBox())!.y+(await tabletToc.boundingBox())!.height)).toBe(800);await page.screenshot({path:testInfo.outputPath('reader-toc-tablet.png')});
+  await expect.poll(()=>tabletToc.boundingBox().then(box=>box&&Math.round(box.y+box.height))).toBe(800);
+  await page.screenshot({path:testInfo.outputPath('reader-toc-tablet.png')});
   await page.setViewportSize({width:1280,height:800});await expect(page.locator('.reader-toc-control [role="dialog"][aria-label="目录"]')).toHaveCount(0);await page.setViewportSize({width:1024,height:800});
   const panel=await settings(page);await expect(panel).not.toHaveAttribute('aria-modal','true');await expect(panel).toHaveCSS('position','absolute');
   await page.setViewportSize({width:375,height:812});await expect(panel).toHaveAttribute('aria-modal','true');await expect(panel).toHaveCSS('position','fixed');

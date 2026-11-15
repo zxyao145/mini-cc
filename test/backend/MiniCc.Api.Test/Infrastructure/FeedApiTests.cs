@@ -10,7 +10,7 @@ using MiniCc.Api.Core.TagNs.Domain.AggregatesModel;
 namespace MiniCc.Api.Test.Infrastructure;
 public partial class LibraryApiTests
 {
-    private class FeedHttpHandler(string url, string title = "Test feed", string body = "short", string cover = "") : HttpMessageHandler
+    internal class FeedHttpHandler(string url, string title = "Test feed", string body = "short", string cover = "") : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
         { Content = new StringContent($"<rss version='2.0' xmlns:media='http://search.yahoo.com/mrss/'><channel><title>{System.Security.SecurityElement.Escape(title)}</title><link>https://example.com</link><description>test</description><item><title>{System.Security.SecurityElement.Escape(title)}</title><guid isPermaLink='false'>id</guid><link>{System.Security.SecurityElement.Escape(url)}</link><description>{System.Security.SecurityElement.Escape(body)}</description><media:thumbnail url='{System.Security.SecurityElement.Escape(cover)}'/></item></channel></rss>") });

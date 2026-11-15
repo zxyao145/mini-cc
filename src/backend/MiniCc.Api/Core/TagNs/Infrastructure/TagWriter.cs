@@ -2,8 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using MiniCc.Api.Core.TagNs.Application.Services;
 using MiniCc.Api.Core.TagNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.TagNs.Infrastructure.EntityConfigurations;
+using MiniCc.Api.Shared.Data;
 using MiniCc.Api.Shared.Data.Repositories;
-using Npgsql;
 
 namespace MiniCc.Api.Core.TagNs.Infrastructure;
 
@@ -39,8 +39,7 @@ internal sealed class TagWriter(IUnitOfWork unitOfWork) : ITagWriter
             await unitOfWork.SaveChangesAsync(cancellationToken);
             return null;
         }
-        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
-            { SqlState: PostgresErrorCodes.UniqueViolation, TableName: "Tags", ConstraintName: TagConfiguration.NameIndex })
+        catch (DbUpdateException exception) when (DatabaseErrors.IsUniqueViolation(exception, "Tags", TagConfiguration.NameIndex, "Name"))
         {
             var entry = exception.Entries.FirstOrDefault(e => ReferenceEquals(e.Entity, tag));
             if (entry == null)

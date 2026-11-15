@@ -14,9 +14,9 @@
 ## Tech Stack
 
 ### Backend
-- **ASP.NET Core 9.0** - Web API framework
+- **ASP.NET Core 10.0** - Web API framework
 - **Entity Framework Core** - ORM for database operations
-- **PostgreSQL** - Primary database
+- **PostgreSQL or SQLite** - Configurable database provider
 - **HtmlAgilityPack** - HTML image URL rewriting
 
 ### Chrome Extension
@@ -60,14 +60,22 @@ Navigate to the repository's root directory:
 podman compose -f ./docker-compose.yaml up -d --build
 ```
 
+For a new SQLite deployment, use the SQLite Compose file:
+
+```bash
+podman compose -f ./docker-compose.sqlite.yaml up -d --build
+```
+
+Open http://localhost:5000. The SQLite database lives in the `sqlite-data` volume. Stop the active Compose stack with `down` before switching files because both stacks use the same container names.
+
 ## Getting Started
 
 ### Prerequisites
-- .NET 9.0 SDK
+- .NET 10.0 SDK
 - Node.js 18+ and pnpm (install pnpm: `npm install -g pnpm`)
-- PostgreSQL database 
+- PostgreSQL 16 with zhparser if using PostgreSQL
 
-### Backend Setup
+### Backend Setup (PostgreSQL)
 
 1. Navigate to the backend directory:
    ```bash
@@ -87,17 +95,28 @@ podman compose -f ./docker-compose.yaml up -d --build
    ```
    Run imageproxy with the same signing key. In Compose, set `IMAGE_PROXY_SECRET`; both services receive it. The default proxy URL `/imageProxy` routes through nginx. No page extraction service is needed.
 
-4. Create and run database migrations:
-   ```bash
-   dotnet ef database update
-   ```
-
-5. Run the backend API:
+4. Run the backend API. It initializes zhparser and applies migrations on startup.
    ```bash
    dotnet run
    ```
 
 The API will be available at `http://localhost:5001`.
+
+### Backend Setup (SQLite)
+
+```bash
+cd src/backend/MiniCc.Api
+Database__Provider=sqlite ImageProxy__SignatureKey=your-image-proxy-secret dotnet run
+```
+
+On startup the API creates `data/mini_cc.db` under the project directory and applies the SQLite migrations. `Database:Provider` accepts `postgres` (default) or `sqlite`, case-insensitively. `MiniCC_Db` overrides `ConnectionStrings:DefaultConnection` for PostgreSQL or `ConnectionStrings:Sqlite` for SQLite. Relative SQLite paths resolve from the API content root.
+
+Use SQLite for a new deployment with one API instance and local storage. SQLite uses WAL. Keep the database on a local disk or a local named volume.
+
+- Article search matches substrings in the title, summary, author and HTML body. It ignores ASCII letter case and scans the fields for both the result list and its count. Markup and escaped entities can affect body search results. PostgreSQL uses zhparser for Chinese text search.
+- SQLite sorts tag names and feed titles using binary ordering. It relies on API validation for field length limits.
+- Back up SQLite by stopping the API and copying the database and any remaining WAL files together. A host with the SQLite CLI can use `sqlite3 /path/to/mini_cc.db ".backup /path/to/backup.db"` while the API runs.
+- If a killed migration leaves startup waiting on `__EFMigrationsLock`, stop the API, confirm no migration is running, and clear the table with `DELETE FROM "__EFMigrationsLock"`.
 
 ### Frontend Setup
 
@@ -176,11 +195,21 @@ dotnet run
 # Run tests (if any)
 dotnet test
 
-# Create new migration
-dotnet ef migrations add MigrationName
+# Generate both migrations when changing the model
+Database__Provider=postgres dotnet ef migrations add MigrationName --context MiniCcDbContext
+dotnet ef migrations add MigrationName --context SqliteMiniCcDbContext --output-dir Migrations/Sqlite
 
-# Update database
-dotnet ef database update
+# Apply manually to an initialized PostgreSQL database or to a SQLite file
+Database__Provider=postgres dotnet ef database update --context MiniCcDbContext
+dotnet ef database update --context SqliteMiniCcDbContext --connection "Data Source=/absolute/path/to/mini_cc.db"
+```
+
+### Database Tests
+
+The SQLite tests use temporary local database files and run without Docker.
+
+```bash
+dotnet test test/backend/MiniCc.Api.Test --filter "FullyQualifiedName~Sqlite|FullyQualifiedName~Database"
 ```
 
 ### Frontend Commands

@@ -29,10 +29,11 @@ public class ApiKeyService : IApiKeyService
         var query = _context.ApiKeys.Where(x => x.Key == key);
         _logger.LogDebug("Checking if api key is valid: {query}", query.ToQueryString());
 #endif
+        var now = DateTimeOffset.UtcNow;
         return await _context.ApiKeys.AnyAsync(x =>
             x.Key == key
             && !x.Disabled
-            && (x.ExpiredTime == null || x.ExpiredTime > DateTimeOffset.UtcNow)
+            && (x.ExpiredTime == null || x.ExpiredTime > now)
              );
     }
 

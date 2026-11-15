@@ -13,15 +13,12 @@ public class FeedRefresher(MiniCcDbContext db, IUnitOfWork unitOfWork, FeedFetch
     public async Task<Guid?> ClaimAsync(Guid id, CancellationToken cancellationToken)
     {
         var token = Guid.NewGuid();
-        var count = await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE \"Feeds\" SET \"LeaseUntil\" = now() + interval '5 minutes', \"LeaseToken\" = {token} WHERE \"Id\" = {id} AND \"Status\" = 0 AND (\"LeaseUntil\" IS NULL OR \"LeaseUntil\" < now())", cancellationToken);
+        var count = await FeedLeases.ClaimAsync(db, id, token, cancellationToken);
         return count == 1 ? token : null;
     }
-    public async Task<List<Guid>> ClaimDueAsync(Guid token, CancellationToken cancellationToken) => await db.Database.SqlQuery<Guid>($"""
-        UPDATE "Feeds" SET "LeaseUntil" = now() + interval '5 minutes', "LeaseToken" = {token}
-        WHERE "Id" IN (SELECT "Id" FROM "Feeds" WHERE "Status" = 0 AND "NextFetchAt" <= now()
-          AND ("LeaseUntil" IS NULL OR "LeaseUntil" < now()) ORDER BY "NextFetchAt" LIMIT 4 FOR UPDATE SKIP LOCKED)
-        RETURNING "Id" AS "Value"
-        """).ToListAsync(cancellationToken);
+
+    public Task<List<Guid>> ClaimDueAsync(Guid token, CancellationToken cancellationToken) =>
+        FeedLeases.ClaimDueAsync(db, token, cancellationToken);
 
     public async Task<RefreshResult> RefreshAsync(Guid id, Guid token, CancellationToken cancellationToken)
     {
@@ -55,7 +52,7 @@ public class FeedRefresher(MiniCcDbContext db, IUnitOfWork unitOfWork, FeedFetch
         {
             // Ignore previously tracked snapshots: user pause/unsubscribe and a reclaimed lease are authoritative.
             var stale = db.Feeds.Local.FirstOrDefault(f => f.Id == id); if (stale != null) db.Entry(stale).State = EntityState.Detached;
-            var feed = await db.Feeds.FromSqlInterpolated($"SELECT * FROM \"Feeds\" WHERE \"Id\" = {id} FOR UPDATE").SingleAsync(cancellationToken);
+            var feed = await db.Feeds.FromSqlForUpdate($"SELECT * FROM \"Feeds\" WHERE \"Id\" = {id}").SingleAsync(cancellationToken);
             if (feed.LeaseToken != token || feed.LeaseUntil <= DateTimeOffset.UtcNow || feed.Status != FeedStatus.Active)
             { await unitOfWork.RollbackTransactionAsync(cancellationToken); return new(0, 0, "skipped", null); }
             var counts = new ImportResult(0, 0);

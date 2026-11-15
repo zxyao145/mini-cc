@@ -38,6 +38,19 @@ public class ArticleListItemDto
         Feeds = a.FeedEntries.Select(e => new ArticleFeedDto(e.Feed.Id, e.Feed.Title)).Distinct().ToList(),
         HighlightCount = a.Highlights.Count()
     };
+
+    // Deduplicate the feeds after materialization so SQLite can translate the projection.
+    internal static readonly Expression<Func<Article, ArticleListItemDto>> ProjectionWithAllFeedEntries = a => new ArticleListItemDto
+    {
+        Id = a.Id, Url = a.Url.Value, Title = a.Title, Author = a.Author, Summary = a.Summary,
+        ImageUrl = a.ImageUrl, CreatedAt = a.CreatedAt, PublishedAt = a.PublishedAt, ReadAt = a.ReadAt,
+        LastReadAt = a.LastReadAt, DeletedAt = a.DeletedAt, ReadingStatus = a.ReadingStatus,
+        ProgressPercent = a.ProgressPercent, IsFavorite = a.IsFavorite, IsArchived = a.IsArchived,
+        ContentKind = a.ContentKind, SavedFromExtension = a.SavedFromExtensionAt != null,
+        Tags = a.Tags.Select(t => new TagDto { Id = t.Id, Name = t.Name, Color = t.Color.Value, CreatedAt = t.CreatedAt }).ToList(),
+        Feeds = a.FeedEntries.Select(e => new ArticleFeedDto(e.Feed.Id, e.Feed.Title)).ToList(),
+        HighlightCount = a.Highlights.Count()
+    };
 }
 
 public record ArticleFeedDto(Guid Id, string Title);
