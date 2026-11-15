@@ -1,24 +1,44 @@
 # version: '3.9'
 
+name: mini-cc
+
 services:
+  db:
+    image: zhparser/zhparser:bookworm-16
+    container_name: db
+    environment:
+      POSTGRES_DB: mini_cc
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "15432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      # test: "exit 0"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   minicc-api:
     image: minicc-api
     build:
-      context: .
+      context: ..
       dockerfile: ./src/server/Dockerfile
     container_name: minicc-api
     # ports:
     #   - "5001:8080"
     environment:
-      Database__Provider: sqlite
-      MiniCC_Db: "Data Source=/app/data/mini_cc.db"
+      MiniCC_Db: "Host=db;Port=5432;Database=mini_cc;Username=postgres;Password=postgres"
       ImageProxy__SignatureKey: "${IMAGE_PROXY_SECRET:-my-secret-key-123!@#}"
-    volumes:
-      - sqlite-data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
 
   minicc-web:
     build:
-      context: .
+      context: ..
       dockerfile: ./src/web/Dockerfile
       args:
         NEXT_PUBLIC_API_URL: http://localhost:5000/api
@@ -28,10 +48,10 @@ services:
     #   - "5000:3000"  # 假设内部是 3000
     depends_on:
       - minicc-api
-
+  
   image-proxy:
     build:
-      context: ./src/image-proxy
+      context: ../src/image-proxy
       dockerfile: ./Dockerfile
     image: image-proxy
     container_name: image-proxy
@@ -46,17 +66,17 @@ services:
 
   lb:
     build:
-      context: ./src/ng
+      context: ../src/ng
       dockerfile: ./Dockerfile
     image: minicc-lb
     container_name: minicc-lb
     ports:
-      - "5000:80"
+      - "5000:80"  
     depends_on:
       - minicc-api
       - minicc-web
       - image-proxy
 
 volumes:
-  sqlite-data:
+  pgdata:
   image-proxy-data:

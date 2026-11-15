@@ -1,9 +1,15 @@
 #!/bin/bash
 set -e
 
-container_engine=docker
-if ! command -v docker >/dev/null 2>&1; then
+cd "$(dirname "$0")/.."
+
+if command -v docker >/dev/null 2>&1; then
+    container_engine=docker
+elif command -v podman >/dev/null 2>&1; then
     container_engine=podman
+else
+    echo "Docker or Podman is required" >&2
+    exit 1
 fi
 
 "$container_engine" build -f ./src/server/Dockerfile -t minicc-api:latest .

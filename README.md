@@ -38,7 +38,10 @@
 ├── package.json              # Web dependencies and root build commands
 ├── pnpm-workspace.yaml        # JavaScript workspace
 ├── pnpm-lock.yaml             # Shared JavaScript lockfile
+├── deploy/                   # Compose files and deployment scripts
 └── src/
+    ├── init-db.sql            # PostgreSQL database setup
+    ├── init-db-text-search.sql # PostgreSQL text search setup
     ├── server/                # ASP.NET Core API
     ├── web/                   # Next.js app and static assets
     ├── web-extension/         # Chrome extension
@@ -52,13 +55,13 @@
 Navigate to the repository's root directory:
 
 ```bash
-podman compose -f ./docker-compose.yaml up -d --build
+podman compose -f ./deploy/docker-compose.yaml up -d --build
 ```
 
 For a new SQLite deployment, use the SQLite Compose file:
 
 ```bash
-podman compose -f ./docker-compose.sqlite.yaml up -d --build
+podman compose -f ./deploy/docker-compose.sqlite.yaml up -d --build
 ```
 
 Open http://localhost:5000. The SQLite database lives in the `sqlite-data` volume. Stop the active Compose stack with `down` before switching files because both stacks use the same container names.

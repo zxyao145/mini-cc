@@ -6,11 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Docker (Recommended)
 ```bash
-podman compose -f docker-compose.yaml up -d --build
+podman compose -f deploy/docker-compose.yaml up -d --build
 ```
 
 ```bash
-podman compose -f docker-compose.sqlite.yaml up -d --build
+podman compose -f deploy/docker-compose.sqlite.yaml up -d --build
 ```
 
 ### Manual Setup
@@ -213,9 +213,9 @@ pnpm --filter minicc-extension typecheck
 ### Docker Development
 
 ```bash
-bash docker-build.sh           # Build the API and Web images
-podman compose -f docker-compose.yaml up -d --build
-podman compose -f docker-compose.yaml down
+bash deploy/docker-build.sh           # Build the API and Web images
+podman compose -f deploy/docker-compose.yaml up -d --build
+podman compose -f deploy/docker-compose.yaml down
 ```
 
 ## Environment Setup
