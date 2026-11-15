@@ -114,3 +114,15 @@ it('requires confirmation before moving an article to trash', async () => {
   await act(async () => Array.from(document.body.querySelectorAll('button')).find(button => button.textContent === '取消')!.click());
   expect(onDelete).not.toHaveBeenCalled();
 });
+
+it.each([
+  { deletedAt: null, href: '/pages/article/a' },
+  { deletedAt: '2026-11-10T00:00:00Z', href: null },
+])('ends the actions with a reader link only outside trash (deletedAt $deletedAt)', async ({ deletedAt, href }) => {
+  const article = { id: 'a', title: 'Title', url: 'https://example.com', createdAt: '2026-11-08T00:00:00Z', deletedAt, readingStatus: 'unread', tags: [], isArchived: false, isFavorite: false, contentKind: 'full', highlightCount: 0, feeds: [], savedFromExtension: true } as unknown as import('@/types').ArticleListItem;
+  await renderCard(article);
+  const actions = container.querySelector('[role="group"]')!;
+  const read = actions.querySelector('a[aria-label="阅读文章"]');
+  expect(read?.getAttribute('href') ?? null).toBe(href);
+  if (href) expect(actions.lastElementChild).toBe(read);
+});
