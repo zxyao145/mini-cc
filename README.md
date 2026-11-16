@@ -4,12 +4,22 @@
 
 ## Features
 
-- **Save Articles**: Save the current page through the Chrome extension; read and manage saved articles on the website
-- **Search**: Full-text search across saved articles
+- **Save Pages**: Save the current page as a full article or as a link through the Chrome extension, or copy it as Markdown; read and manage saved items on the website
+- **RSS / Atom Subscriptions**: Subscribe to feeds, apply default tags to new entries, and browse articles by feed
+- **Search and Filters**: Full-text search, plus filters for reading status, tags, source, feed and save date, in grid or list view
 - **Tagging**: Organize articles with custom tags and colors
-- **Highlighting**: Add highlights and notes to article content
-- **Favorites & Archive**: Mark articles as favorites or archive them
-- **Responsive UI**: Modern, responsive interface built with React and SCSS
+- **Highlighting**: Add highlights and notes to article content, and review them on the Highlights page
+- **Favorites, Archive & Trash**: Mark articles as favorites, archive them, act on several at once, and restore deleted articles from the trash
+- **API Keys**: Create up to 10 keys for the browser extension and programmatic access
+- **Responsive UI**: Modern, responsive interface built with React and CSS Modules, with light, dark and system themes
+
+## Screenshots
+
+| Library | RSS subscriptions |
+| --- | --- |
+| ![Library inbox with filters and tagged article cards](assets/inbox.png) | ![Library filtered to one RSS feed](assets/rss.png) |
+| **Highlights** | **Sign in** |
+| ![Highlights page with a highlighted passage](assets/highlight.png) | ![Sign-in page](assets/login.png) |
 
 ## Tech Stack
 
@@ -136,9 +146,16 @@ Use SQLite for a new deployment with one API instance and local storage. SQLite 
 
 1. From the repository root, run `pnpm install --frozen-lockfile` if you have yet to install the workspace.
 2. Run `pnpm build:ext` from the root.
-3. Open `chrome://extensions/`, enable Developer mode, and load `src/web-extension/dist` as an unpacked extension. Set the API URL and an API key in the extension Settings. Reload the extension and article tabs after rebuilding.
+3. Open `chrome://extensions/`, enable Developer mode, and load `src/web-extension/dist` as an unpacked extension. Reload the extension and article tabs after rebuilding.
+4. Sign in to the website, click your account at the bottom of the sidebar, and create a key on the **API 密钥** (API Keys) tab.
 
-The extension extracts and sanitizes the current page, then sends the original HTML, readable HTML, and metadata to the API. The API stores the article and signs image URLs; it does not fetch the source page. Existing saved articles remain unchanged.
+   ![API keys tab in account settings](assets/browser-extension-apikey.png)
+
+5. Open the extension popup, click the gear icon, and enter the API URL (the address that serves `/api`, such as `http://localhost:5000`) and the API key.
+
+   <img src="assets/browser-extension.png" alt="Extension popup with Save Article, Save Link and Copy Markdown" width="320">
+
+The popup offers **Save Article**, **Save Link** and **Copy Markdown**. Save Article extracts and sanitizes the current page, then sends the original HTML, readable HTML, and metadata to the API. The API stores the article and signs image URLs; it does not fetch the source page. Existing saved articles remain unchanged.
 
 ## API Endpoints
 
