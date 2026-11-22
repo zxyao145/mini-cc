@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MiniCc.Api.Core.ImageNs.Application;
 using MiniCc.Api.Shared.Config;
 using MiniCc.Api.Shared.Data;
 
@@ -30,7 +31,10 @@ public class TrashCleanup(MiniCcDbContext db, ArticlePurger purger, ILogger<Tras
         }
     }
 }
-public class TrashPurgeWorker(IServiceScopeFactory scopes, IOptions<LibraryOptions> options, ILogger<TrashPurgeWorker> logger) : BackgroundService
+public class TrashPurgeWorker(
+    IServiceScopeFactory scopes,
+    IOptions<LibraryOptions> options,
+    ILogger<TrashPurgeWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -46,6 +50,18 @@ public class TrashPurgeWorker(IServiceScopeFactory scopes, IOptions<LibraryOptio
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { throw; }
                 catch (Exception ex) { logger.LogError(ex, "Trash retention cleanup failed"); }
+                try
+                {
+                    using var scope = scopes.CreateScope();
+                    var result = await scope.ServiceProvider.GetRequiredService<ImageCollector>()
+                        .CollectAsync(DateTimeOffset.UtcNow, stoppingToken);
+                    if (!result.Skipped)
+                        logger.LogInformation("Image cleanup deleted {Deleted} objects and reset {Repaired} image records",
+                            result.Deleted, result.Repaired);
+                }
+                catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { throw; }
+                catch (Exception ex) { logger.LogError(ex, "Image storage cleanup failed"); }
+
                 await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
             }
         }

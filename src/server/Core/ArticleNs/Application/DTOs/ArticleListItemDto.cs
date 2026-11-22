@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using System.Text.Json.Serialization;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.TagNs.Application.DTOs;
 
@@ -12,6 +13,8 @@ public class ArticleListItemDto
     public string Author { get; set; } = "";
     public string Summary { get; set; } = "";
     public string ImageUrl { get; set; } = "";
+    [JsonIgnore]
+    public Dictionary<string, ArticleImage>? Images { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? PublishedAt { get; set; }
     public DateTimeOffset? ReadAt { get; set; }
@@ -30,7 +33,7 @@ public class ArticleListItemDto
     public static readonly Expression<Func<Article, ArticleListItemDto>> Projection = a => new ArticleListItemDto
     {
         Id = a.Id, Url = a.Url.Value, Title = a.Title, Author = a.Author, Summary = a.Summary,
-        ImageUrl = a.ImageUrl, CreatedAt = a.CreatedAt, PublishedAt = a.PublishedAt, ReadAt = a.ReadAt,
+        ImageUrl = a.ImageUrl, Images = a.Images, CreatedAt = a.CreatedAt, PublishedAt = a.PublishedAt, ReadAt = a.ReadAt,
         LastReadAt = a.LastReadAt, DeletedAt = a.DeletedAt, ReadingStatus = a.ReadingStatus,
         ProgressPercent = a.ProgressPercent, IsFavorite = a.IsFavorite, IsArchived = a.IsArchived,
         ContentKind = a.ContentKind, SavedFromExtension = a.SavedFromExtensionAt != null,
@@ -43,7 +46,7 @@ public class ArticleListItemDto
     internal static readonly Expression<Func<Article, ArticleListItemDto>> ProjectionWithAllFeedEntries = a => new ArticleListItemDto
     {
         Id = a.Id, Url = a.Url.Value, Title = a.Title, Author = a.Author, Summary = a.Summary,
-        ImageUrl = a.ImageUrl, CreatedAt = a.CreatedAt, PublishedAt = a.PublishedAt, ReadAt = a.ReadAt,
+        ImageUrl = a.ImageUrl, Images = a.Images, CreatedAt = a.CreatedAt, PublishedAt = a.PublishedAt, ReadAt = a.ReadAt,
         LastReadAt = a.LastReadAt, DeletedAt = a.DeletedAt, ReadingStatus = a.ReadingStatus,
         ProgressPercent = a.ProgressPercent, IsFavorite = a.IsFavorite, IsArchived = a.IsArchived,
         ContentKind = a.ContentKind, SavedFromExtension = a.SavedFromExtensionAt != null,

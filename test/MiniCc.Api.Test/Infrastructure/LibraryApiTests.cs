@@ -13,6 +13,7 @@ using MiniCc.Api.Controllers.ArticleNs;
 using MiniCc.Api.Core.ApiKeys.Application.Services;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.TagNs.Domain.AggregatesModel;
+using MiniCc.Api.Core.ImageNs.Infrastructure.Worker;
 using MiniCc.Api.Shared.Data;
 
 namespace MiniCc.Api.Test.Infrastructure;
@@ -569,12 +570,14 @@ public partial class LibraryApiTests(PostgresFixture fixture)
             builder.UseEnvironment("Testing");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
+                ["Images:Storage:LocalPath"] = fixture.ImageDirectory,
                 ["ImageProxy:SignatureKey"] = "test-signing-key",
                 ["Library:TrashRetentionDays"] = "45",
                 ["Library:UndoWindowSeconds"] = "12"
             }));
             builder.ConfigureTestServices(services =>
             {
+                services.Remove(services.Single(s => s.ImplementationType == typeof(ImageDownloadWorker)));
                 services.RemoveAll<DbContextOptions<MiniCcDbContext>>();
                 services.RemoveAll<MiniCcDbContext>();
                 services.AddDbContext<MiniCcDbContext>(options => options.UseNpgsql(fixture.ConnectionString));

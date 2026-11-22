@@ -1,12 +1,10 @@
 using System.Net;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MiniCc.Api.Core.FeedNs.Application;
 using MiniCc.Api.Core.FeedNs.Domain;
 using MiniCc.Api.Core.FeedNs.Infrastructure;
 using MiniCc.Api.Shared.Data;
 using MiniCc.Api.Shared.Data.Repositories;
-using MiniCc.Api.Infra;
 
 namespace MiniCc.Api.Test.Infrastructure;
 [Collection("Postgres")]
@@ -21,7 +19,7 @@ public class FeedRefreshPostgresTests(PostgresFixture fixture)
     private FeedRefresher Refresher(MiniCcDbContext db, Func<Task<HttpResponseMessage>> respond)
     {
         var uow = new UnitOfWork(db);
-        return new(db, uow, new FeedFetcher(new Factory(respond)), new FeedParser(new ImageProxyService(Options.Create(new ImageProxyOptions { SignatureKey = "test" }))), new FeedImportService(db, uow));
+        return new(db, uow, new FeedFetcher(new Factory(respond)), new FeedParser(), new FeedImportService(db, uow));
     }
     private async Task<Feed> Seed()
     { var feed = Feed.Create($"https://example.com/{Guid.NewGuid()}", "Test", null, FeedFormat.Rss); await using var db = fixture.CreateContext(); db.Feeds.Add(feed); await db.SaveChangesAsync(); return feed; }

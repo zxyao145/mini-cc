@@ -102,7 +102,7 @@ export default function Client(params: { id: string }) {
     setLoading(true);
     try {
       const data = await articleApi.getArticleById(id);
-      const cleanHtml = DOMPurify.sanitize(data.readableContent);
+      const cleanHtml = DOMPurify.sanitize(data.readableContent, { ADD_ATTR: ['referrerpolicy'] });
       data.readableContent = cleanHtml;
       setArticle(data);
     } catch (error) {
@@ -188,7 +188,7 @@ export default function Client(params: { id: string }) {
         {isLink && <div className={styles.linkDetail}>
           {article.imageUrl && <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className={styles.linkCover} src={article.imageUrl} alt="" />
+            <img className={styles.linkCover} src={article.imageUrl} alt="" referrerPolicy="no-referrer" />
           </>}
           {article.summary && <p className={styles.linkSummary}>{article.summary}</p>}
         </div>}

@@ -15,7 +15,7 @@ namespace MiniCc.Api.Migrations.Sqlite
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.7");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.15");
 
             modelBuilder.Entity("ArticleTags", b =>
                 {
@@ -120,6 +120,12 @@ namespace MiniCc.Api.Migrations.Sqlite
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Images")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("ImagesDueAt")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("IsArchived")
                         .HasColumnType("INTEGER");
 
@@ -193,6 +199,9 @@ namespace MiniCc.Api.Migrations.Sqlite
 
                     b.HasIndex("DeletedAt")
                         .HasFilter("\"DeletedAt\" IS NOT NULL");
+
+                    b.HasIndex("ImagesDueAt")
+                        .HasFilter("\"ImagesDueAt\" IS NOT NULL");
 
                     b.HasIndex("NormalizedUrl");
 

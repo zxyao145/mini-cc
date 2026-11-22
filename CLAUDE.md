@@ -19,10 +19,10 @@ Run these commands from the repository root.
 
 ```bash
 # Start the PostgreSQL API and apply migrations
-dotnet run --project src/server/MiniCc.Api.csproj
+Images__ApiUrl=http://localhost:5001/api/images dotnet run --project src/server/MiniCc.Api.csproj
 
 # Start the API with a local SQLite file
-Database__Provider=sqlite ImageProxy__SignatureKey=your-image-proxy-secret dotnet run --project src/server/MiniCc.Api.csproj
+Database__Provider=sqlite Images__ApiUrl=http://localhost:5001/api/images dotnet run --project src/server/MiniCc.Api.csproj
 
 # Install Web, SDK, and extension dependencies
 pnpm install --frozen-lockfile
@@ -38,6 +38,7 @@ pnpm build:ext             # Load src/web-extension/dist in Chrome
 - **Frontend**: Next.js 15 App Router with TypeScript
 - **Chrome Extension**: The TypeScript content-handler SDK extracts the loaded page with site-specific DOM handling, Mozilla Readability and DOMPurify. The website handles reading and management.
 - **Database**: PostgreSQL 16 with zhparser or SQLite
+- **Image storage**: API-downloaded images are persisted in a local directory or S3-compatible object storage. The legacy image proxy is optional.
 - **Proxy**: Nginx routing (localhost:5000)
 
 ### Clean Architecture Layers
@@ -112,7 +113,7 @@ DELETE /api/tags/{id}             # Delete tag and its ArticleTags and FeedTags 
 - The `/` library stores conditions in its URL; defaults are omitted. Search replaces history after 300 ms; view/filter changes push history. RSS filters and the expandable feed sidebar are enabled.
 - `useArticleList(query)` exposes `{ items, total, loading, loadingMore, error, hasMore, loadMore, updateItem, removeItems }`. `updateItem(id, partialListItem)` keeps matching rows or removes them and decrements the count. Successful mutations advance a revision, cancel older requests, and start an acknowledged-state refresh; stale responses cannot restore removed rows or overwrite state/counts. Load more waits for reconciliation and retries an invalidated request from the resulting cursor.
 - `lib/library-cache.ts` keeps at most five query snapshots for ten minutes in memory and session storage. Returning restores loaded pages and window scroll. A silent first-page metadata merge is used only when ordered first-page IDs and total remain stable and no known membership/sort-key edit needs reconciliation. Otherwise the hook re-fetches the loaded prefix and matching tail cursor, keeping the cached UI/scroll. `updateCachedArticle(id, partialListItem)` marks membership/order changes for reconciliation. Existing reader tag/highlight callbacks and global-highlight deletion patch full tags/highlightCount; reader body/highlight content stays intact. URL controls compose against the latest pending destination, ignore intermediate acknowledgements, and treat browser history/external URL changes as authoritative.
-- Frontend verification: `pnpm test` runs Vitest/happy-dom. `E2E_BASE_URL=<isolated deployment> pnpm test:e2e` runs Playwright at 1280×800 and 375×812; it requires an isolated 65-article fixture with `.NET` and `阅读` tags and configured test login (`E2E_USERNAME` / `E2E_PASSWORD`). No default E2E server URL is provided.
+- Frontend verification: `pnpm test` runs Vitest/happy-dom. `E2E_BASE_URL=<isolated deployment> pnpm test:e2e` runs Playwright at 1280×800 and 375×812; it requires an isolated 65-article fixture with `.NET` and `阅读` tags and configured test login (`E2E_USERNAME` / `E2E_PASSWORD`). Image-storage E2E also needs the deployment configured with `Images__AllowPrivateNetworks=true`, `E2E_IMAGE_URL` set to the mock image server address reachable from the API container, and optional `E2E_IMAGE_PORT` (default `5019`). No default E2E server URL is provided.
 
 
 ### Reading Progress (P2)
@@ -226,7 +227,7 @@ podman compose -f deploy/docker-compose.yaml down
 - SQLite defaults to `Data Source=data/mini_cc.db`. The path is relative to the API content root and the API creates the directory on startup.
 
 ### External Services
-- **Image Proxy**: Runs on port 5050 with secret key authentication. Set API `ImageProxy__SignatureKey` to the same imageproxy signing key and `ImageProxy__ProxyUrl` to `/imageProxy` (nginx) or `http://localhost:5050` (manual local setup). Compose shares `IMAGE_PROXY_SECRET` between both services.
+- **Image downloads**: The API downloads article images in the background and stores them locally or through the S3 API. Default delivery requires a signed-in user. `Images__Mode=ImageProxy` opts into the legacy proxy service and its nginx route.
 - **Page collection**: The Chrome extension sends extracted HTML to `POST /api/articles/content` and link metadata to `POST /api/articles/link`. Extraction runs on the loaded page in Chrome.
 - **CORS**: Configured for localhost:4000, localhost:5000
 
@@ -261,7 +262,15 @@ podman compose -f deploy/docker-compose.yaml down
 ### Infrastructure Layer
 - **Repositories**: Generic repository with EF Core
 - **Entity Configurations**: Fluent API configurations
-- **Image URLs**: Server-side HMAC signing and HTML image rewriting through ImageProxyService
+- **Image URLs**: `ImageHtml` normalizes original HTTP(S) image URLs on writes. `ImageUrlResolver` serves completed images from `IImageStore`, adds `no-referrer` for unresolved external images, and uses `ImageProxyService` only in the optional image-proxy mode.
+
+### Image Storage
+- `Images:Mode` defaults to `Store`. Choose `ImageProxy` for signed proxy URLs. `Images:Delivery` defaults to `Authenticated`. `Images:Storage:Provider` defaults to `Local`. S3-compatible storage uses `ServiceUrl`, `Bucket`, `Region` (`auto` for R2), `AccessKeyId` and `SecretAccessKey`. Keep access keys in environment variables.
+- `Images:ApiUrl` defaults to `/api/images`. For the web dev server at port 4000 and API at port 5001, set `Images__ApiUrl=http://localhost:5001/api/images`. `Images:PublicBaseUrl` requires public delivery and S3. Public direct image URLs use the two-character hash directory and content hash.
+- `Articles.Images` stores source URL to image-result records as JSON, and `ImagesDueAt` tracks pending work or an atomic lease. New writes normalize image URLs and synchronize this map. `ImageDownloadWorker` runs every 30 seconds, backfills up to 50 legacy rows per batch, then claims up to 10 articles. Backfill does not change content revision, progress, or highlight state.
+- The 30-second image request deadline starts after acquiring a download slot and includes reading the response body. Requests follow at most 5 redirects and accept up to 20 MB. At most 4 downloads run process-wide and 2 for one host. Downloads are content-sniffed and accept JPEG, PNG, GIF, WebP, AVIF and SVG. Retry delays are 1 minute, 10 minutes, 1 hour, 6 hours, then every 24 hours. Ten failed attempts mark an image failed.
+- Image downloads require direct outbound HTTP(S) access. The downloader bypasses system and environment proxies so it can connect to the IP address it validated. Private, loopback and link-local addresses are blocked by default. `Images:AllowPrivateNetworks=true` permits them and is only for deployments that intentionally fetch images from trusted internal hosts. Stored images are served with immutable caching, `nosniff` and a sandbox CSP. `ImageCollector` runs after trash purging, skips collection while legacy rows remain, and deletes unreferenced objects only after a 24-hour grace period.
+- Local images live under `Images:Storage:LocalPath`, relative to the API content root. Compose persists PostgreSQL images in `api-data` and SQLite images in `sqlite-data`. Back up local image files along with the matching database. R2 persists images in the bucket.
 
 ### API Layer
 - **Controllers**: RESTful endpoints with attribute routing
@@ -271,7 +280,7 @@ podman compose -f deploy/docker-compose.yaml down
 ### RSS / Atom Subscriptions (P5)
 - Apply `M3_Feeds`: Feeds, FeedEntries, FeedTags, Highlights.AnchorStatus, and Article.Url/ImageUrl text storage. Full canonical feed URLs and entry keys remain text; persisted C# SHA-256 keys provide unique indexes (`FeedUrlHash`, `FeedId + EntryKeyHash`) without PostgreSQL B-tree key-width failures. Every hash match checks the full identity. API article URL inputs remain limited to 2000; feed inputs follow http/https validation and accept canonical preview URLs.
 - Authenticated endpoints: `POST /api/feeds/preview`, `POST /api/feeds` (201 `{ feed, imported }`, 409 `{ existingFeedId }`), `GET /api/feeds`, `PATCH /api/feeds/{id}` (`title`, `tagIds`, `paused`), `POST /api/feeds/{id}/refresh` (409 if leased/paused), `DELETE /api/feeds/{id}` (unsubscribe, keep articles), and `POST /api/feeds/{id}/trash-articles` (`{ trashed, skipped }`, excludes plugin saves and other-feed sources). Preview returns at most five entries; first subscribe/resubscribe imports at most 20 new entries and permanently dismisses the excess.
-- `FeedParser` uses Syndication with DTD ignored and no XML resolver, RSS2/Atom content precedence (Atom text/default content and summaries are HTML-encoded for literal rendering while OriginalContent stays raw), valid http/https links, nullable malformed dates, ttl/syndication intervals, safe Unicode field limits, summary classification, HtmlSanitizer and signed image rewriting. Feed/site/entry/link/content and nested XHTML xml:base values inherit in order; empty bases inherit rather than reset. Content without an explicit base keeps the entry URL fallback. `feeds` HttpClient follows at most five redirects. A linked 20-second deadline includes streamed body reading; byte counting aborts above 10MB. Byte decoding honors BOM first, then explicit HTTP charset, then XML declaration/default before string conversion. HTML discovery follows one alternate RSS/Atom link.
+- `FeedParser` uses Syndication with DTD ignored and no XML resolver, RSS2/Atom content precedence (Atom text/default content and summaries are HTML-encoded for literal rendering while OriginalContent stays raw), valid http/https links, nullable malformed dates, ttl/syndication intervals, safe Unicode field limits, summary classification, HtmlSanitizer and normalized image URLs. Feed/site/entry/link/content and nested XHTML xml:base values inherit in order; empty bases inherit rather than reset. Content without an explicit base keeps the entry URL fallback. `feeds` HttpClient follows at most five redirects. A linked 20-second deadline includes streamed body reading; byte counting aborts above 10MB. Byte decoding honors BOM first, then explicit HTTP charset, then XML declaration/default before string conversion. HTML discovery follows one alternate RSS/Atom link.
 - `FeedRefreshWorker` ticks every 60 seconds. It atomically claims at most four due rows with a five-minute lease and ownership token, then runs independent scopes concurrently. PostgreSQL claims rows with `FOR UPDATE SKIP LOCKED`. SQLite claims them in one `UPDATE … RETURNING` statement. Completion locks and rechecks current status/ownership/expiry before importing or changing metadata; acknowledged pause/unsubscribe revokes in-flight work. Success/304 clears failures; supplied 304 ETag/LastModified headers replace stored validators while omitted ones are retained; 429/503 honors Retry-After and failures back off 30 minutes to 24 hours. Caller cancellation propagates and conditionally releases only its own lease.
 - Imports run in one transaction per feed. PostgreSQL uses a feed-row lock and a transaction-scoped advisory lock for canonical article creation across feeds and extension saves. SQLite acquires the database write lock with `BEGIN IMMEDIATE`. Same-feed entry writes serialize before identity lookup; no swallowed unique exception can poison a transaction. Existing article content/tags/state are never changed by feed updates, and trash is never restored. Every permanent-deletion path dismisses linked entries through ArticlePurger.
 - Saving a feed summary through the extension replaces its body and fills missing metadata. The reader matches Pending highlights against the refreshed body using UTF-16 text offsets. `PUT /api/highlights/{id}/anchor` applies offsets or `{ orphaned: true }` to Pending highlights and accepts `contentRevision`. Creating a highlight accepts the same optional revision. Both highlight operations return 409 with the current revision when it differs from the loaded body. Orphaned notes remain visible.
@@ -280,7 +289,7 @@ podman compose -f deploy/docker-compose.yaml down
 
 ### Saved Links and Markdown Copy
 - `ContentKind.Link = 2` serializes as `"link"` and stores empty original and readable content. The existing schema supports it.
-- `POST /api/articles/link` requires an HTTP(S) URL and title. The saved address is the page's original `document.URL`. The existing `UrlNormalizer` handles deduplication, keeping YouTube playlist parameters distinct. Link saves restore existing matches and preserve their content, metadata, and state. Full content saves upgrade `Link` and `SummaryOnly` and fill missing metadata. Re-saving a `Full` article refreshes the title and any nonempty author, summary and cover. A changed body after image-proxy rewriting increments `contentRevision`, resets progress with a strictly newer version, and marks highlights Pending. An identical body keeps progress, highlights and the revision.
+- `POST /api/articles/link` requires an HTTP(S) URL and title. The saved address is the page's original `document.URL`. The existing `UrlNormalizer` handles deduplication, keeping YouTube playlist parameters distinct. Link saves restore existing matches and preserve their content, metadata, and state. Full content saves upgrade `Link` and `SummaryOnly` and fill missing metadata. Re-saving a `Full` article refreshes the title and any nonempty author, summary and cover. Article HTML is normalized before comparison so legacy proxy URLs and their original URLs resolve to the same stored body. A changed body increments `contentRevision`, resets progress with a strictly newer version, and marks highlights Pending. An identical body keeps progress, highlights and the revision.
 - Link details show the domain, save date, available cover and summary, and an original-page button. Reading progress saves, resets, and new highlights on links return 400.
 - The popup shows both `Save Article` and `Save Link`; the user chooses. Extraction returns `PageChoices { suggested, article, link }`: classification only picks the highlighted primary button, and `Save Article` is disabled when Readability finds no content. Settings open from the top-right gear icon.
 - After an in-page navigation changes the URL beyond the fragment, extraction skips stale head metadata. The YouTube popup requests oEmbed for supported video, Shorts and playlist links with a five-second deadline. It uses the extracted metadata and the watch/Shorts thumbnail fallback when oEmbed is unavailable.
@@ -303,6 +312,7 @@ src/web-extension/test/        # Popup, background and clipboard tests
 - **FluentAssertions**: Assertion library
 - **EF Core InMemory**: Existing isolated tests
 - **Testcontainers.PostgreSql**: Real PostgreSQL 16 + zhparser migration, query filter, canonical matching, search, and HTTP state tests; requires a running Docker-compatible daemon. The shared fixture runs `DbSeeder` to initialize `mixed_zh_en` and apply migrations. Rootless Podman may require `DOCKER_HOST`, `TESTCONTAINERS_HOST_OVERRIDE=localhost`, and `TESTCONTAINERS_RYUK_DISABLED=true`.
+- **Testcontainers.Minio** tests the S3 image store against MinIO. It pulls the public Chainguard image by default. Set `MINIO_TEST_IMAGE` to test with a pinned or local MinIO image. [Chainguard MinIO images](https://images.chainguard.dev/directory/image/minio/versions)
 
 The SQLite tests run with temporary local database files and require only the .NET SDK.
 
@@ -327,7 +337,7 @@ dotnet test --collect:"XPlat Code Coverage"
 - **db**: PostgreSQL 16 with zhparser for Chinese search in the default Compose stack
 - **minicc-api**: ASP.NET Core backend
 - **minicc-web**: Next.js frontend
-- **image-proxy**: Image proxy service for secure image loading
+- **image-proxy**: Optional service enabled by `deploy/docker-compose.image-proxy.yaml` when `Images__Mode=ImageProxy`
 - **lb**: Nginx load balancer (port 5000)
 
 ### Service Communication
@@ -368,7 +378,7 @@ dotnet test --collect:"XPlat Code Coverage"
 
 ### Frontend Optimization
 - **Code Splitting**: Next.js automatic code splitting
-- **Image Optimization**: Lazy loading and proxy service
+- **Image delivery**: Lazy loading and persistent API or S3 image storage
 - **Caching**: Browser and CDN caching strategies
 - **Bundle Analysis**: Regular bundle size monitoring
 
@@ -376,7 +386,7 @@ dotnet test --collect:"XPlat Code Coverage"
 
 ### Common Issues
 - **Database Migrations**: Generate both migrations for schema changes. Use `--context` to select a provider when running `dotnet ef`.
-- **Port Conflicts**: Ensure ports 4000, 5000, 5050 are available
+- **Port Conflicts**: Ensure ports 4000 and 5000 are available
 - **Docker Issues**: Use `podman` instead of `docker` if configured
 - **CORS Problems**: Verify frontend URL in CORS configuration
 

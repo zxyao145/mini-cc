@@ -75,7 +75,7 @@ public class FeedFetcherTests
             response.Content.Headers.ContentType = new("application/rss+xml") { CharSet = httpCharset }; return response;
         })));
         var fetched = await fetcher.FetchAsync("https://example.com/feed", null, null, default);
-        var parser = new FeedParser(new MiniCc.Api.Infra.ImageProxyService(Microsoft.Extensions.Options.Options.Create(new MiniCc.Api.Infra.ImageProxyOptions { SignatureKey = "test" })));
+        var parser = new FeedParser();
         var feed = parser.Parse(fetched.Body!, fetched.FeedUrl);
         feed.Title.Should().Be("Café"); feed.Items.Single().Title.Should().Be("Résumé"); feed.Items.Single().Summary.Should().Be("Résumé & café");
     }

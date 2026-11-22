@@ -9,7 +9,7 @@ using Ganss.Xss;
 using HtmlAgilityPack;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.FeedNs.Domain;
-using MiniCc.Api.Infra;
+using MiniCc.Api.Core.ImageNs.Domain;
 
 namespace MiniCc.Api.Core.FeedNs.Infrastructure;
 
@@ -21,7 +21,7 @@ public record ParsedEntry(string EntryKey, string Url, string Title, string Auth
 public record ParsedFeed(string Title, string? SiteUrl, FeedFormat Format, int MinIntervalMinutes, List<ParsedEntry> Items, int Skipped);
 public class FeedException(string message) : Exception(message);
 
-public class FeedParser(ImageProxyService images)
+public class FeedParser
 {
     public ParsedFeed Parse(string xml, string feedUrl)
     {
@@ -73,10 +73,10 @@ public class FeedParser(ImageProxyService images)
             var enclosure = raw.Elements().FirstOrDefault(x => (x.Name.LocalName == "enclosure" || x.Name.LocalName == "link" && x.Attribute("rel")?.Value == "enclosure") && x.Attribute("type")?.Value.StartsWith("image/") == true);
             var cover = Absolute(media?.Attribute("url")?.Value, XmlBase(media ?? raw, feedUrl, url))
                 ?? Absolute(enclosure?.Attribute(format == FeedFormat.Rss ? "url" : "href")?.Value, XmlBase(enclosure ?? raw, feedUrl, url));
-            if (cover == null) { var html = new HtmlDocument(); html.LoadHtml(sanitized); cover = html.DocumentNode.Descendants("img").FirstOrDefault()?.GetAttributeValue("src", ""); }
+            if (cover == null) { var html = new HtmlDocument(); html.LoadHtml(sanitized); cover = HtmlEntity.DeEntitize(html.DocumentNode.Descendants("img").FirstOrDefault()?.GetAttributeValue("src", "")); }
             items.Add(new(key, url, string.IsNullOrWhiteSpace(item.Title?.Text) ? "无标题" : item.Title.Text,
                 item.Authors.FirstOrDefault()?.Name ?? feed.Title?.Text ?? "", body,
-                images.RewriteImages(sanitized), FeedText.Limit(summary, 300), cover ?? "", text.Length,
+                ImageHtml.Normalize(sanitized), FeedText.Limit(summary, 300), ImageHtml.NormalizeUrl(cover ?? ""), text.Length,
                 IsSummary(text) ? ContentKind.SummaryOnly : ContentKind.Full, published));
         }
         var minutes = 30;

@@ -19,6 +19,7 @@ public class SqliteMiniCcDbContext(
     protected override void ConfigureProviderModel(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Article>().Ignore(a => a.SearchVector);
+        modelBuilder.Entity<Article>().Property(a => a.Images).HasColumnType("TEXT");
         modelBuilder.Entity<User>().Property(u => u.ReaderPreferences).HasColumnType("TEXT");
     }
 }

@@ -1,16 +1,10 @@
-using Microsoft.Extensions.Options;
 using MiniCc.Api.Core.ArticleNs.Domain.Services;
-using MiniCc.Api.Infra;
 
 namespace MiniCc.Api.Test.Core.ArticleNs.Domain.Services;
 
 public class ArticleDomainServiceTests
 {
-    private readonly ArticleDomainService _service = new(new ImageProxyService(Options.Create(new ImageProxyOptions
-    {
-        ProxyUrl = "/imageProxy",
-        SignatureKey = "local-test-secret"
-    })));
+    private readonly ArticleDomainService _service = new();
 
     [Fact]
     public void CreateArticleFromContent_StoresExtensionOutputAndCountsDecodedText()
@@ -38,12 +32,12 @@ public class ArticleDomainServiceTests
     }
 
     [Fact]
-    public void CreateArticleFromContent_ProxiesCoverImageWithoutChangingOriginalHtml()
+    public void CreateArticleFromContent_NormalizesCoverImageWithoutChangingOriginalHtml()
     {
         var article = _service.CreateArticleFromContent("https://example.com/article", "<img src='original.png'>",
             "<p>Readable</p>", "Title", "", "", "https://example.com/cover.png");
 
-        article.ImageUrl.Should().StartWith("/imageProxy/0x0,s").And.EndWith("/https://example.com/cover.png");
+        article.ImageUrl.Should().Be("https://example.com/cover.png");
         article.OriginalContent.Should().Be("<img src='original.png'>");
     }
 }

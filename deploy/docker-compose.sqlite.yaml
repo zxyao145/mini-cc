@@ -14,7 +14,6 @@ services:
     environment:
       Database__Provider: sqlite
       MiniCC_Db: "Data Source=/app/data/mini_cc.db"
-      ImageProxy__SignatureKey: "${IMAGE_PROXY_SECRET:-my-secret-key-123!@#}"
     volumes:
       - sqlite-data:/app/data
 
@@ -31,21 +30,6 @@ services:
     depends_on:
       - minicc-api
 
-  image-proxy:
-    build:
-      context: ../src/image-proxy
-      dockerfile: ./Dockerfile
-    image: image-proxy
-    container_name: image-proxy
-    environment:
-      IMAGE_PROXY_SECRET: "${IMAGE_PROXY_SECRET:-my-secret-key-123!@#}"
-    depends_on:
-      - minicc-api
-    volumes:
-      - image-proxy-data:/temp/cache/image-proxy
-    ports:
-      - "5050:8080"
-
   lb:
     build:
       context: ../src/ng
@@ -57,8 +41,6 @@ services:
     depends_on:
       - minicc-api
       - minicc-web
-      - image-proxy
 
 volumes:
   sqlite-data:
-  image-proxy-data:

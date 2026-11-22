@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MiniCc.Api.Controllers.ArticleNs;
 using MiniCc.Api.Core.ApiKeys.Application.Services;
+using MiniCc.Api.Core.ImageNs.Infrastructure.Worker;
 using MiniCc.Api.Infra;
 using MiniCc.Api.Shared.Data;
 
@@ -20,9 +21,14 @@ public static class SqliteApi
         {
             builder.UseEnvironment("Testing");
             builder.ConfigureAppConfiguration((_, configuration) => configuration.AddInMemoryCollection(
-                new Dictionary<string, string?> { ["ImageProxy:SignatureKey"] = "test-signing-key" }));
+                new Dictionary<string, string?>
+                {
+                    ["ImageProxy:SignatureKey"] = "test-signing-key",
+                    ["Images:Storage:LocalPath"] = fixture.ImageDirectory
+                }));
             builder.ConfigureTestServices(services =>
             {
+                services.Remove(services.Single(s => s.ImplementationType == typeof(ImageDownloadWorker)));
                 services.RemoveAll<DbContextOptions<MiniCcDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<MiniCcDbContext>>();
                 services.RemoveAll<MiniCcDbContext>();

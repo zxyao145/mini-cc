@@ -17,6 +17,8 @@ public sealed class PostgresFixture : IAsyncLifetime
         .WithImage("zhparser/zhparser:bookworm-16")
         .Build();
 
+    public string ImageDirectory { get; } = Path.Combine(Path.GetTempPath(), $"minicc-postgres-images-{Guid.NewGuid():N}");
+
     public string ConnectionString => _container.GetConnectionString();
 
     public MiniCcDbContext CreateContext(string? connectionString = null) => new(
@@ -47,5 +49,10 @@ public sealed class PostgresFixture : IAsyncLifetime
         return article;
     }
 
-    public async Task DisposeAsync() => await _container.DisposeAsync();
+    public async Task DisposeAsync()
+    {
+        await _container.DisposeAsync();
+        if (Directory.Exists(ImageDirectory))
+            Directory.Delete(ImageDirectory, recursive: true);
+    }
 }

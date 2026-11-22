@@ -106,7 +106,7 @@ export default function ArticleCard({ article, onDelete, onUpdate, layout = "gri
       </div>}
       {currentArticle.imageUrl && (
         <div className={styles.imageContainer}>
-          <img src={currentArticle.imageUrl} alt="" className={styles.image} loading="lazy" />
+          <img src={currentArticle.imageUrl} alt="" className={styles.image} loading="lazy" referrerPolicy="no-referrer" />
         </div>
       )}
       <div className={styles.content}>

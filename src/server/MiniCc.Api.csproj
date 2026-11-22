@@ -25,6 +25,7 @@
 
     <ItemGroup>
         <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+        <PackageReference Include="AWSSDK.S3" />
         <PackageReference Include="HtmlAgilityPack" />
         <PackageReference Include="System.ServiceModel.Syndication" />
         <PackageReference Include="HtmlSanitizer" />

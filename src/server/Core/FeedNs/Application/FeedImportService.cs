@@ -4,6 +4,7 @@ using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects;
 using MiniCc.Api.Core.ArticleNs.Domain.Services;
 using MiniCc.Api.Core.FeedNs.Domain;
 using MiniCc.Api.Core.FeedNs.Infrastructure;
+using MiniCc.Api.Core.ImageNs.Domain;
 using MiniCc.Api.Shared.Data;
 using MiniCc.Api.Shared.Data.Repositories;
 
@@ -57,7 +58,8 @@ public class FeedImportService(MiniCcDbContext db, IUnitOfWork unitOfWork)
                 if (article == null)
                 {
                     article = Article.Create(Url.Create(item.Url), FeedText.Limit(item.Title, 500), FeedText.Limit(item.Author, 200),
-                        Content.Create(item.OriginalContent.Length == 0 ? " " : item.OriginalContent, item.ReadableContent, item.Length), item.Summary, item.ImageUrl);
+                        Content.Create(item.OriginalContent.Length == 0 ? " " : item.OriginalContent, item.ReadableContent, item.Length), item.Summary, ImageHtml.NormalizeUrl(item.ImageUrl));
+                    article.SyncImages(resetFailed: false, DateTimeOffset.UtcNow);
                     article.SetFeedContent(item.ContentKind, item.PublishedAt);
                     foreach (var tag in feed.Tags) article.AddTag(tag);
                     db.Articles.Add(article); imported++;

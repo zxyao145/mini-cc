@@ -1,11 +1,10 @@
 using MapsterMapper;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using MiniCc.Api.Core.ArticleNs.Application.Commands;
 using MiniCc.Api.Core.ArticleNs.Application.DTOs;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.ArticleNs.Domain.Services;
-using MiniCc.Api.Infra;
+using MiniCc.Api.Test.Images;
 using MiniCc.Api.Shared.Data.Repositories;
 
 namespace MiniCc.Api.Test.Core.ArticleNs.Application.Commands;
@@ -15,10 +14,7 @@ public class SaveLinkCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IArticleRepository> _articles = new();
     private readonly Mock<IMapper> _mapper = new();
-    private readonly ArticleDomainService _domainService = new(new ImageProxyService(Options.Create(new ImageProxyOptions
-    {
-        SignatureKey = "test-key"
-    })));
+    private readonly ArticleDomainService _domainService = new();
 
     public SaveLinkCommandHandlerTests()
     {
@@ -98,5 +94,5 @@ public class SaveLinkCommandHandlerTests
     }
 
     private SaveLinkCommandHandler CreateHandler() => new(
-        _unitOfWork.Object, _domainService, _mapper.Object, NullLogger<SaveLinkCommandHandler>.Instance);
+        _unitOfWork.Object, _domainService, _mapper.Object, TestImages.Legacy(), NullLogger<SaveLinkCommandHandler>.Instance);
 }

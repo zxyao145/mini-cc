@@ -125,13 +125,28 @@ it('renders a link without reader chrome or progress traffic when a state update
   expect(container.textContent).toContain('Video description');
   expect(container.textContent).toContain('youtube.com');
   expect(container.textContent).toContain('保存于');
-  expect(container.querySelector('img[src="https://img.example/cover.jpg"]')).not.toBeNull();
+  expect(container.querySelector('img[src="https://img.example/cover.jpg"]')?.getAttribute('referrerpolicy')).toBe('no-referrer');
 
   document.dispatchEvent(new Event('visibilitychange'));
   await act(async () => { await Promise.resolve(); });
   expect(articleApi.getArticleById).toHaveBeenCalledTimes(1);
   expect(articleApi.saveProgress).not.toHaveBeenCalled();
   expect(articleApi.resetProgress).not.toHaveBeenCalled();
+});
+
+it('keeps referrerpolicy on article images after sanitizing', async () => {
+  const imageUrl = 'https://img.example/a.png';
+  const article = {
+    id: 'image-article', title: 'Image article', url: 'https://example.com/article', author: '',
+    readableContent: `<p>Body</p><img src="${imageUrl}" referrerpolicy="no-referrer">`, summary: '', imageUrl: '',
+    createdAt: '2026-11-13T00:00:00Z', contentKind: 'full', tags: [], feeds: [], highlights: [],
+    readingStatus: 'unread', isArchived: false, isFavorite: false,
+  } as unknown as Article;
+  vi.mocked(articleApi.getArticleById).mockResolvedValue(article);
+
+  await act(async () => root.render(<Client id={article.id} />));
+
+  expect(container.querySelector(`img[src="${imageUrl}"]`)?.getAttribute('referrerpolicy')).toBe('no-referrer');
 });
 
 it('uses the active app theme when reader preferences follow the system', async () => {

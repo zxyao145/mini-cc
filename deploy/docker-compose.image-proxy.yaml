@@ -1,0 +1,27 @@
+services:
+  minicc-api:
+    environment:
+      Images__Mode: ImageProxy
+      ImageProxy__SignatureKey: "${IMAGE_PROXY_SECRET:?Set IMAGE_PROXY_SECRET}"
+
+  image-proxy:
+    build:
+      context: ../src/image-proxy
+      dockerfile: ./Dockerfile
+    image: image-proxy
+    container_name: image-proxy
+    environment:
+      IMAGE_PROXY_SECRET: "${IMAGE_PROXY_SECRET:?Set IMAGE_PROXY_SECRET}"
+    depends_on:
+      - minicc-api
+    volumes:
+      - image-proxy-data:/temp/cache/image-proxy
+
+  lb:
+    depends_on:
+      - image-proxy
+    volumes:
+      - ../src/ng/image-proxy.location.conf:/etc/nginx/conf.d/locations/image-proxy.conf:ro
+
+volumes:
+  image-proxy-data:
