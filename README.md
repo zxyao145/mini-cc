@@ -136,12 +136,15 @@ SQLite notes:
 
 ### Configuration
 
+The API reads its defaults from `src/server/appsettings.yaml`. Use `#` for comments.
+`appsettings.Development.yaml` supplies development overrides.
+
 Set these environment variables on the API. With Compose, add them to the `environment` section of `minicc-api`.
 
 | Variable | Default | Description |
 | --- | --- | --- |
 | `Database__Provider` | `postgres` | `postgres` or `sqlite`, case-insensitive |
-| `MiniCC_Db` | From `appsettings.json` | Database connection string. Relative SQLite paths resolve from the API content root. |
+| `MiniCC_Db` | From `appsettings.yaml` | Database connection string. Relative SQLite paths resolve from the API content root. |
 | `Images__Mode` | `Store` | `Store` downloads and persists article images. `ImageProxy` enables the optional legacy proxy. |
 | `Images__Delivery` | `Authenticated` | `Authenticated` requires sign-in for stored image URLs. `Public` permits anonymous access. |
 | `Images__ApiUrl` | `/api/images` | API image endpoint address. Set to `http://localhost:5001/api/images` for a local web dev server. |

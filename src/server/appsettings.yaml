@@ -1,0 +1,147 @@
+Logging:
+  LogLevel:
+    Default: Information
+    Microsoft.AspNetCore: Warning
+
+Database:
+  # 可选值为 postgres（PostgreSQL）和 sqlite（SQLite）。
+  # 可通过 Database__Provider 环境变量覆盖此设置。
+  # Supported values are postgres (PostgreSQL) and sqlite (SQLite).
+  # Set the Database__Provider environment variable to override this setting.
+  Provider: postgres
+
+ConnectionStrings:
+  # PostgreSQL 连接字符串。
+  # PostgreSQL connection string.
+  DefaultConnection: "Host=127.0.0.1;Port=15432;Database=mini_cc;Username=postgres;Password=postgres"
+  # 选用 SQLite 时使用。相对路径以 API 内容根目录为基准。
+  # Used when SQLite is selected. Relative paths resolve from the API content root.
+  Sqlite: "Data Source=data/mini_cc.db"
+
+# 允许的请求 Host 名称。多个名称用分号分隔，省略端口。* 允许任意主机。
+# Allowed names in the request Host header. Separate names with semicolons and omit ports. * allows any host.
+AllowedHosts: "*"
+
+# 用于加密数据库字段的 AES 密钥。解密已有数据需要保留对应的密钥条目。
+# AES keys for database fields. Keep the key entries needed to decrypt existing data.
+AesKeys:
+  # Id 标识密钥。Key 和 IV 都采用 Base64 编码。
+  # Id identifies the key. Both Key and IV are Base64 encoded.
+  - Id: v1
+    Key: "hMQCUrNmmUfmiGUzeYw16StufbCVq++YQFAUYm1VR5Q="
+    IV: "OF1aoSCPy4s4frAWonoaOQ=="
+
+# 文章回收站和撤销提示设置。
+# Article trash and undo settings.
+Library:
+  # 文章在回收站保留的天数，范围为 1–365。到期后可被永久清理。
+  # Days to keep an article in the trash before permanent cleanup. Valid range is 1–365.
+  TrashRetentionDays: 30
+  # 删除文章后撤销提示的显示时长，单位为秒，范围为 3–60。
+  # Seconds to show the undo prompt after deleting an article. Valid range is 3–60.
+  UndoWindowSeconds: 10
+
+# 文章图片的处理方式、访问权限和存储设置。
+# Processing, access, and storage settings for article images.
+Images:
+  # Store 由 API 下载并保存图片，ImageProxy 使用旧版图片代理。
+  # Store downloads and saves images in the API. ImageProxy uses the legacy image proxy.
+  Mode: Store
+  # Authenticated 要求登录或提供 API 密钥，Public 允许匿名访问。
+  # Authenticated requires sign-in or an API key. Public permits anonymous access.
+  Delivery: Authenticated
+  # API 为已存储图片生成链接时使用的基址，可以是相对路径或完整 URL。
+  # Base used to build links for images served by the API. Use a relative path or a full URL.
+  ApiUrl: /api/images
+  # 公开 S3 图片的绝对 HTTP(S) 基址。填写时需将 Delivery 设为 Public，并选用 S3 存储。
+  # Absolute HTTP(S) base URL for public S3 images. Requires Public delivery and S3 storage.
+  PublicBaseUrl: ""
+  # 是否允许后台图片下载访问环回、私有和链路本地地址。
+  # Allow background image downloads from loopback, private, and link-local addresses.
+  AllowPrivateNetworks: False
+  Storage:
+    # Local 使用本地目录，S3 使用兼容 S3 的对象存储。
+    # Local uses a directory on disk. S3 uses S3-compatible object storage.
+    Provider: Local
+    # 本地图片目录。相对路径以 API 内容根目录为基准。
+    # Local image directory. Relative paths resolve from the API content root.
+    LocalPath: data/images
+    # 使用 S3 存储时，需要设置服务端点、存储桶和访问凭证。
+    # S3 storage requires a service endpoint, bucket, and access credentials.
+    S3:
+      ServiceUrl: ""
+      Bucket: ""
+      # S3 请求签名使用的区域。Cloudflare R2 使用 auto。
+      # Region used to sign S3 requests. Cloudflare R2 uses auto.
+      Region: auto
+      # 访问凭证可通过各自对应的环境变量注入。
+      # Set the corresponding environment variables to supply access credentials.
+      AccessKeyId: ""
+      SecretAccessKey: ""
+
+# 旧版图片代理配置。启用 ImageProxy 模式时，通过 ImageProxy__SignatureKey 提供签名密钥。
+# Legacy image proxy settings. Set ImageProxy__SignatureKey when using ImageProxy mode.
+ImageProxy:
+  # 生成代理图片链接时使用的基础路径或 URL。
+  # Base path or URL used to build proxied image links.
+  ProxyUrl: /imageProxy
+
+
+Serilog:
+  MinimumLevel:
+    Default: Information
+    Override:
+      Microsoft: Information
+      System: Information
+      Microsoft.Hosting.Lifetime: Information
+      Microsoft.EntityFrameworkCore.Database.Command: Information
+      Microsoft.AspNetCore.Hosting.Diagnostics: Warning
+      Microsoft.AspNetCore.Mvc.Infrastructure: Warning
+      Microsoft.AspNetCore.Routing.EndpointMiddleware: Warning
+  Using:
+    - Serilog.Sinks.Console
+    - Serilog.Sinks.File
+    - Serilog.Enrichers.ClientInfo
+  Enrich:
+    - FromLogContext
+    - WithClientIp
+    - WithThreadId
+  WriteTo:
+    - Name: Console
+      Args:
+        outputTemplate: "{Timestamp:yyyy-MM-ddTHH:mm:ss.fffK}|{Level:u3}|{TraceId}-{SpanId}-{TraceFlags}|{Flag}|{SourceContext}#{Caller}|{Message:lj}{NewLine}{Exception}"
+        # 备用输出模板示例。
+        # Example of an alternative output template.
+        # outputTemplate: "[{Timestamp:o} {Level:u3}][{TraceId}-{SpanId}-{TraceFlags}] [{Flag}] [{SourceContext}#{Caller}] {Message:lj}{NewLine}{Exception}"
+        theme: "Serilog.Sinks.SystemConsole.Themes.AnsiConsoleTheme::Code, Serilog.Sinks.Console"
+        # 可选的表达式格式化器示例。
+        # Example of an optional expression-based formatter.
+        # formatter:
+        #   type: "Serilog.Templates.ExpressionTemplate, Serilog.Expressions"
+    # 常规日志文件配置，按小时轮换。
+    # General log file settings with hourly rolling.
+    - Name: Default
+      Args:
+        configure:
+          - Name: File
+            Args:
+              rollingInterval: Hour
+              path: logs/log-.log
+              fileSizeLimitBytes: 40960
+              buffered: False
+              outputTemplate: "{Timestamp:yyyy-MM-ddTHH:mm:ss.fffK}|{Level:u3}|{TraceId}-{SpanId}-{TraceFlags}|{Flag}|{SourceContext}#{Caller}|{Message:lj}{NewLine}{Exception}"
+              # outputTemplate: "[{Timestamp:o} {Level:u3}][{TraceId}-{SpanId}-{TraceFlags}] [{Flag}] [{SourceContext}#{Caller}] [{Message:lj}]{NewLine}{Exception}"
+    # 错误日志文件配置，筛选 Error 和 Fatal 级别，按小时轮换。
+    # Error log file settings with hourly rolling and a filter for Error and Fatal.
+    - Name: Error
+      Args:
+        expression: "@Level in ['Error', 'Fatal']"
+        configureSink:
+          - Name: File
+            Args:
+              rollingInterval: Hour
+              path: logs/log-error-.log
+              fileSizeLimitBytes: 40960
+              buffered: False
+              outputTemplate: "{Timestamp:yyyy-MM-ddTHH:mm:ss.fffK}|{Level:u3}|{TraceId}-{SpanId}-{TraceFlags}|{Flag}|{SourceContext}#{Caller}|{Message:lj}{NewLine}{Exception}"
+              # outputTemplate: "[{Timestamp:o} {Level:u3}][{TraceId}-{SpanId}-{TraceFlags}] [{Flag}] [{SourceContext}#{Caller}] [{Message:lj}]{NewLine}{Exception}"
