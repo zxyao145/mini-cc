@@ -145,6 +145,8 @@ export default function FeedDialog({ feed, onClose, onDone }: { feed?: Feed; onC
                 disabled={pending}
               />
 
+              {feed && <Input label="订阅地址" type="url" value={feed.feedUrl} readOnly />}
+
               <fieldset className={styles.tagFieldset}>
                 <legend>默认标签</legend>
                 <p className={styles.muted}>只应用于今后新导入的文章。</p>

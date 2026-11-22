@@ -34,18 +34,86 @@ it('renders only acknowledged anchors; missing text is orphaned and a failed ack
   } finally { await act(async () => root.unmount()); host.remove(); vi.useRealTimers(); }
 });
 
+it.each([
+  {
+    selection: 'across paragraphs',
+    html: '<p>Before first.</p>\n\n<p>Second after.</p>',
+    text: 'first.\n\nSecond',
+    startOffset: 'Before '.length,
+    endOffset: 'Before first.\n\nSecond'.length,
+    fragments: [['P', 'first.'], ['P', 'Second']],
+  },
+  {
+    selection: 'across a bold boundary',
+    html: '<p>The <strong>bold word</strong> and the rest.</p>',
+    text: 'word and',
+    startOffset: 'The bold '.length,
+    endOffset: 'The bold word and'.length,
+    fragments: [['STRONG', 'word'], ['P', ' and']],
+  },
+  {
+    selection: 'with trailing paragraph breaks',
+    html: '<p>Selected sentence.</p>\n\n<p>Next paragraph.</p>',
+    text: 'Selected sentence.',
+    startOffset: 0,
+    endOffset: 'Selected sentence.\n\n'.length,
+    fragments: [['P', 'Selected sentence.']],
+  },
+])('renders a saved highlight $selection and preserves the article', async ({ html, text, startOffset, endOffset, fragments }) => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  vi.useFakeTimers();
+  const saved: Highlight = { id: 'saved', articleId: 'article', text, startOffset, endOffset, note: 'Saved note', color: '#ffeb3b', createdAt: '' };
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  const onHighlightsChange = vi.fn();
+
+  function Reader({ highlights }: { highlights: Highlight[] }) {
+    const ref = useRef<HTMLDivElement>(null);
+    return <>
+      <ReadableContent contentRef={ref} html={html} />
+      <HighlightManager articleId="article" bodyStale={false} highlights={highlights} onHighlightsChange={onHighlightsChange} />
+    </>;
+  }
+
+  try {
+    await act(async () => root.render(<Reader highlights={[saved]} />));
+    const content = host.querySelector('.readable-content')!;
+    const originalHtml = content.innerHTML;
+    const originalText = content.textContent;
+    await act(async () => vi.advanceTimersByTimeAsync(110));
+    const marks = Array.from(content.querySelectorAll<HTMLElement>('[data-highlight-id="saved"]'));
+    expect(marks.map(mark => [mark.parentElement?.tagName, mark.textContent])).toEqual(fragments);
+    expect(marks.map(mark => mark.title)).toEqual(fragments.map(() => '笔记：Saved note'));
+    expect(content.querySelectorAll('[data-highlight-id] [aria-hidden="true"]')).toHaveLength(1);
+    expect(content.textContent).toBe(originalText);
+    expect(onHighlightsChange).not.toHaveBeenCalled();
+
+    await act(async () => root.render(<Reader highlights={[]} />));
+    await act(async () => vi.advanceTimersByTimeAsync(110));
+    expect(content.innerHTML).toBe(originalHtml);
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+    vi.useRealTimers();
+  }
+});
+
 it('closes the highlight menu on Escape and leaves article text unchanged', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  vi.useFakeTimers();
   const highlight: Highlight = { id: 'existing', articleId: 'article', text: 'Selected text', note: '', color: '#ffeb3b', startOffset: 0, endOffset: 13, createdAt: '' };
   const host = document.createElement('div'); document.body.append(host); const root = createRoot(host);
   function Reader() {
     const [highlights, setHighlights] = useState([highlight]);
-    return <><div className="readable-content"><p><span data-highlight-id="existing">Selected text</span></p></div><HighlightManager articleId="article" highlights={highlights} bodyStale={false} onHighlightsChange={setHighlights}/></>;
+    const ref = useRef<HTMLDivElement>(null);
+    return <><ReadableContent contentRef={ref} html="<p>Selected text</p>"/><HighlightManager articleId="article" highlights={highlights} bodyStale={false} onHighlightsChange={setHighlights}/></>;
   }
   const dismissTooltip = (event: KeyboardEvent) => { if (event.key === 'Escape') event.preventDefault(); };
   document.addEventListener('keydown', dismissTooltip, true);
   try {
     await act(async () => root.render(<Reader/>));
+    await act(async () => vi.advanceTimersByTimeAsync(110));
     const trigger = host.querySelector<HTMLElement>('[data-highlight-id="existing"]')!;
     const content = host.querySelector('.readable-content')!;
     const articleText = content.textContent;
@@ -62,7 +130,7 @@ it('closes the highlight menu on Escape and leaves article text unchanged', asyn
     await pressEscape();
     expect(menu()).toBeNull();
     expect(content.textContent).toBe(articleText);
-  } finally { document.removeEventListener('keydown', dismissTooltip, true); await act(async () => root.unmount()); host.remove(); }
+  } finally { document.removeEventListener('keydown', dismissTooltip, true); await act(async () => root.unmount()); host.remove(); vi.useRealTimers(); }
 });
 
 it('does not re-anchor pending highlights while the body is stale', async () => {

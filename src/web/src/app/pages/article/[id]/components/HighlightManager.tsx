@@ -209,53 +209,47 @@ export default function HighlightManager({
         }
       });
 
-      // Apply new highlights
       if (highlights.length === 0) return;
 
       const nodes = textNodes(contentDiv);
+      const lastNode = nodes.at(-1);
+      if (!lastNode) return;
+      const contentLength = lastNode.offset + lastNode.text.length;
 
-      // Sort highlights by start offset (reverse order for proper DOM manipulation)
+      // Work from the end so splitting a text node preserves its earlier offsets.
       const sortedHighlights = highlights.filter(h => !h.anchorStatus || h.anchorStatus === 'ok').sort((a, b) => b.startOffset - a.startOffset);
 
-      sortedHighlights.forEach((highlight) => {
-        const startNode = nodes.find(tn =>
-          tn.offset <= highlight.startOffset && tn.offset + tn.text.length > highlight.startOffset
-        );
-        const endNode = nodes.find(tn =>
-          tn.offset < highlight.endOffset && tn.offset + tn.text.length >= highlight.endOffset
-        );
+      for (const highlight of sortedHighlights) {
+        if (highlight.startOffset < 0 || highlight.endOffset > contentLength) continue;
 
-        if (startNode && endNode) {
+        let lastFragment: HTMLSpanElement | undefined;
+        for (const { node, offset } of nodes) {
+          if (offset >= highlight.endOffset) break;
+          const start = Math.max(0, highlight.startOffset - offset);
+          const end = Math.min(node.length, highlight.endOffset - offset);
+          // Paragraph separators count toward offsets but do not need a wrapper.
+          if (start >= end || !node.data.slice(start, end).trim()) continue;
+
+          const span = document.createElement('span');
+          span.className = styles.highlight;
+          span.style.setProperty('--hl', highlight.color || DEFAULT_HIGHLIGHT_COLOR);
+          span.setAttribute('data-highlight-id', highlight.id);
+          span.title = highlight.note ? `笔记：${highlight.note}` : '点击管理高亮';
+
           const range = document.createRange();
-          const startOffsetInNode = highlight.startOffset - startNode.offset;
-          const endOffsetInNode = highlight.endOffset - endNode.offset;
-
-          range.setStart(startNode.node, startOffsetInNode);
-          range.setEnd(endNode.node, endOffsetInNode);
-
-          if (!range.collapsed) {
-            const span = document.createElement('span');
-            span.className = styles.highlight;
-            span.style.setProperty('--hl', highlight.color || DEFAULT_HIGHLIGHT_COLOR);
-            span.setAttribute('data-highlight-id', highlight.id);
-            span.title = highlight.note ? `笔记：${highlight.note}` : '点击管理高亮';
-
-            try {
-              range.surroundContents(span);
-              // Mark highlights that have a note. Appended after surroundContents, which
-              // clears the wrapper's children. The marker is empty so it adds no article text.
-              if (highlight.note && highlight.note.trim()) {
-                const noteIcon = document.createElement('span');
-                noteIcon.className = styles.noteIcon;
-                noteIcon.setAttribute('aria-hidden', 'true');
-                span.appendChild(noteIcon);
-              }
-            } catch (e) {
-              console.warn('Could not apply highlight:', e);
-            }
-          }
+          range.setStart(node, start);
+          range.setEnd(node, end);
+          range.surroundContents(span);
+          lastFragment = span;
         }
-      });
+
+        if (lastFragment && highlight.note?.trim()) {
+          const noteIcon = document.createElement('span');
+          noteIcon.className = styles.noteIcon;
+          noteIcon.setAttribute('aria-hidden', 'true');
+          lastFragment.appendChild(noteIcon);
+        }
+      }
     };
 
     // Apply highlights after a short delay to ensure DOM is ready

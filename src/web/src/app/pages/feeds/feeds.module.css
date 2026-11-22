@@ -220,6 +220,10 @@
   gap: 18px;
 }
 
+.dialogForm input[readonly] {
+  background: var(--surface-muted);
+}
+
 .dialogForm > .muted {
   margin-top: -10px;
 }

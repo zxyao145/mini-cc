@@ -2,6 +2,7 @@ import { act, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { expect, it, vi } from 'vitest';
 import { feedApi, tagApi } from '@/lib/api';
+import type { Feed } from '@/types';
 import FeedDialog from './FeedDialog';
 vi.mock('@/lib/api', () => ({feedApi:{preview:vi.fn(),create:vi.fn(),edit:vi.fn()},tagApi:{getTags:vi.fn()}}));
 it('previews before saving, accepts confirmed title and tags, and reports the imported count', async()=>{
@@ -29,6 +30,41 @@ it('previews before saving, accepts confirmed title and tags, and reports the im
     expect(feedApi.create).toHaveBeenCalledWith('https://example.com/feed','Original',[]);
     expect(onDone).toHaveBeenCalledWith('已导入 20 篇');
   } finally { await act(async()=>root.unmount());host.remove(); }
+});
+
+it('shows the saved feed address as a selectable read-only field when editing', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  const feed: Feed = {
+    id: 'feed-1', title: 'Example', originalTitle: 'Example',
+    feedUrl: 'https://example.com/feed?format=rss&limit=20', siteUrl: 'https://example.com',
+    format: 'rss', status: 'active', health: 'ok', lastSuccessAt: null,
+    lastFetchedAt: null, lastError: null, unreadCount: 0, articleCount: 0, tags: [],
+  };
+  vi.mocked(tagApi.getTags).mockResolvedValue([]);
+  vi.mocked(feedApi.edit).mockResolvedValue(feed);
+  const onDone = vi.fn();
+  const host = document.createElement('div');
+  document.body.append(host);
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(<FeedDialog feed={feed} onDone={onDone} onClose={vi.fn()} />));
+    const dialog = document.body.querySelector('[role="dialog"]')!;
+    expect(dialog.querySelector('input[type="url"]')).toMatchObject({
+      value: feed.feedUrl,
+      readOnly: true,
+      disabled: false,
+    });
+
+    const title = dialog.querySelector<HTMLInputElement>('input[name="title"]')!;
+    expect(document.activeElement).toBe(title);
+    title.value = 'Renamed';
+    await act(async () => dialog.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(feedApi.edit).toHaveBeenCalledWith(feed.id, { title: 'Renamed', tagIds: [] });
+    expect(onDone).toHaveBeenCalledWith('订阅已更新');
+  } finally {
+    await act(async () => root.unmount());
+    host.remove();
+  }
 });
 
 it('restores focus to the button that opened the dialog', async()=>{
