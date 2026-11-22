@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.Extensions.Configuration.Json;
 using MiniCc.Api.Authentication;
 using MiniCc.Api.Componments;
 using MiniCc.Api.Core;
@@ -7,11 +8,29 @@ using MiniCc.Api.Core.ApiKeys.Application.Services;
 using MiniCc.Api.Core.TagNs.Application.Services;
 using MiniCc.Api.Infra;
 using MiniCc.Api.Shared.Data;
+using NetEscapades.Configuration.Yaml;
 using Scalar.AspNetCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Replace the settings sources in place to preserve configuration precedence.
+var sources = builder.Configuration.Sources;
+for (var index = 0; index < sources.Count; index++)
+{
+    if (sources[index] is JsonConfigurationSource { Path: string jsonPath } jsonSource &&
+        (jsonPath.Equals("appsettings.json", StringComparison.OrdinalIgnoreCase) ||
+         jsonPath.Equals("appsettings.Development.json", StringComparison.OrdinalIgnoreCase)))
+    {
+        sources[index] = new YamlConfigurationSource
+        {
+            Path = Path.ChangeExtension(jsonPath, ".yaml"),
+            FileProvider = jsonSource.FileProvider,
+            Optional = jsonSource.Optional,
+            ReloadOnChange = jsonSource.ReloadOnChange
+        };
+    }
+}
 
 #region serilog
 Log.Logger = new LoggerConfiguration()

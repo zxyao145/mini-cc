@@ -1,0 +1,17 @@
+# 仅在 Development 环境加载，用于覆盖 appsettings.yaml。
+# Loaded in the Development environment to override appsettings.yaml.
+# 用户机密、环境变量和命令行参数的优先级高于此文件。
+# User Secrets, environment variables, and command-line arguments have higher priority than this file.
+
+# ASP.NET Core 默认记录 Information 及以上级别，框架类别 Microsoft.AspNetCore 从 Warning 开始记录。
+# ASP.NET Core defaults to Information and above. Microsoft.AspNetCore logs at Warning and above.
+Logging:
+  LogLevel:
+    Default: Information
+    Microsoft.AspNetCore: Warning
+
+# 将 Serilog 的默认最低级别设为 Debug，便于本地排查。匹配 Override 的来源按各自配置过滤。
+# Use Debug as the Serilog default for local troubleshooting. Matching sources use their Override levels.
+Serilog:
+  MinimumLevel:
+    Default: Debug
