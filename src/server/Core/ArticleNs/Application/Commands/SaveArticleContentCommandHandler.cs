@@ -3,6 +3,7 @@ using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects;
 using MiniCc.Api.Core.ArticleNs.Application.DTOs;
 using MiniCc.Api.Core.ArticleNs.Domain.Services;
+using MiniCc.Api.Core.ImageNs.Application;
 using MiniCc.Api.Shared;
 using MiniCc.Api.Shared.Data.Repositories;
 
@@ -13,17 +14,20 @@ public class SaveArticleContentCommandHandler : IRequestHandler<SaveArticleConte
     private readonly IUnitOfWork _unitOfWork;
     private readonly IArticleDomainService _articleDomainService;
     private readonly IMapper _mapper;
+    private readonly LegacyImageUrls _legacy;
     private readonly ILogger<SaveArticleContentCommandHandler> _logger;
 
     public SaveArticleContentCommandHandler(
         IUnitOfWork unitOfWork,
         IArticleDomainService articleDomainService,
         IMapper mapper,
+        LegacyImageUrls legacy,
         ILogger<SaveArticleContentCommandHandler> logger)
     {
         _unitOfWork = unitOfWork;
         _articleDomainService = articleDomainService;
         _mapper = mapper;
+        _legacy = legacy;
         _logger = logger;
     }
 
@@ -34,10 +38,12 @@ public class SaveArticleContentCommandHandler : IRequestHandler<SaveArticleConte
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
             await _unitOfWork.LockArticleCreationAsync(cancellationToken);
             var existingArticle = await _unitOfWork.Articles.GetByUrlAsync(UrlNormalizer.Normalize(request.Url), cancellationToken);
+            var now = DateTimeOffset.UtcNow;
             if (existingArticle != null)
             {
                 existingArticle.Restore();
-                existingArticle.MarkSavedFromExtension(DateTimeOffset.UtcNow);
+                _legacy.Backfill(existingArticle, now);
+                existingArticle.MarkSavedFromExtension(now);
                 var replacement = _articleDomainService.CreateArticleFromContent(request.Url, request.OriginalContent,
                     request.ReadableContent, request.Title ?? existingArticle.Title, request.Author ?? "", request.Summary ?? "", request.ImageUrl ?? "");
                 var wasFull = existingArticle.ContentKind == ContentKind.Full;
@@ -50,9 +56,10 @@ public class SaveArticleContentCommandHandler : IRequestHandler<SaveArticleConte
                 if (wasFull) existingArticle.RefreshMetadata(replacement.Title, replacement.Author, replacement.Summary, replacement.ImageUrl);
                 else existingArticle.FillMissingMetadata(replacement.Author, replacement.Summary, replacement.ImageUrl);
 
+                existingArticle.SyncImages(resetFailed: true, now);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
                 await _unitOfWork.CommitTransactionAsync(cancellationToken);
-                return Result<ArticleDto>.Success(_mapper.Map<ArticleDto>(existingArticle));
+                return Response(existingArticle);
             }
 
             var article = _articleDomainService
@@ -65,12 +72,13 @@ public class SaveArticleContentCommandHandler : IRequestHandler<SaveArticleConte
                 request.Summary ?? "",
                 request.ImageUrl ?? ""
                 );
-            article.MarkSavedFromExtension(DateTimeOffset.UtcNow);
+            article.MarkSavedFromExtension(now);
+            article.SyncImages(resetFailed: true, now);
             var savedArticle = await _unitOfWork.Articles.AddAsync(article, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await _unitOfWork.CommitTransactionAsync(cancellationToken);
 
-            return Result<ArticleDto>.Success(_mapper.Map<ArticleDto>(savedArticle));
+            return Response(savedArticle);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -84,6 +92,8 @@ public class SaveArticleContentCommandHandler : IRequestHandler<SaveArticleConte
             return Result<ArticleDto>.Failure($"Failed to save article: {ex.Message}");
         }
     }
+
+    private Result<ArticleDto> Response(Article article) => Result<ArticleDto>.Success(_mapper.Map<ArticleDto>(article));
 
     private static DateTimeOffset NextProgressVersion(Article article)
     {

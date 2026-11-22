@@ -4,13 +4,11 @@ using System.Text.Json;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using MiniCc.Api.Core.ArticleNs.Application.Services;
 using MiniCc.Api.Core.ArticleNs.Domain.Services;
 using MiniCc.Api.Core.FeedNs.Application;
 using MiniCc.Api.Core.FeedNs.Domain;
 using MiniCc.Api.Core.FeedNs.Infrastructure;
-using MiniCc.Api.Infra;
 using MiniCc.Api.Shared.Data;
 using MiniCc.Api.Shared.Data.Repositories;
 
@@ -236,8 +234,7 @@ public class SqliteConcurrencyTests(SqliteFixture fixture)
     private static FeedRefresher Refresher(MiniCcDbContext db, Func<Task<HttpResponseMessage>> respond)
     {
         var uow = new UnitOfWork(db);
-        var images = new ImageProxyService(Options.Create(new ImageProxyOptions { SignatureKey = "test" }));
-        return new(db, uow, new FeedFetcher(new FeedClientFactory(respond)), new FeedParser(images), new FeedImportService(db, uow));
+        return new(db, uow, new FeedFetcher(new FeedClientFactory(respond)), new FeedParser(), new FeedImportService(db, uow));
     }
 
     private sealed class FeedClientFactory(Func<Task<HttpResponseMessage>> respond) : IHttpClientFactory

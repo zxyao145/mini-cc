@@ -28,6 +28,19 @@ const renderCard = async (article: Article | import('@/types').ArticleListItem, 
   await act(async () => root.render(<ConfirmProvider><ArticleCard article={article} onDelete={onDelete} /></ConfirmProvider>));
 };
 
+it('renders cover without referrer', async () => {
+  const article = {
+    id: 'cover-article', title: 'Cover article', url: 'https://example.com/article',
+    imageUrl: 'https://img.example/c.jpg', createdAt: '2026-11-08T00:00:00Z',
+    readingStatus: 'unread', tags: [], isArchived: false, isFavorite: false,
+    contentKind: 'full', highlightCount: 0, feeds: [], savedFromExtension: true,
+  } as unknown as import('@/types').ArticleListItem;
+
+  await renderCard(article);
+
+  expect(container.querySelector('img[src="https://img.example/c.jpg"]')?.getAttribute('referrerpolicy')).toBe('no-referrer');
+});
+
 it.each([
   { field: 'isFavorite' as const, action: '收藏', initial: false },
   { field: 'isFavorite' as const, action: '收藏', initial: true },

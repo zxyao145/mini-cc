@@ -1,12 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using MiniCc.Api.Core.ArticleNs.Application.Queries;
 using MiniCc.Api.Core.ArticleNs.Application.DTOs;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects;
 using MiniCc.Api.Core.TagNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.TagNs.Domain.AggregatesModel.ValueObjects;
-using MiniCc.Api.Infra;
+using MiniCc.Api.Test.Images;
 
 namespace MiniCc.Api.Test.Infrastructure;
 
@@ -23,7 +22,7 @@ public class ArticleListPostgresTests(PostgresFixture fixture) : IAsyncLifetime
     private async Task<ArticleListPage> List(ArticleListRequest request)
     {
         await using var db = fixture.CreateContext();
-        var result = await new GetArticleListQueryHandler(db, new ImageProxyService(Options.Create(new ImageProxyOptions())))
+        var result = await new GetArticleListQueryHandler(db, TestImages.Resolver())
             .Handle(new GetArticleListQuery(request), CancellationToken.None);
         result.IsSuccess.Should().BeTrue(result.Error);
         return result.Value;

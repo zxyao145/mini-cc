@@ -18,7 +18,7 @@ namespace MiniCc.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.7")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "zhparser");
@@ -127,6 +127,12 @@ namespace MiniCc.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Images")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("ImagesDueAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
 
@@ -207,6 +213,9 @@ namespace MiniCc.Api.Migrations
 
                     b.HasIndex("DeletedAt")
                         .HasFilter("\"DeletedAt\" IS NOT NULL");
+
+                    b.HasIndex("ImagesDueAt")
+                        .HasFilter("\"ImagesDueAt\" IS NOT NULL");
 
                     b.HasIndex("NormalizedUrl");
 
@@ -428,7 +437,8 @@ namespace MiniCc.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_Tags_Name");
 
                     b.ToTable("Tags");
                 });

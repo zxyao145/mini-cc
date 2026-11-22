@@ -38,7 +38,7 @@ Clip web pages with the Chrome extension, follow RSS and Atom feeds, then read, 
 
 ## Installation
 
-MiniCC consists of a server (API, web app, image proxy and nginx), a database, and a Chrome extension that clips pages.
+MiniCC consists of an API, a web app, nginx, a database, and a Chrome extension. Images are downloaded by the API and stored locally or in S3-compatible storage. The legacy image proxy is available as an optional mode.
 
 ### Option 1: Podman or Docker Compose (recommended)
 
@@ -51,15 +51,7 @@ You need [Podman](https://podman.io/) with `podman compose`, or Docker with Dock
    cd mini-cc
    ```
 
-2. Choose a long random secret for signing image URLs. The API and the image proxy both read it. Without it, Compose uses a default value that is public in this repository.
-
-   ```bash
-   export IMAGE_PROXY_SECRET="your-long-random-secret"
-   ```
-
-   Use the same value every time you start the stack. MiniCC signs image URLs when it saves an article, so a new secret breaks images in articles you saved before.
-
-3. Start the stack with the database you want. See [Choosing a database](#choosing-a-database).
+2. Start the stack with the database you want. See [Choosing a database](#choosing-a-database).
 
    ```bash
    # PostgreSQL
@@ -69,14 +61,12 @@ You need [Podman](https://podman.io/) with `podman compose`, or Docker with Dock
    podman compose -f deploy/docker-compose.sqlite.yaml up -d --build
    ```
 
-4. Open http://localhost:5000 and [sign in](#sign-in).
-
-To upgrade, pull the latest code and run the same `up` command again. The API applies database migrations on startup.
+3. Open http://localhost:5000 and [sign in](#sign-in).
 
 Compose notes:
 
-- **Ports**: 5000 serves the web app and the API through nginx, and 5050 serves the image proxy. The PostgreSQL stack also publishes the database on port 15432 with the password `postgres`. Change the password or remove the port mapping in `deploy/docker-compose.yaml` before you expose the host.
-- **Data**: The database lives in the `pgdata` or `sqlite-data` volume. Cached images live in `image-proxy-data`.
+- **Ports**: 5000 serves the web app and API through nginx. The PostgreSQL stack also publishes the database on port 15432 with the password `postgres`. Change the password or remove the port mapping in `deploy/docker-compose.yaml` before you expose the host.
+- **Data**: The database and locally stored images live in `pgdata` and `api-data` for PostgreSQL, or in `sqlite-data` for SQLite. The image proxy is not part of either default stack.
 - **Another address**: The web app has `http://localhost:5000/api` built in as its API address. To serve MiniCC from another host or domain, change `NEXT_PUBLIC_API_URL` under `minicc-web` → `build.args` in the Compose file, for example to `https://minicc.example.com/api`, and rebuild.
 - **Switching databases**: Both stacks use the same container names. Stop the running stack with `down` and its own Compose file before you start the other one.
 
@@ -94,15 +84,14 @@ Prerequisites:
    pnpm install --frozen-lockfile
    ```
 
-2. Start the API with PostgreSQL or with SQLite. `ImageProxy__SignatureKey` is required.
+2. Start the API with PostgreSQL or with SQLite. By default, images are saved under `src/server/data/images` and served through the API. Set `Images__ApiUrl=http://localhost:5001/api/images` so the web app on port 4000 can request locally served images from the API.
 
    PostgreSQL:
 
    ```bash
    cd src/server
    export MiniCC_Db="Host=127.0.0.1;Database=mini_cc;Username=postgres;Password=your_password"
-   export ImageProxy__ProxyUrl="http://localhost:5050"
-   export ImageProxy__SignatureKey="your-image-proxy-secret"
+   export Images__ApiUrl="http://localhost:5001/api/images"
    dotnet run
    ```
 
@@ -110,10 +99,10 @@ Prerequisites:
 
    ```bash
    cd src/server
-   Database__Provider=sqlite ImageProxy__SignatureKey=your-image-proxy-secret dotnet run
+   Database__Provider=sqlite Images__ApiUrl=http://localhost:5001/api/images dotnet run
    ```
 
-   On startup the API initializes zhparser for PostgreSQL, or creates `src/server/data/mini_cc.db` for SQLite, and applies migrations. It listens on http://localhost:5001. To load article images, run the image proxy in `src/image-proxy` with the same signing key and point `ImageProxy__ProxyUrl` to it.
+   On startup the API initializes zhparser for PostgreSQL, or creates `src/server/data/mini_cc.db` for SQLite, and applies migrations. It listens on http://localhost:5001. Image storage configuration is described in [Image storage](#image-storage).
 
 3. If your API address is different, set it in `src/web/.env.local`.
 
@@ -153,8 +142,18 @@ Set these environment variables on the API. With Compose, add them to the `envir
 | --- | --- | --- |
 | `Database__Provider` | `postgres` | `postgres` or `sqlite`, case-insensitive |
 | `MiniCC_Db` | From `appsettings.json` | Database connection string. Relative SQLite paths resolve from the API content root. |
-| `ImageProxy__SignatureKey` | None (required) | Image URL signing key. It must match the image proxy's `IMAGE_PROXY_SECRET`; Compose passes `IMAGE_PROXY_SECRET` to both. |
-| `ImageProxy__ProxyUrl` | `/imageProxy` | Image proxy address. The default routes through nginx. |
+| `Images__Mode` | `Store` | `Store` downloads and persists article images. `ImageProxy` enables the optional legacy proxy. |
+| `Images__Delivery` | `Authenticated` | `Authenticated` requires sign-in for stored image URLs. `Public` permits anonymous access. |
+| `Images__ApiUrl` | `/api/images` | API image endpoint address. Set to `http://localhost:5001/api/images` for a local web dev server. |
+| `Images__PublicBaseUrl` | Empty | Optional public S3 domain, for example `https://images.example.com`. Requires `Delivery=Public` and S3 storage. |
+| `Images__AllowPrivateNetworks` | `false` | Allows image downloads from loopback and private networks when enabled. See [Image storage](#image-storage). |
+| `Images__Storage__Provider` | `Local` | `Local` or `S3`. |
+| `Images__Storage__LocalPath` | `data/images` | Local image directory, relative to the API content root. In Compose this resolves under `/app/data`. |
+| `Images__Storage__S3__ServiceUrl` | Empty | S3 endpoint. For R2, use `https://<account_id>.r2.cloudflarestorage.com`. |
+| `Images__Storage__S3__Bucket` | Empty | S3 bucket name. |
+| `Images__Storage__S3__Region` | `auto` | S3 region. R2 requires `auto`. |
+| `Images__Storage__S3__AccessKeyId` | Empty | S3 access key ID. Store it in the environment. |
+| `Images__Storage__S3__SecretAccessKey` | Empty | S3 secret access key. Store it in the environment. |
 | `Library__TrashRetentionDays` | `30` | Days before trashed articles are deleted permanently (1–365) |
 | `Library__UndoWindowSeconds` | `10` | Seconds the undo button stays visible (3–60) |
 
@@ -162,7 +161,80 @@ Set these environment variables on the API. With Compose, add them to the `envir
 
 - **PostgreSQL**: Back up the `pgdata` volume, or dump the database with `podman exec db pg_dump -U postgres mini_cc > mini_cc.sql`.
 - **SQLite**: Stop the API and copy the database together with any remaining WAL files. On a host with the SQLite CLI, `sqlite3 /path/to/mini_cc.db ".backup /path/to/backup.db"` also works while the API runs.
+- **Local images**: Back up the image directory as well as the database. In Compose, it is `/app/data/images` in the `api-data` volume (PostgreSQL) or `sqlite-data` volume (SQLite). Restoring the database without its matching images can cause stored images to be downloaded again from their original URLs. With R2, image files persist in the bucket and are backed up separately by your R2 retention or replication setup.
 - **Stuck migration**: If a killed migration leaves startup waiting on `__EFMigrationsLock`, stop the API, confirm that no migration is running, and clear the table with `DELETE FROM "__EFMigrationsLock"`.
+
+### Image storage
+
+MiniCC stores image files outside the database. The default provider is a local directory, `data/images` relative to the API content root. In Compose this is `/app/data/images` in the API data volume. Images are fetched in the background after the article is saved. Use a directory or bucket dedicated to one MiniCC database. Cleanup treats image keys without a reference in that database as unused.
+
+The delivery setting controls who can open an image and where it is served.
+
+| Configuration | Image URL | Access |
+| --- | --- | --- |
+| `Images__Delivery=Authenticated` | MiniCC API, such as `/api/images/<hash>.png` | A signed-in user or API key is required. This is the default. |
+| `Images__Delivery=Public` | MiniCC API, such as `/api/images/<hash>.png` | Anyone with the URL can load the image. |
+| `Images__Delivery=Public` with `Images__PublicBaseUrl` and S3 storage | Your public bucket domain, such as `https://images.example.com/<hash-prefix>/<hash>.png` | Anyone with the URL can load the image directly from the bucket. |
+
+Local storage works with the defaults. To configure it explicitly, add these variables to `minicc-api.environment` in your Compose file.
+
+```yaml
+Images__Storage__Provider: Local
+Images__Storage__LocalPath: data/images
+Images__Delivery: Authenticated
+```
+
+To use Cloudflare R2, create a bucket in the Cloudflare dashboard. Create an R2 API token with **Object Read & Write** access scoped to that bucket. Set the S3 endpoint to `https://<account_id>.r2.cloudflarestorage.com` and the region to `auto`. [R2 S3 API setup](https://developers.cloudflare.com/r2/get-started/s3/) · [R2 API token permissions](https://developers.cloudflare.com/r2/api/tokens/)
+
+For Compose, export the credentials and add the provider settings to `minicc-api.environment`. Compose substitutes the exported credential variables into the API container.
+
+```bash
+export R2_ACCESS_KEY_ID="your-r2-access-key-id"
+export R2_SECRET_ACCESS_KEY="your-r2-secret-access-key"
+```
+
+```yaml
+Images__Storage__Provider: S3
+Images__Storage__S3__ServiceUrl: https://<account_id>.r2.cloudflarestorage.com
+Images__Storage__S3__Bucket: your-bucket
+Images__Storage__S3__Region: auto
+Images__Storage__S3__AccessKeyId: ${R2_ACCESS_KEY_ID:?Set R2_ACCESS_KEY_ID}
+Images__Storage__S3__SecretAccessKey: ${R2_SECRET_ACCESS_KEY:?Set R2_SECRET_ACCESS_KEY}
+Images__Delivery: Authenticated
+```
+
+For public delivery from R2, enable an `r2.dev` address for testing or attach a dedicated image domain in the bucket settings. Set `Images__Delivery=Public` and `Images__PublicBaseUrl=https://images.example.com` in the API environment. Anyone who knows a public image URL can retrieve it. [Cloudflare public bucket setup](https://developers.cloudflare.com/r2/buckets/public-buckets/)
+
+For public delivery through the MiniCC API instead, set `Images__Delivery: Public` and leave `Images__PublicBaseUrl` empty. That mode does not require a public bucket domain.
+
+The API downloads images for up to 10 articles every 30 seconds. It allows up to 4 simultaneous image transfers overall and 2 downloads per host. The 30-second deadline starts when a download gets a slot and includes reading the response body. Downloads follow at most 5 redirects and accept files up to 20 MB. Transient errors retry after 1 minute, 10 minutes, 1 hour, 6 hours, then every 24 hours. After the tenth failed attempt the image is marked failed. Storage cleanup removes unreferenced local or S3 objects only after a 24-hour grace period. Existing articles are backfilled in batches before downloads begin.
+
+Image downloads require direct outbound HTTP(S) access. The downloader bypasses system proxies and environment proxies such as `HTTP_PROXY` and `HTTPS_PROXY` so it can connect to the IP address it validated. Downloads in `Store` mode fail on networks that allow outbound web access only through a proxy. By default, the downloader blocks loopback, private and link-local addresses. `Images__AllowPrivateNetworks=true` permits downloads from those networks. Enable it only when you need articles hosted on your private network, since saving a page with a private image URL can cause the API server to connect to internal services.
+
+To move between local storage and an S3-compatible bucket, stop image processing or the API and copy the object tree before changing the provider. Image object keys include the two-character hash directory. Configure an rclone remote for your S3-compatible bucket, preview the copy, then synchronize it. [rclone S3 setup](https://rclone.org/s3/)
+
+```bash
+rclone sync --dry-run /path/to/images r2:your-bucket
+rclone sync /path/to/images r2:your-bucket
+```
+
+Configure the destination provider after the copy completes. Keep a separate backup before switching. When moving from R2 to local storage, reverse the source and destination paths.
+
+To use the legacy image proxy, set `Images__Mode=ImageProxy` and provide `ImageProxy__SignatureKey` through the environment. Compose includes the optional service and nginx route when you add `deploy/docker-compose.image-proxy.yaml`.
+
+```bash
+export IMAGE_PROXY_SECRET="your-long-random-secret"
+podman compose -f deploy/docker-compose.yaml -f deploy/docker-compose.image-proxy.yaml up -d --build
+podman compose -f deploy/docker-compose.sqlite.yaml -f deploy/docker-compose.image-proxy.yaml up -d --build
+```
+
+### Upgrading from an older version
+
+1. Back up the database and the local image directory. For PostgreSQL, dump the database and back up `api-data`. For SQLite, stop the API and back up `sqlite-data`.
+2. Pull the new version and rebuild the services with the same default Compose command you already use.
+3. The API applies migrations on startup. A background worker then removes legacy proxy prefixes and downloads images. Watch the API logs for the backfill counts and image download summaries.
+4. Keep the old `image-proxy-data` volume during the migration. It may contain the only remaining copies of images removed from their original sites.
+5. To roll back, stop the new version and restore the pre-upgrade database backup before starting the older version. Reuse the saved proxy cache volume. The older version expects the signed image URLs stored in the backup.
 
 ## Usage
 

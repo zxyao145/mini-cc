@@ -1,6 +1,7 @@
 ﻿using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects;
 using MiniCc.Api.Core.ArticleNs.Domain.Events;
 using MiniCc.Api.Core.ArticleNs.Domain.Services;
+using MiniCc.Api.Core.ImageNs.Domain;
 using MiniCc.Api.Core.TagNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.TagNs.Domain.Events;
 using MiniCc.Api.Shared.Data.Common;
@@ -21,6 +22,12 @@ public class Article : AggregateRoot
 
     public string Summary { get; private set; }
     public string ImageUrl { get; private set; }
+    [JsonIgnore]
+    public Dictionary<string, ArticleImage>? Images { get; private set; }
+
+    [JsonIgnore]
+    public DateTimeOffset? ImagesDueAt { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset? ReadAt { get; private set; }
     public bool IsArchived { get; private set; }
@@ -58,6 +65,7 @@ public class Article : AggregateRoot
         Author = author ?? string.Empty;
         Summary = summary ?? string.Empty;
         ImageUrl = imageUrl ?? string.Empty;
+        Images = new(StringComparer.Ordinal);
         CreatedAt = DateTimeOffset.UtcNow;
         IsArchived = false;
         IsFavorite = false;
@@ -173,6 +181,61 @@ public class Article : AggregateRoot
         ContentKind = kind;
         ContentRevision++;
     }
+
+    public void SyncImages(bool resetFailed, DateTimeOffset now) =>
+        SyncImages(ImageHtml.CollectDownloadUrls(ReadableContent, ImageUrl), resetFailed, now);
+
+    public void SyncImages(IReadOnlyCollection<string> urls, bool resetFailed, DateTimeOffset now)
+    {
+        var images = new Dictionary<string, ArticleImage>(StringComparer.Ordinal);
+        var pending = new ArticleImage(ArticleImageState.Pending, NextAttemptAt: now);
+        foreach (var url in urls)
+        {
+            var previous = Images?.GetValueOrDefault(url);
+            images[url] = previous == null || (resetFailed && previous.State == ArticleImageState.Failed)
+                ? pending
+                : previous;
+        }
+
+        Images = images;
+        RecomputeImagesDue();
+    }
+
+    public bool ApplyImageResult(string url, ArticleImage result)
+    {
+        if (Images == null || !Images.TryGetValue(url, out var previous) || previous.State != ArticleImageState.Pending)
+            return false;
+
+        Images[url] = result;
+        RecomputeImagesDue();
+        return true;
+    }
+
+    public void NormalizeLegacyImages(string readableContent, string imageUrl, DateTimeOffset now)
+    {
+        ReadableContent = readableContent;
+        ImageUrl = imageUrl;
+        SyncImages(resetFailed: false, now);
+    }
+
+    public int ResetMissingImages(IReadOnlySet<string> missingHashes, DateTimeOffset now)
+    {
+        if (Images == null) return 0;
+
+        var urls = Images.Where(pair => pair.Value is { State: ArticleImageState.Done, Hash: { } hash } &&
+                                         missingHashes.Contains(hash))
+            .Select(pair => pair.Key)
+            .ToList();
+        var pending = new ArticleImage(ArticleImageState.Pending, NextAttemptAt: now);
+        foreach (var url in urls)
+            Images[url] = pending;
+
+        if (urls.Count > 0) RecomputeImagesDue();
+        return urls.Count;
+    }
+
+    public void RecomputeImagesDue() =>
+        ImagesDueAt = Images?.Values.Where(image => image.State == ArticleImageState.Pending).Min(image => image.NextAttemptAt);
 
     public void SetFeedContent(ContentKind kind, DateTimeOffset? publishedAt)
     {

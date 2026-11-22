@@ -1,10 +1,9 @@
-using Microsoft.Extensions.Options;
 using MiniCc.Api.Core.ArticleNs.Application.DTOs;
 using MiniCc.Api.Core.ArticleNs.Application.Queries;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel.ValueObjects;
 using MiniCc.Api.Core.FeedNs.Domain;
-using MiniCc.Api.Infra;
+using MiniCc.Api.Test.Images;
 
 namespace MiniCc.Api.Test.Infrastructure;
 
@@ -27,7 +26,7 @@ public class ArticleListFeedProjectionPostgresTests(PostgresFixture fixture)
         db.FeedEntries.AddRange(Entry(feedA, "a1"), Entry(feedA, "a2"), Entry(feedB, "b1"));
         await db.SaveChangesAsync();
 
-        var handler = new GetArticleListQueryHandler(db, new ImageProxyService(Options.Create(new ImageProxyOptions())));
+        var handler = new GetArticleListQueryHandler(db, TestImages.Resolver());
         var request = new ArticleListRequest { View = "feeds", Q = token };
         var result = await handler.Handle(new GetArticleListQuery(request), CancellationToken.None);
 

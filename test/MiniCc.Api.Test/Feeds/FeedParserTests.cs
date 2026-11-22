@@ -1,13 +1,11 @@
-using Microsoft.Extensions.Options;
 using MiniCc.Api.Core.FeedNs.Infrastructure;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
-using MiniCc.Api.Infra;
 
 namespace MiniCc.Api.Test.Feeds;
 
 public class FeedParserTests
 {
-    private readonly FeedParser parser = new(new ImageProxyService(Options.Create(new ImageProxyOptions { SignatureKey = "test", ProxyUrl = "/img" })));
+    private readonly FeedParser parser = new();
 
     [Fact]
     public void Rss_PrefersEncodedContentAndSanitizesRelativeImages()
@@ -16,7 +14,7 @@ public class FeedParserTests
         var feed = parser.Parse(xml, "https://example.com/feed");
         feed.MinIntervalMinutes.Should().Be(90); feed.Skipped.Should().Be(1);
         var item = feed.Items.Single(); item.EntryKey.Should().Be("opaque"); item.ContentKind.Should().Be(ContentKind.Full);
-        item.ReadableContent.Should().NotContain("<script").And.NotContain("onerror").And.Contain("language-csharp").And.Contain("/img/");
+        item.ReadableContent.Should().NotContain("<script").And.NotContain("onerror").And.Contain("language-csharp").And.Contain("https://example.com/photo.jpg");
         item.Summary.Should().Be("short"); item.PublishedAt.Should().BeNull();
     }
 
@@ -27,6 +25,25 @@ public class FeedParserTests
         feed.Format.ToString().Should().Be("Atom"); feed.Items.Single().EntryKey.Should().Be("urn:item");
         feed.Items.Single().Url.Should().Be("https://example.com/article"); feed.Items.Single().ContentKind.Should().Be(ContentKind.SummaryOnly);
         feed.Items.Single().PublishedAt.Should().NotBeNull();
+    }
+
+    [Theory]
+    [InlineData("&amp;")]
+    [InlineData("&#38;")]
+    public void Rss_FallbackCoverDecodesHtmlEntitiesInImageUrl(string ampersand)
+    {
+        var xml = $"""
+            <rss version="2.0"><channel><title>Feed</title><link>https://example.com</link><description>Feed</description>
+              <item><title>Post</title><link>https://example.com/post</link>
+                <description><![CDATA[<img src="https://example.com/photo.png?w=320{ampersand}h=200">]]></description>
+              </item>
+            </channel></rss>
+            """;
+
+        var entry = parser.Parse(xml, "https://example.com/feed").Items.Single();
+
+        entry.ImageUrl.Should().Be("https://example.com/photo.png?w=320&h=200");
+        entry.ReadableContent.Should().Contain("https://example.com/photo.png?w=320&amp;h=200");
     }
 
     [Theory]

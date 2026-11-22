@@ -15,6 +15,8 @@ public sealed class SqliteFixture : IAsyncLifetime
 {
     private readonly string directory = Path.Combine(Path.GetTempPath(), $"minicc-sqlite-{Guid.NewGuid():N}");
 
+    public string ImageDirectory => Path.Combine(directory, "images");
+
     public string ConnectionString => $"Data Source={Path.Combine(directory, "mini_cc.db")}";
 
     public SqliteMiniCcDbContext CreateContext(string? connectionString = null) => new(

@@ -1,6 +1,7 @@
 using MediatR;
 using MiniCc.Api.Core.ArticleNs.Application.DTOs;
 using MiniCc.Api.Core.ArticleNs.Domain.Services;
+using MiniCc.Api.Core.ImageNs.Application;
 using MiniCc.Api.Shared;
 using MiniCc.Api.Shared.Data.Repositories;
 
@@ -10,6 +11,7 @@ public class SaveLinkCommandHandler(
     IUnitOfWork unitOfWork,
     IArticleDomainService articleDomainService,
     IMapper mapper,
+    LegacyImageUrls legacy,
     ILogger<SaveLinkCommandHandler> logger) : IRequestHandler<SaveLinkCommand, Result<ArticleDto>>
 {
     public async Task<Result<ArticleDto>> Handle(SaveLinkCommand request, CancellationToken cancellationToken)
@@ -22,7 +24,10 @@ public class SaveLinkCommandHandler(
             existing?.Restore();
             var article = existing ?? articleDomainService.CreateLink(request.Url, request.Title, request.Author ?? "",
                 request.Summary ?? "", request.ImageUrl ?? "");
-            article.MarkSavedFromExtension(DateTimeOffset.UtcNow);
+            var now = DateTimeOffset.UtcNow;
+            legacy.Backfill(article, now);
+            article.MarkSavedFromExtension(now);
+            article.SyncImages(resetFailed: true, now);
             if (existing is null)
             {
                 article = await unitOfWork.Articles.AddAsync(article, cancellationToken);

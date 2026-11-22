@@ -142,7 +142,7 @@ public partial class LibraryApiTests
         article.GetProperty("title").GetString().Should().Be("Saved as link");
         article.GetProperty("author").GetString().Should().Be("Jane");
         article.GetProperty("summary").GetString().Should().Be("Kept summary");
-        article.GetProperty("imageUrl").GetString().Should().Contain("/imageProxy/").And.EndWith("https://example.com/cover.png");
+        article.GetProperty("imageUrl").GetString().Should().Be("https://example.com/cover.png");
         article.GetProperty("isFavorite").GetBoolean().Should().BeTrue();
         article.GetProperty("isArchived").GetBoolean().Should().BeTrue();
         article.GetProperty("readingStatus").GetString().Should().Be("read");

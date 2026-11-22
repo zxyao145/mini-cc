@@ -2,14 +2,14 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using MiniCc.Api.Core.ArticleNs.Application.DTOs;
 using MiniCc.Api.Core.ArticleNs.Domain.AggregatesModel;
-using MiniCc.Api.Infra;
+using MiniCc.Api.Core.ImageNs.Application;
 using MiniCc.Api.Shared;
 using MiniCc.Api.Shared.Data;
 using System.Linq.Expressions;
 
 namespace MiniCc.Api.Core.ArticleNs.Application.Queries;
 
-public class GetArticleListQueryHandler(MiniCcDbContext db, ImageProxyService images)
+public class GetArticleListQueryHandler(MiniCcDbContext db, ImageUrlResolver images)
     : IRequestHandler<GetArticleListQuery, Result<ArticleListPage>>
 {
     public async Task<Result<ArticleListPage>> Handle(GetArticleListQuery query, CancellationToken cancellationToken)
@@ -40,10 +40,11 @@ public class GetArticleListQueryHandler(MiniCcDbContext db, ImageProxyService im
             {
                 "read_desc" => last.LastReadAt, "published_desc" => last.PublishedAt, "trash" => last.DeletedAt, _ => last.CreatedAt
             }, last.Id) : null;
+            // Resolve covers after materialization so the database query stays body-free.
             foreach (var item in items)
             {
                 item.Feeds = item.Feeds.Distinct().ToList();
-                item.ImageUrl = images.GetUrl(item.ImageUrl);
+                item.ImageUrl = images.ResolveUrl(item.ImageUrl, item.Images, item.SavedFromExtension);
             }
             return Result<ArticleListPage>.Success(new(items, total, next));
         }
