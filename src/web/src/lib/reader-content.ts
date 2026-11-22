@@ -12,4 +12,10 @@ export function decorateReaderContent(content: HTMLElement) {
     table.before(wrapper); wrapper.append(table);
   });
   content.querySelectorAll('img').forEach(image => { image.loading = 'lazy'; image.decoding = 'async'; });
+  content.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(link => {
+    const href = link.getAttribute('href')?.trim();
+    if (!href || href.startsWith('#') || (link.protocol !== 'http:' && link.protocol !== 'https:')) return;
+    link.target = '_blank';
+    link.relList.add('noopener', 'noreferrer');
+  });
 }

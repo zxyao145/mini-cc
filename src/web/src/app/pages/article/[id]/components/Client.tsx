@@ -146,7 +146,8 @@ export default function Client(params: { id: string }) {
     );
   }
 
-  const linkHost = isLink ? articleHostname(article.url) : undefined;
+  const originalUrl = article.url?.trim();
+  const linkHost = isLink && originalUrl ? articleHostname(originalUrl) : undefined;
 
   return (
     <main className={`${styles.reader} reader article-detail${toc.headings.length ? ` ${styles.hasToc}` : ""}`} style={readerPreferenceStyle(preferences)} data-reader-theme={preferences.theme === "system" ? theme : preferences.theme}>
@@ -168,17 +169,19 @@ export default function Client(params: { id: string }) {
           </>}
         </div>
         
-        <div className={styles.articleActions}>
-          <a 
-            href={article.url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className={`${styles.visitOriginal}${isLink ? ` ${styles.primary} primary` : ""} visit-original-btn`}
-          >
-            <ExternalLink size={16} aria-hidden="true" />
-            <span className={styles.text}>访问原文</span>
-          </a>
-        </div>
+        {originalUrl && (
+          <div className={styles.articleActions}>
+            <a
+              href={originalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${styles.visitOriginal}${isLink ? ` ${styles.primary} primary` : ""} visit-original-btn`}
+            >
+              <ExternalLink size={16} aria-hidden="true" />
+              <span className={styles.text}>访问原文</span>
+            </a>
+          </div>
+        )}
         
         <TagManager 
           articleId={article.id}
@@ -194,7 +197,13 @@ export default function Client(params: { id: string }) {
         </div>}
       </div>
       
-      {article.contentKind === 'summaryOnly' && <div className={`${styles.summaryBanner} reader-summary-banner`}><strong>仅摘要</strong> · 订阅源只提供了摘要。<a href={article.url} target="_blank" rel="noopener noreferrer">访问原文</a><p>用浏览器插件保存原文即可补全全文，标签和笔记会保留。</p></div>}
+      {article.contentKind === 'summaryOnly' && (
+        <div className={`${styles.summaryBanner} reader-summary-banner`}>
+          <strong>仅摘要</strong> · 订阅源只提供了摘要。
+          {originalUrl && <a href={originalUrl} target="_blank" rel="noopener noreferrer">访问原文</a>}
+          <p>用浏览器插件保存原文即可补全全文，标签和笔记会保留。</p>
+        </div>
+      )}
       {!isLink && <div className={`${styles.bodyRow} reader-body-row`}>
       <div className={styles.articleContent}>
         <HighlightManager

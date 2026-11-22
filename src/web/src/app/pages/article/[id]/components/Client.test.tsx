@@ -149,6 +149,39 @@ it('keeps referrerpolicy on article images after sanitizing', async () => {
   expect(container.querySelector(`img[src="${imageUrl}"]`)?.getAttribute('referrerpolicy')).toBe('no-referrer');
 });
 
+it('opens web links in the article body in a new tab', async () => {
+  const article = {
+    id: 'body-links', title: 'Body links', url: 'https://example.com/article', contentKind: 'full',
+    readableContent: `<p>
+      <a href="https://example.org/reference" rel="nofollow">Reference</a>
+      <a href="/related">Related</a>
+      <a href="#footnote">Footnote</a>
+      <a href="mailto:reader@example.org">Contact</a>
+      <a href="">Empty</a>
+    </p>`,
+  } as Article;
+  vi.mocked(articleApi.getArticleById).mockResolvedValue(article);
+
+  await act(async () => root.render(<Client id={article.id} />));
+
+  const links = Array.from(container.querySelectorAll<HTMLAnchorElement>('.readable-content a'));
+  expect(links.map(link => link.getAttribute('target'))).toEqual(['_blank', '_blank', null, null, null]);
+  expect(links[0].rel).toBe('nofollow noopener noreferrer');
+});
+
+it('hides original links when a summary has no URL', async () => {
+  const article = {
+    id: 'summary-without-url', title: 'Summary', url: '', contentKind: 'summaryOnly',
+    readableContent: '<p>Summary body</p>',
+  } as Article;
+  vi.mocked(articleApi.getArticleById).mockResolvedValue(article);
+
+  await act(async () => root.render(<Client id={article.id} />));
+
+  expect(container.querySelector('.reader-summary-banner')).not.toBeNull();
+  expect(container.querySelector('a.visit-original-btn, .reader-summary-banner a')).toBeNull();
+});
+
 it('uses the active app theme when reader preferences follow the system', async () => {
   const link = { id:'theme-link', title:'Theme link', url:'https://example.com', author:'', readableContent:'', summary:'', imageUrl:'', createdAt:'2026-11-13T00:00:00Z', contentKind:'link', tags:[], feeds:[], highlights:[], readingStatus:'unread', isArchived:false, isFavorite:false } as unknown as Article;
   vi.mocked(articleApi.getArticleById).mockResolvedValue(link);
