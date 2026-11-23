@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration.Json;
 using MiniCc.Api.Authentication;
 using MiniCc.Api.Componments;
@@ -57,6 +58,13 @@ builder.Services.AddControllers()
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 
+if (builder.Configuration["DataProtection:KeysPath"] is { Length: > 0 } keysPath)
+{
+    builder.Services.AddDataProtection()
+        .SetApplicationName("MiniCc")
+        .PersistKeysToFileSystem(new DirectoryInfo(Path.GetFullPath(keysPath, builder.Environment.ContentRootPath)));
+}
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -68,6 +76,14 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.None;
         options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Events.OnValidatePrincipal = CookieSession.ValidateAsync;
+        options.Events.OnSigningIn = context =>
+        {
+            if (context.Properties.IsPersistent && context.Properties.IssuedUtc is { } issuedUtc)
+                context.Properties.ExpiresUtc = issuedUtc.AddDays(30);
+
+            return Task.CompletedTask;
+        };
     })
     .AddScheme<ApiKeyAuthenticationSchemeOptions, ApiAuthenticationHandler>(
         ApiKeyAuthenticationSchemeOptions.DefaultScheme, options => { });

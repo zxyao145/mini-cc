@@ -1,11 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Net.Http.Headers;
 using MiniCc.Api.Core.FeedNs.Domain;
+using MiniCc.Api.Core.UserNs.Domain.AggregatesModel;
+using MiniCc.Api.Shared.Utils;
 
 namespace MiniCc.Api.Test.Infrastructure;
 
@@ -20,6 +25,130 @@ public class SqliteApiTests(SqliteFixture fixture)
 
         using var response = await client.GetAsync("/api/tags");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Login_RememberMeControlsCookiePersistenceAndLifetime(bool rememberMe)
+    {
+        var issuedAt = DateTimeOffset.FromUnixTimeSeconds(DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+        var now = issuedAt;
+        var clock = new Mock<TimeProvider>();
+        clock.Setup(provider => provider.GetUtcNow()).Returns(() => now);
+        using var baseFactory = SqliteApi.CreateFactory(fixture);
+        using var factory = baseFactory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.Configure<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme,
+                options => options.TimeProvider = clock.Object)));
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        var cookie = await LoginAsync(client, rememberMe: rememberMe);
+        cookie.Expires.Should().Be(rememberMe ? issuedAt.AddDays(30) : null);
+        cookie.MaxAge.Should().BeNull();
+
+        UseCookie(client, cookie);
+        var current = await client.GetFromJsonAsync<JsonElement>("/api/account/current");
+        current.GetProperty("isAuthenticated").GetBoolean().Should().BeTrue();
+
+        now = issuedAt.AddMinutes(31);
+        current = await client.GetFromJsonAsync<JsonElement>("/api/account/current");
+        current.GetProperty("isAuthenticated").GetBoolean().Should().Be(rememberMe);
+
+        SetCookieHeaderValue? renewedCookie = null;
+        if (rememberMe)
+        {
+            now = issuedAt.AddDays(16);
+            using var renewal = await client.GetAsync("/api/account/current");
+            renewal.EnsureSuccessStatusCode();
+            renewedCookie = ReadCookie(renewal);
+            renewedCookie.Name.Should().Be(cookie.Name);
+            renewedCookie.Value.Should().NotBe(cookie.Value);
+            renewedCookie.Expires.Should().Be(now.AddDays(30));
+        }
+
+        now = issuedAt.AddDays(30).AddSeconds(1);
+        current = await client.GetFromJsonAsync<JsonElement>("/api/account/current");
+        current.GetProperty("isAuthenticated").GetBoolean().Should().BeFalse();
+
+        if (renewedCookie is not null)
+        {
+            UseCookie(client, renewedCookie);
+            current = await client.GetFromJsonAsync<JsonElement>("/api/account/current");
+            current.GetProperty("isAuthenticated").GetBoolean().Should().BeTrue();
+        }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task UpdatePassword_RevokesExistingCookiesAndKeepsCurrentBrowserSignedIn(bool rememberMe)
+    {
+        const string oldPassword = "before-password-change";
+        const string newPassword = "after-password-change";
+        var userName = $"password-{Guid.NewGuid():N}";
+        await using (var db = fixture.CreateContext())
+        {
+            db.Users.Add(User.Create(userName, PasswordUtil.HashPassword(oldPassword)));
+            await db.SaveChangesAsync();
+        }
+
+        using var factory = SqliteApi.CreateFactory(fixture);
+        using var changingClient = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        using var otherClient = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        var changingCookie = await LoginAsync(changingClient, userName, oldPassword, rememberMe);
+        var otherCookie = await LoginAsync(otherClient, userName, oldPassword, rememberMe: true);
+        UseCookie(changingClient, changingCookie);
+        UseCookie(otherClient, otherCookie);
+        using var previouslyAuthorized = await otherClient.GetAsync("/api/account/reader-preferences");
+        previouslyAuthorized.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var changed = await changingClient.PutAsJsonAsync("/api/account/password",
+            new { currentPassword = oldPassword, newPassword });
+        changed.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var rejected = await otherClient.GetAsync("/api/account/reader-preferences");
+        rejected.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        using var rejectedChangingCookie = await changingClient.GetAsync("/api/account/reader-preferences");
+        rejectedChangingCookie.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        var replacement = ReadCookie(changed);
+        replacement.Expires.HasValue.Should().Be(rememberMe);
+        UseCookie(changingClient, replacement);
+        using var current = await changingClient.GetAsync("/api/account/reader-preferences");
+        current.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        otherClient.DefaultRequestHeaders.Remove("Cookie");
+        UseCookie(otherClient, await LoginAsync(otherClient, userName, newPassword, rememberMe: true));
+        using var signedInAgain = await otherClient.GetAsync("/api/account/reader-preferences");
+        signedInAgain.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task RememberMeCookie_SurvivesApiRestartWithPersistedKeys()
+    {
+        var keys = Directory.CreateTempSubdirectory("minicc-cookie-keys-");
+        try
+        {
+            using var baseFactory = SqliteApi.CreateFactory(fixture);
+            SetCookieHeaderValue cookie;
+            using (var firstHost = baseFactory.WithWebHostBuilder(ConfigureKeys))
+            using (var client = firstHost.CreateClient())
+            {
+                cookie = await LoginAsync(client, rememberMe: true);
+                keys.GetFiles("key-*.xml").Should().NotBeEmpty();
+            }
+
+            using var secondHost = baseFactory.WithWebHostBuilder(ConfigureKeys);
+            using var restarted = secondHost.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+            UseCookie(restarted, cookie);
+            using var response = await restarted.GetAsync("/api/account/reader-preferences");
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        finally
+        {
+            keys.Delete(recursive: true);
+        }
+
+        void ConfigureKeys(IWebHostBuilder builder) => builder.UseSetting("DataProtection:KeysPath", keys.FullName);
     }
 
     [Fact]
@@ -214,16 +343,27 @@ public class SqliteApiTests(SqliteFixture fixture)
         }
     }
 
-    private static async Task LoginAsync(HttpClient client)
+    private static async Task<SetCookieHeaderValue> LoginAsync(HttpClient client, string userName = "mini_cc",
+        string password = "mini_cc_password", bool rememberMe = false)
     {
         using var credentials = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["userName"] = "mini_cc",
-            ["password"] = "mini_cc_password",
-            ["rememberMe"] = "false"
+            ["userName"] = userName,
+            ["password"] = password,
+            ["rememberMe"] = rememberMe ? "true" : "false"
         });
         using var response = await client.PostAsync("/api/account/login", credentials);
         response.StatusCode.Should().Be(HttpStatusCode.OK);
+        return ReadCookie(response);
+    }
+
+    private static SetCookieHeaderValue ReadCookie(HttpResponseMessage response) =>
+        SetCookieHeaderValue.Parse(Assert.Single(response.Headers.GetValues("Set-Cookie")));
+
+    private static void UseCookie(HttpClient client, SetCookieHeaderValue cookie)
+    {
+        client.DefaultRequestHeaders.Remove("Cookie");
+        client.DefaultRequestHeaders.Add("Cookie", $"{cookie.Name}={cookie.Value}");
     }
 
     private static Task<JsonElement> SaveContentAsync(HttpClient client, string url, string title, string body) =>
