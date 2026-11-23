@@ -232,7 +232,8 @@ podman compose -f deploy/docker-compose.yaml down
 - **CORS**: Configured for localhost:4000, localhost:5000
 
 ### Authentication
-- **Cookie Authentication**: 30-minute sessions with sliding expiration
+- **Cookie Authentication**: Session cookies use a 30-minute ticket. Remember Me issues a persistent cookie with a 30-day expiry. Both use sliding expiration. A successful password change replaces the current browser's ticket and revokes previously issued tickets for that account. Cookies issued before session versioning require a fresh sign-in.
+- **Data Protection**: Both Compose deployments persist the cookie encryption keys under `/app/data/data-protection-keys` in the API data volume. Other deployments can set `DataProtection__KeysPath` to a persistent directory.
 - **API Key Authentication**: Header-based for programmatic access
 - **Encryption**: AES encryption for sensitive data
 

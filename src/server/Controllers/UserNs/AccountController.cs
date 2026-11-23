@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MiniCc.Api.Authentication;
 using MiniCc.Api.Core.UserNs.Application.Commands;
 using MiniCc.Api.Core.UserNs.Application.DTOs;
 using MiniCc.Api.Core.UserNs.Application.Queries;
@@ -95,6 +96,7 @@ public class AccountController : ApiControllerBase
     {
         var userName = User.Identity?.Name ?? "";
         command.OldUserName = userName;
+        command.SessionVersion = User.FindFirstValue(CookieSession.VersionClaim) ?? "";
 
         var isPersistent = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.IsPersistent)?.Value;
         if (string.IsNullOrWhiteSpace(isPersistent))

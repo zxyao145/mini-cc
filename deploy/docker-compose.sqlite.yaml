@@ -14,6 +14,7 @@ services:
     environment:
       Database__Provider: sqlite
       MiniCC_Db: "Data Source=/app/data/mini_cc.db"
+      DataProtection__KeysPath: /app/data/data-protection-keys
     volumes:
       - sqlite-data:/app/data
 

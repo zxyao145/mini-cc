@@ -31,6 +31,7 @@ services:
     #   - "5001:8080"
     environment:
       MiniCC_Db: "Host=db;Port=5432;Database=mini_cc;Username=postgres;Password=postgres"
+      DataProtection__KeysPath: /app/data/data-protection-keys
     volumes:
       - api-data:/app/data
     depends_on:
