@@ -18,6 +18,38 @@ namespace MiniCc.Api.Test.Infrastructure;
 public class SqliteApiTests(SqliteFixture fixture)
 {
     [Fact]
+    public async Task ArticleList_FiltersLinksBeforeCountingAndPaging()
+    {
+        using var factory = SqliteApi.CreateFactory(fixture);
+        using var client = SqliteApi.AuthenticatedClient(factory);
+        var token = Guid.NewGuid().ToString("N");
+        var url = $"https://example.com/{token}";
+        var first = await JsonAsync(client.PostAsJsonAsync("/api/articles/link", new { url = url + "/one", title = token }), HttpStatusCode.Created);
+        var second = await JsonAsync(client.PostAsJsonAsync("/api/articles/link", new { url = url + "/two", title = token }), HttpStatusCode.Created);
+        await SaveContentAsync(client, url + "/article", token, "<p>Full article body</p>");
+
+        var query = $"/api/articles?view=all&source=extension&contentKind=link&q={token}&pageSize=1";
+        var page = await client.GetFromJsonAsync<JsonElement>(query);
+        page.GetProperty("total").GetInt32().Should().Be(2);
+        page.GetProperty("items").GetArrayLength().Should().Be(1);
+        page.GetProperty("items")[0].GetProperty("contentKind").GetString().Should().Be("link");
+        var cursor = page.GetProperty("nextCursor").GetString();
+        cursor.Should().NotBeNullOrEmpty();
+        var next = await client.GetFromJsonAsync<JsonElement>(query + "&cursor=" + Uri.EscapeDataString(cursor!));
+        next.GetProperty("total").GetInt32().Should().Be(2);
+        next.GetProperty("items")[0].GetProperty("id").GetGuid().Should().NotBe(page.GetProperty("items")[0].GetProperty("id").GetGuid());
+        var ids = new[] { first.GetProperty("id").GetGuid(), second.GetProperty("id").GetGuid() };
+        ids.Should().Contain(page.GetProperty("items")[0].GetProperty("id").GetGuid());
+        ids.Should().Contain(next.GetProperty("items")[0].GetProperty("id").GetGuid());
+
+        await SaveContentAsync(client, url + "/one", token, "<p>Upgraded article body</p>");
+        var after = await client.GetFromJsonAsync<JsonElement>(query);
+        after.GetProperty("total").GetInt32().Should().Be(1);
+        after.GetProperty("items")[0].GetProperty("id").GetGuid().Should().Be(second.GetProperty("id").GetGuid());
+        (await client.GetAsync("/api/articles?contentKind=invalid")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Api_StartsOnSqlite()
     {
         using var factory = SqliteApi.CreateFactory(fixture);

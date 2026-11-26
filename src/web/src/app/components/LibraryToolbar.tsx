@@ -108,6 +108,7 @@ export default function LibraryToolbar({ query: incomingQuery, onChange, article
     ...query.tags.map(id => ({ label: `标签：${tags.find(tag => tag.id === id)?.name || id}`, remove: () => toggleTag(id) })),
     ...(query.q ? [{ label: `搜索：${query.q}`, remove: () => { setSearch(''); change({ q: '' }); } }] : []),
     ...(query.source || query.feedId ? [{ label: query.source === 'extension' ? '浏览器收藏' : 'RSS', remove: () => change({ source: '', feedId: '' }) }] : []),
+    ...(query.contentKind ? [{ label: '内容类型：链接', remove: () => change({ contentKind: '' }) }] : []),
     ...(query.savedFrom || query.savedTo ? [{ label: query.range === 'week' ? '最近一周' : query.range === 'month' ? '最近一个月' : `保存时间：${localDate(query.savedFrom) || '不限'} 至 ${localDate(query.savedTo, true) || '不限'}`, remove: () => change({ savedFrom: '', savedTo: '', range: '' }) }] : []),
   ];
   const statusSummary = query.status.length ? query.status.map(status => statusLabels[status]).join('、') : '全部';
@@ -150,6 +151,9 @@ export default function LibraryToolbar({ query: incomingQuery, onChange, article
       <Select label="来源" hideLabel variant="chip" value={query.source} options={[
         { value: '', label: '全部' }, { value: 'extension', label: '浏览器收藏' }, { value: 'feed', label: 'RSS' },
       ]} onValueChange={source => change({ source: source as LibraryQuery['source'], feedId: '' })} />
+      <Select label="内容类型" hideLabel variant="chip" value={query.contentKind} options={[
+        { value: '', label: '全部' }, { value: 'link', label: '链接' },
+      ]} onValueChange={contentKind => change({ contentKind: contentKind as LibraryQuery['contentKind'] })} />
       {(query.source === 'feed' || query.view === 'feeds' || query.feedId) && <Select label="订阅源" hideLabel variant="chip" value={query.feedId} options={[
         { value: '', label: '全部订阅' }, ...(query.feedId && !feeds.some(feed => feed.id === query.feedId) ? [{ value: query.feedId, label: '当前订阅' }] : []), ...feeds.map(feed => ({ value: feed.id, label: feed.title })),
       ]} onValueChange={feedId => change({ feedId })} />}

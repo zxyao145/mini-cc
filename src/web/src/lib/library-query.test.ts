@@ -4,6 +4,17 @@ import { ArticleListItem } from '@/types';
 
 const tag = '00000000-0000-0000-0000-000000000001';
 describe('library URLs', () => {
+  it('round trips the link filter and removes a cached link upgraded to full content', async () => {
+    const query = parseLibraryQuery(new URLSearchParams('view=all&contentKind=link&source=extension'));
+    expect(toApiParams(query).get('contentKind')).toBe('link');
+    expect(isFiltered(query)).toBe(true);
+    const item = { id: 'a', contentKind: 'link', deletedAt: null, tags: [], savedFromExtension: true } as unknown as ArticleListItem;
+    expect(matchesView(item, query)).toBe(true);
+    expect(matchesView({ ...item, contentKind: 'full' }, query)).toBe(false);
+    const { patchLibraryEntry } = await import('./library-cache');
+    const entry = { items: [item], total: 1, nextCursor: null, scrollY: 0, savedAt: Date.now(), firstPageIds: ['a'] };
+    expect(patchLibraryEntry(entry, query, 'a', { contentKind: 'full' })).toMatchObject({ items: [], total: 0, needsReconcile: true });
+  });
   it('omits defaults and keeps view separate from filters', () => {
     const query = parseLibraryQuery(new URLSearchParams());
     expect(query.view).toBe('inbox');

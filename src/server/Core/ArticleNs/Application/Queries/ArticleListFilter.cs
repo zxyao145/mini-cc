@@ -37,6 +37,7 @@ public static class ArticleListFilter
         if (request.View == "feeds" || request.Source == "feed") query = query.Where(a => a.FeedEntries.Any());
         if (request.FeedId != null) query = query.Where(a => a.FeedEntries.Any(e => e.FeedId == request.FeedId));
         if (request.Source == "extension") query = query.Where(a => a.SavedFromExtensionAt != null);
+        if (request.ContentKind == "link") query = query.Where(a => a.ContentKind == ContentKind.Link);
         if (request.SavedFrom.HasValue) query = query.Where(a => a.CreatedAt >= request.SavedFrom.Value);
         if (request.SavedTo.HasValue) query = query.Where(a => a.CreatedAt < request.SavedTo.Value);
         return query;

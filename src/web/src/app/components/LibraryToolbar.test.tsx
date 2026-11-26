@@ -20,6 +20,16 @@ async function choose(label: string, optionText: string) {
   const option = Array.from(document.body.querySelectorAll<HTMLElement>('[role="option"]')).find(item => item.textContent?.trim() === optionText)!;
   await act(async () => option.click());
 }
+it('selects and clears the saved links filter', async () => {
+  const onChange = vi.fn();
+  const render = (search = '') => root.render(<LibraryToolbar query={parseLibraryQuery(new URLSearchParams(search))} onChange={onChange} articleStyle="grid" onStyleChange={() => {}} />);
+  await act(async () => render());
+  await choose('内容类型', '链接');
+  expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ contentKind: 'link' }), false);
+  await act(async () => render('contentKind=link'));
+  await act(async () => container.querySelector<HTMLButtonElement>('button[aria-label="移除内容类型：链接"]')!.click());
+  expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ contentKind: '' }), false);
+});
 it('debounces search by 300ms and uses replace while filters use push', async () => {
   const onChange = vi.fn();
   await act(async () => root.render(<LibraryToolbar query={parseLibraryQuery(new URLSearchParams())} onChange={onChange} articleStyle="grid" onStyleChange={() => {}} />));

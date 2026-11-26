@@ -9,6 +9,7 @@ public class ArticleListRequest
     public string? Status { get; set; }
     public string? Tags { get; set; }
     public string? Source { get; set; }
+    public string? ContentKind { get; set; }
     public Guid? FeedId { get; set; }
     public DateTimeOffset? SavedFrom { get; set; }
     public DateTimeOffset? SavedTo { get; set; }
@@ -28,6 +29,7 @@ public class ArticleListRequest
         if (Split(Status).Any(s => s is not ("unread" or "reading" or "read"))) throw new ArgumentException("Invalid reading status.");
         if (Split(Tags).Length > 10 || Split(Tags).Any(s => !Guid.TryParse(s, out var id) || id == Guid.Empty)) throw new ArgumentException("Provide at most 10 valid tag IDs.");
         if (Source is not (null or "" or "extension" or "feed")) throw new ArgumentException("Invalid source.");
+        if (ContentKind is not (null or "" or "link")) throw new ArgumentException("Invalid content kind.");
         if (FeedId == Guid.Empty) throw new ArgumentException("Invalid feed ID.");
         if (PageSize is < 1 or > 50) throw new ArgumentException("Page size must be between 1 and 50.");
         if (SavedFrom.HasValue && SavedTo.HasValue && SavedFrom >= SavedTo) throw new ArgumentException("Saved date range must have an end after its start.");
