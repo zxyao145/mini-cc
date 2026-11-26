@@ -18,7 +18,8 @@ describe('library URLs', () => {
   it('omits defaults and keeps view separate from filters', () => {
     const query = parseLibraryQuery(new URLSearchParams());
     expect(query.view).toBe('inbox');
-    expect(serializeLibraryQuery(query)).toBe('');
+    expect(query.status).toEqual(['unread']);
+    expect(serializeLibraryQuery(query)).toBe('status=unread');
     expect(isFiltered({ ...query, view: 'favorites' })).toBe(false);
   });
   it('round trips combined filters and excludes presentation range from API', () => {

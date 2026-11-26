@@ -15,10 +15,12 @@ const date = (value: string | null) => value && Number.isFinite(Date.parse(value
 export function parseLibraryQuery(params: URLSearchParams): LibraryQuery {
   const view = params.get('view'); const sort = params.get('sort'); const source = params.get('source'); const range = params.get('range');
   const feedId = params.get('feedId') || '';
+  const normalizedView: LibraryView = ['all', 'favorites', 'archive', 'trash', 'feeds'].includes(view || '') ? view as LibraryView : 'inbox';
+  const status = statuses.filter(s => params.get('status')?.split(',').includes(s));
   return {
-    view: ['all', 'favorites', 'archive', 'trash', 'feeds'].includes(view || '') ? view as LibraryView : 'inbox',
+    view: normalizedView,
     q: (params.get('q') || '').trim().slice(0, 200),
-    status: statuses.filter(s => params.get('status')?.split(',').includes(s)),
+    status: params.has('status') ? status : normalizedView === 'inbox' ? ['unread'] : status,
     tags: Array.from(new Set((params.get('tags') || '').split(',').filter(id => guid.test(id)).map(id => id.toLowerCase()))).sort().slice(0, 10),
     source: source === 'extension' || source === 'feed' ? source : guid.test(feedId) ? 'feed' : '',
     contentKind: params.get('contentKind') === 'link' ? 'link' : '',
