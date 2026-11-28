@@ -1,25 +1,24 @@
 ---
 title: Browser extension
-description: Build and load the MiniCC Chrome extension, connect it with an API key, and clip articles, links, or Markdown.
+description: Download and load the MiniCC Chrome extension, connect it with an API key, and clip articles, links, or Markdown.
 ---
 
 MiniCC clips web pages through a Chrome extension. Article extraction happens right inside your browser before anything is sent to the server; the server itself never fetches the page. That means pages behind a login work just as smoothly as public ones.
 
 ## Install the extension
 
-The extension is not listed on the Chrome Web Store yet, so build it from source and load it in developer mode:
+1. [Download the latest MiniCC Chrome extension](/downloads/minicc-chrome-latest.zip) and unzip it.
+2. Open `chrome://extensions/` and turn on **Developer mode**.
+3. Click **Load unpacked** and select the folder containing `manifest.json`.
 
-1. From the repository root, install dependencies and build the extension:
+To build from source, run these commands from the repository root and load `src/web-extension/dist`.
 
-   ```bash
-   pnpm install --frozen-lockfile
-   pnpm build:ext
-   ```
+```bash
+pnpm install --frozen-lockfile
+pnpm build:ext
+```
 
-2. Open `chrome://extensions/` and toggle on **Developer mode** in the top-right corner.
-3. Click **Load unpacked** and select `src/web-extension/dist`.
-
-Whenever you rebuild the extension later, reload it on the extensions page and refresh any article tabs you already have open.
+To update, replace the files in the same folder, reload the extension on the extensions page, and refresh any article tabs you have open.
 
 ## Connect to your server
 

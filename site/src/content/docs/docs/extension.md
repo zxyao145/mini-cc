@@ -1,25 +1,24 @@
 ---
 title: 浏览器扩展
-description: 构建并加载 MiniCC 的 Chrome 扩展，配置 API 密钥连接服务器，随时保存文章、链接或复制 Markdown。
+description: 下载并加载 MiniCC 的 Chrome 扩展，配置 API 密钥连接服务器，随时保存文章、链接或复制 Markdown。
 ---
 
 MiniCC 通过 Chrome 扩展来剪藏网页。所有正文提取都在你的浏览器本地完成，再将结果发送到服务器，服务端从不直接去抓取原网页。也正因如此，那些需要登录才能看的文章一样能顺利保存。
 
 ## 安装扩展
 
-扩展目前尚未上架 Chrome 应用商店，需要从源码构建后以开发者模式加载：
-
-1. 在仓库根目录安装依赖并构建扩展：
-
-   ```bash
-   pnpm install --frozen-lockfile
-   pnpm build:ext
-   ```
-
+1. [下载最新版 MiniCC Chrome 扩展](/downloads/minicc-chrome-latest.zip)，然后解压 ZIP。
 2. 在浏览器地址栏打开 `chrome://extensions/`，开启右上角的**开发者模式**。
-3. 点击**加载已解压的扩展程序**，选中 `src/web-extension/dist` 目录。
+3. 点击**加载已解压的扩展程序**，选中包含 `manifest.json` 的目录。
 
-日后如果重新构建了扩展，记得回到扩展管理页点击刷新，并重新加载已经打开的文章标签页。
+如需从源码构建，在仓库根目录运行以下命令，再加载 `src/web-extension/dist`。
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build:ext
+```
+
+更新时，用新版文件替换原安装目录中的文件，在扩展管理页重新加载扩展，再刷新已经打开的文章标签页。
 
 ## 连接服务器
 
