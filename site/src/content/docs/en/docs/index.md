@@ -3,7 +3,7 @@ title: Introduction
 description: What MiniCC is, how the pieces fit together, and where to start.
 ---
 
-MiniCC (Mini Cut Collection) is a self-hosted app for clipping and reading the web. Clip articles with the Chrome extension, subscribe to RSS and Atom feeds, and keep everything in a personal library on your own server where you can read, highlight, and organize at your own pace.
+MiniCC (**M**ini web **c**lipping & content **c**ollection) is a self-hosted app for clipping and reading the web. Clip articles with the Chrome extension, subscribe to RSS and Atom feeds, and keep everything in a personal library on your own server where you can read, highlight, and organize at your own pace.
 
 It began as a lightweight alternative to [Omnivore](https://github.com/omnivore-app/omnivore), built with ASP.NET Core on the backend and Next.js on the frontend.
 

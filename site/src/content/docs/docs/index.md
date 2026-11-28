@@ -3,7 +3,7 @@ title: 简介
 description: 了解 MiniCC 是什么、系统由哪些部分组成，以及上手的推荐顺序。
 ---
 
-MiniCC（Mini Cut Collection）是一款可自托管的网页剪藏与阅读应用。平时看到想留下的文章，用 Chrome 扩展一键保存；常看的博客和站点，直接用 RSS / Atom 订阅；所有内容都收拢在你自己服务器的文章库里，随时阅读、高亮、写笔记。
+MiniCC（**M**ini web **c**lipping & content **c**ollection）是一款可自托管的网页剪藏与阅读应用。平时看到想留下的文章，用 Chrome 扩展一键保存；常看的博客和站点，直接用 RSS / Atom 订阅；所有内容都收拢在你自己服务器的文章库里，随时阅读、高亮、写笔记。
 
 项目最初是 [Omnivore](https://github.com/omnivore-app/omnivore) 的精简替代实现，后端基于 ASP.NET Core，前端基于 Next.js。
 
