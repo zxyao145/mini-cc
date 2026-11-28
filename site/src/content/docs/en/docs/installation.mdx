@@ -1,0 +1,132 @@
+---
+title: Installation
+description: Deploy MiniCC with Podman or Docker Compose, or run the API and web app from source.
+---
+
+import { Tabs, TabItem, Steps } from '@astrojs/starlight/components';
+
+You can run MiniCC in two ways. For everyday use, choose Compose. Run from source when you want to change the code.
+
+## Deploy with Compose (recommended)
+
+You need [Podman](https://podman.io/) with `podman compose`, or Docker with Docker Compose. With Docker, replace `podman compose` with `docker compose` in the commands below.
+
+<Steps>
+
+1. Clone the repository.
+
+   ```bash
+   git clone https://github.com/zxyao145/mini-cc.git
+   cd mini-cc
+   ```
+
+2. Start the stack with the database you want. See [Choosing a database](#choosing-a-database) for the differences.
+
+   <Tabs syncKey="database">
+     <TabItem label="PostgreSQL">
+       ```bash
+       podman compose -f deploy/docker-compose.yaml up -d --build
+       ```
+     </TabItem>
+     <TabItem label="SQLite">
+       ```bash
+       podman compose -f deploy/docker-compose.sqlite.yaml up -d --build
+       ```
+     </TabItem>
+   </Tabs>
+
+3. Open http://localhost:5000 and [sign in](#first-sign-in).
+
+</Steps>
+
+Notes:
+
+- Port 5000 serves the web app and the API through nginx. The PostgreSQL stack also publishes the database on host port 15432 with the password `postgres`. Before you expose the host, change the password in `deploy/docker-compose.yaml` or remove the port mapping.
+- Data lives in named volumes: `pgdata` and `api-data` for PostgreSQL, or `sqlite-data` for SQLite. Locally stored images and the keys that encrypt sign-in cookies are also in the API's data volume.
+- Both Compose files use the same container names. To switch databases, run `down` with the Compose file you are using, then start the other one.
+
+### Serve MiniCC from your own domain
+
+The web app has its API address built in at build time. The default is `http://localhost:5000/api`. To serve MiniCC from another host or domain, change `NEXT_PUBLIC_API_URL` under `minicc-web` → `build.args` in the Compose file:
+
+```yaml
+minicc-web:
+  build:
+    args:
+      NEXT_PUBLIC_API_URL: https://minicc.example.com/api
+```
+
+Then rebuild by running the `up` command with `--build` again.
+
+## Choosing a database
+
+| | PostgreSQL | SQLite |
+| --- | --- | --- |
+| Runs as | A separate database container (zhparser image) | One file in the API's volume |
+| Search | Chinese word segmentation with zhparser, plus title substring matching | Substring matching on the title, summary, author and HTML body |
+| Suits | Most deployments, especially libraries with Chinese content | One API instance with its data on a local disk |
+
+With SQLite:
+
+- Search ignores ASCII letter case. Because it matches the HTML body, markup and HTML entities can affect the results.
+- Tag names and feed titles sort in binary order.
+- Keep the database on a local disk or a local named volume. SQLite runs in WAL mode.
+
+## Run from source
+
+Prerequisites:
+
+- .NET 10.0 SDK
+- Node.js 22.13 or later and pnpm 12.5.1 (`npm install -g pnpm@12.5.1`)
+- PostgreSQL 16 with zhparser, if you use PostgreSQL
+
+<Steps>
+
+1. Install the workspace dependencies from the repository root.
+
+   ```bash
+   pnpm install --frozen-lockfile
+   ```
+
+2. Start the API. Images are saved under `src/server/data/images` by default and served by the API. Because the web dev server runs on port 4000, set `Images__ApiUrl` to the API's full address so pages can load locally stored images.
+
+   <Tabs syncKey="database">
+     <TabItem label="PostgreSQL">
+       ```bash
+       cd src/server
+       export MiniCC_Db="Host=127.0.0.1;Database=mini_cc;Username=postgres;Password=your_password"
+       export Images__ApiUrl="http://localhost:5001/api/images"
+       dotnet run
+       ```
+     </TabItem>
+     <TabItem label="SQLite">
+       ```bash
+       cd src/server
+       Database__Provider=sqlite Images__ApiUrl=http://localhost:5001/api/images dotnet run
+       ```
+     </TabItem>
+   </Tabs>
+
+   On startup the API initializes zhparser for PostgreSQL, or creates `src/server/data/mini_cc.db` for SQLite, and applies migrations. It listens on http://localhost:5001.
+
+   The API's default PostgreSQL connection string matches the Compose database. To run only the database container, use `podman compose -f deploy/docker-compose.yaml up -d db` and skip `MiniCC_Db`.
+
+3. The web app calls `http://localhost:5001/api` by default. If your API runs elsewhere, set its address in `src/web/.env.local`, for example:
+
+   ```dotenv
+   NEXT_PUBLIC_API_URL=http://192.168.1.20:5001/api
+   ```
+
+4. Run `pnpm dev` from the repository root and open http://localhost:4000.
+
+</Steps>
+
+## First sign-in
+
+The first start creates one account with the username `mini_cc` and the password `mini_cc_password`. MiniCC has no sign-up page.
+
+After you sign in, click your account at the bottom of the sidebar and change the username and password on the **个人资料** (Profile) tab. Changing the password signs the account out of every other browser.
+
+Select **记住我** (Remember me) when you sign in to stay signed in for 30 days. Otherwise the session ends after 30 minutes without activity. In both cases the expiry moves forward while you keep using MiniCC.
+
+Next: [install the browser extension](/en/docs/extension/).

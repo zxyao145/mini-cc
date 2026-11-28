@@ -1,0 +1,98 @@
+---
+// Replaces Starlight's Hero on the homepage: the title, tagline and actions
+// still come from each locale's frontmatter, and the reader demo sits beside them.
+import { LinkButton } from '@astrojs/starlight/components';
+import ReaderDemo from './ReaderDemo.astro';
+
+const { entry, lang } = Astro.locals.starlightRoute;
+const { data } = entry;
+const { title = data.title, tagline, actions = [] } = data.hero || {};
+---
+
+<div class="hero">
+	<div class="copy">
+		<h1 id="_top" data-page-title set:html={title} />
+		{tagline && <p class="tagline" set:html={tagline} />}
+		{
+			actions.length > 0 && (
+				<div class="actions">
+					{actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link: href, text, variant }) => (
+						<LinkButton {href} {variant} icon={icon?.name} class:list={['action', className]} {...attrs}>
+							{text}
+						</LinkButton>
+					))}
+				</div>
+			)
+		}
+	</div>
+	<ReaderDemo lang={lang} />
+</div>
+
+<style>
+	.hero {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 2.5rem;
+		align-items: center;
+		padding-block: 1rem 1.5rem;
+	}
+
+	h1 {
+		margin: 0;
+		color: var(--sl-color-white);
+		font-size: clamp(2.25rem, 1.35rem + 3.6vw, 3.75rem);
+		font-weight: 650;
+		line-height: 1.08;
+		letter-spacing: var(--mc-heading-tracking, -0.035em);
+		text-wrap: balance;
+	}
+
+	/* Keep each Chinese line (up to nine characters) whole in the hero column. */
+	.hero:lang(zh-CN) h1 {
+		font-size: clamp(2rem, 1.2rem + 3vw, 3.25rem);
+		line-height: 1.22;
+	}
+
+	.tagline {
+		max-width: 34em;
+		margin-top: 1.25rem;
+		color: var(--sl-color-gray-2);
+		font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+		line-height: 1.65;
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-top: 2rem;
+	}
+
+	.actions :global(.action) {
+		border-radius: 0.625rem;
+		font-weight: 500;
+	}
+
+	/* The product's controls are monochrome: primary actions use ink, not the accent. */
+	.actions :global(.action.primary) {
+		background: var(--mc-ink);
+		border-color: var(--mc-ink);
+		color: var(--mc-paper);
+	}
+
+	.actions :global(.action.secondary) {
+		border-color: var(--sl-color-gray-5);
+	}
+
+	.actions :global(.action:hover) {
+		opacity: 0.86;
+	}
+
+	@media (min-width: 56rem) {
+		.hero {
+			grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+			gap: 4rem;
+			padding-block: 3rem 3.5rem;
+		}
+	}
+</style>

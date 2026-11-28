@@ -1,0 +1,4 @@
+# The product site has its own workspace and lockfile so its dependencies
+# never re-resolve the application's packages in the root workspace.
+packages:
+  - .

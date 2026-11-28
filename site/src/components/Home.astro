@@ -1,0 +1,227 @@
+---
+// Homepage sections below the hero. Screenshots come from the repository's
+// assets/ directory so the site and README always show the same images.
+import { Image } from 'astro:assets';
+import { Code } from '@astrojs/starlight/components';
+import inbox from '../../../assets/inbox.png';
+import { homeContent, homeLang, repoUrl } from './home-content';
+
+const t = homeContent[homeLang(Astro.locals.starlightRoute.lang)];
+---
+
+<div class="home not-content">
+	<figure class="library">
+		<div class="frame">
+			<Image
+				src={inbox}
+				alt={t.library.alt}
+				widths={[640, 1080, 1600]}
+				sizes="(min-width: 72rem) 67.5rem, 100vw"
+			/>
+		</div>
+		<figcaption>{t.library.caption}</figcaption>
+	</figure>
+
+	<section aria-labelledby="features">
+		<h2 id="features">{t.features.heading}</h2>
+		<div class="groups">
+			{
+				t.features.groups.map((group) => (
+					<div class="group">
+						<h3>{group.title}</h3>
+						<ul>
+							{group.items.map((item) => (
+								<li>{item}</li>
+							))}
+						</ul>
+					</div>
+				))
+			}
+		</div>
+	</section>
+
+	<section aria-labelledby="start">
+		<h2 id="start">{t.start.heading}</h2>
+		<ol class="steps">
+			{
+				t.start.steps.map((step) => (
+					<li>
+						<h3>{step.title}</h3>
+						<p>{step.body}</p>
+						{step.code && <Code code={step.code} lang="bash" />}
+					</li>
+				))
+			}
+		</ol>
+		<p class="more"><a href={t.start.more.link}>{t.start.more.text}</a></p>
+	</section>
+
+	<footer>
+		<p>{t.footer.license} <a href={repoUrl}>{t.footer.source}</a></p>
+		<p>
+			<a href={t.footer.otherLanguage.link} lang={t.footer.otherLanguage.lang} hreflang={t.footer.otherLanguage.lang}>
+				{t.footer.otherLanguage.text}
+			</a>
+		</p>
+	</footer>
+</div>
+
+<style>
+	.home {
+		--gap-section: clamp(3.5rem, 2rem + 5vw, 6rem);
+	}
+
+	.home section,
+	.home footer {
+		margin-top: var(--gap-section);
+	}
+
+	h2 {
+		margin: 0 0 2rem;
+		color: var(--sl-color-white);
+		font-size: clamp(1.625rem, 1.3rem + 1.2vw, 2.125rem);
+		font-weight: 650;
+		line-height: 1.2;
+		letter-spacing: var(--mc-heading-tracking, -0.025em);
+	}
+
+	h3 {
+		margin: 0 0 0.75rem;
+		color: var(--sl-color-white);
+		font-size: 1.125rem;
+		font-weight: 600;
+		line-height: 1.35;
+	}
+
+	figure {
+		margin: 0;
+	}
+
+	figcaption {
+		margin-top: 0.75rem;
+		color: var(--sl-color-gray-3);
+		font-size: 0.875rem;
+		line-height: 1.5;
+	}
+
+	.frame {
+		overflow: hidden;
+		border: 1px solid color-mix(in srgb, var(--mc-ink) 12%, transparent);
+		border-radius: 0.75rem;
+		background: var(--mc-paper);
+	}
+
+	.frame :global(img) {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+
+	.library .frame {
+		box-shadow: 0 36px 72px -40px rgb(0 0 0 / 0.35);
+	}
+
+	.groups {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 2.25rem 2.5rem;
+	}
+
+	.group ul {
+		display: grid;
+		gap: 0.625rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.group li {
+		color: var(--sl-color-gray-2);
+		font-size: 0.975rem;
+		line-height: 1.6;
+	}
+
+	/* minmax(0, 1fr) lets the code block scroll instead of widening the page. */
+	.steps {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: 2.25rem;
+		max-width: 46rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		counter-reset: step;
+	}
+
+	/* A real sequence, so the steps are numbered. */
+	.steps li {
+		position: relative;
+		padding-left: 3.25rem;
+		counter-increment: step;
+	}
+
+	.steps li::before {
+		content: counter(step);
+		position: absolute;
+		top: -0.1rem;
+		left: 0;
+		display: grid;
+		place-items: center;
+		width: 2rem;
+		height: 2rem;
+		border-radius: 50%;
+		background: var(--mc-highlight);
+		color: #1c1c1c;
+		font-size: 0.9375rem;
+		font-weight: 650;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.steps p {
+		margin: 0;
+		color: var(--sl-color-gray-2);
+		line-height: 1.65;
+	}
+
+	.steps :global(.expressive-code) {
+		margin-top: 1rem;
+	}
+
+	.more {
+		margin: 2.25rem 0 0 3.25rem;
+	}
+
+	.more a,
+	footer a {
+		color: var(--sl-color-text-accent);
+		font-weight: 500;
+		text-underline-offset: 0.2em;
+	}
+
+	footer {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 0.5rem 1.5rem;
+		padding: 1.5rem 0 1rem;
+		border-top: 1px solid var(--sl-color-hairline);
+		color: var(--sl-color-gray-3);
+		font-size: 0.875rem;
+	}
+
+	footer p {
+		margin: 0;
+	}
+
+	@media (min-width: 40rem) {
+		.groups {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (min-width: 64rem) {
+		.groups {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+	}
+</style>

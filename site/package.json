@@ -1,0 +1,19 @@
+{
+  "name": "minicc-site",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "0.43.1",
+    "@fontsource-variable/geist": "5.3.0",
+    "@fontsource-variable/geist-mono": "5.3.0",
+    "@fontsource-variable/source-serif-4": "5.3.1",
+    "astro": "7.4.12"
+  },
+  "packageManager": "pnpm@12.5.1"
+}

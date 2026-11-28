@@ -1,0 +1,11 @@
+// Cloudflare Workers static assets: serves the Astro build output from dist/.
+// `wrangler deploy` attaches the custom domain; its zone must be in the same Cloudflare account.
+{
+	"name": "minicc-site",
+	"compatibility_date": "2026-11-01",
+	"assets": {
+		"directory": "./dist",
+		"not_found_handling": "404-page"
+	},
+	"routes": [{ "pattern": "cc.zxyao.net", "custom_domain": true }]
+}

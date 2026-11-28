@@ -211,6 +211,19 @@ pnpm --filter minicc-extension test
 pnpm --filter minicc-extension typecheck
 ```
 
+### Product Site
+
+`site/` is the bilingual product site and documentation (Astro + Starlight) for `https://cc.zxyao.net`. It is its own pnpm workspace with its own `pnpm-lock.yaml`, so its dependencies never re-resolve the application's root lockfile; run its commands inside `site/`. Simplified Chinese is the root locale and English lives under `/en/`. Docs pages are in `src/content/docs/docs/` and `src/content/docs/en/docs/`; homepage strings for both languages are in `src/components/home-content.ts`. The homepage and docs import screenshots from the repository's `assets/` directory.
+
+```bash
+cd site
+pnpm install --frozen-lockfile
+pnpm dev                       # http://localhost:4321
+pnpm build                     # Static output in site/dist
+```
+
+Pushing a `v*` tag runs `.github/workflows/deploy-site.yml`, which builds the site and runs `wrangler deploy` to Cloudflare Workers static assets (`site/wrangler.jsonc`, custom domain `cc.zxyao.net`). The workflow needs the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets and can also be started manually.
+
 ### Docker Development
 
 ```bash
