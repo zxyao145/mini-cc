@@ -1,6 +1,7 @@
 # MiniCC
 
-**A self-hosted mini web clipping & collection app.**
+A **lightweight**, **self-hosted** web clipping and content collection app.
+
 
 Clip web pages with the Chrome extension, follow RSS and Atom feeds, then read, highlight and organize everything in a library that runs on your own server. MiniCC (**M**ini web **c**lipping & content **c**ollection) started as a minimal implementation of [Omnivore](https://github.com/omnivore-app/omnivore) and is built with ASP.NET Core and Next.js.
 
