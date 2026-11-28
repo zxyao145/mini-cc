@@ -1,62 +1,62 @@
 ---
 title: 备份与升级
-description: 备份 MiniCC 的数据库和图片，升级到新版本，以及处理卡住的数据库迁移。
+description: 备份 MiniCC 的数据库和本地图片，安全升级到新版本，以及排查常见问题。
 ---
 
 ## 备份
 
-数据库和本地图片要一起备份。只恢复数据库、没有对应的图片时，已经存过的图片会重新从原网站下载，而原网站上的图片可能已经不在了。
+数据库和本地图片请务必一起备份。如果只恢复了数据库却丢了图片文件，系统会尝试重新回源下载，而原网站上的图片可能早已失效。
 
-**PostgreSQL**：备份 `pgdata` 卷，或者导出数据库：
+- **PostgreSQL**：直接备份 `pgdata` 卷，或使用 `pg_dump` 导出逻辑备份：
 
-```bash
-podman exec db pg_dump -U postgres mini_cc > mini_cc.sql
-```
+  ```bash
+  podman exec db pg_dump -U postgres mini_cc > mini_cc.sql
+  ```
 
-**SQLite**：先停止 API，再把数据库文件和残留的 WAL 文件一起复制。主机上装了 SQLite 命令行工具的话，也可以在 API 运行时备份：
+- **SQLite**：先停掉 API，再把数据库文件连同残留的 WAL 文件一起拷走。如果宿主机装有 SQLite 命令行工具，也可以在不停止服务的情况下热备：
 
-```bash
-sqlite3 /path/to/mini_cc.db ".backup /path/to/backup.db"
-```
+  ```bash
+  sqlite3 /path/to/mini_cc.db ".backup /path/to/backup.db"
+  ```
 
-**本地图片**：在 Compose 部署里是 `/app/data/images`，PostgreSQL 版在 `api-data` 卷中，SQLite 版在 `sqlite-data` 卷中。用 R2 时，图片文件在存储桶里，靠 R2 自己的保留或复制策略来备份。
+- **本地图片**：在 Compose 部署中位于 `/app/data/images`，对应 PostgreSQL 版的 `api-data` 卷或 SQLite 版的 `sqlite-data` 卷。如果图片存在 Cloudflare R2，则由 R2 自身的保留或复制策略负责保护。
 
 ## 升级
 
-1. 备份数据库和本地图片目录。PostgreSQL 版导出数据库并备份 `api-data`；SQLite 版停止 API 后备份 `sqlite-data`。
-2. 拉取新版本代码，用原来的 Compose 命令重新构建：
+1. 先做好数据库和本地图片目录的备份。PostgreSQL 版导出数据库并备份 `api-data`；SQLite 版停掉 API 后备份 `sqlite-data`。
+2. 拉取最新代码，用原本的 Compose 命令重新构建并启动：
 
    ```bash
    git pull
    podman compose -f deploy/docker-compose.yaml up -d --build
    ```
 
-3. API 启动时自动执行数据库迁移。可以在 API 日志里查看迁移和图片下载的进度：`podman logs -f minicc-api`。
+3. API 启动后会自动跑完数据库迁移。运行 `podman logs -f minicc-api` 可以实时查看迁移和图片下载进度。
 
-升级后浏览器扩展可能也有更新。在仓库根目录执行 `pnpm build:ext`，然后在 `chrome://extensions/` 里重新加载扩展。
+如果新版本同时更新了浏览器扩展，记得在仓库根目录重新跑一遍 `pnpm build:ext`，然后去 `chrome://extensions/` 刷新扩展。
 
-### 从使用图片代理的旧版本升级
+### 从旧版图片代理升级
 
-新版本默认由 API 下载并保存图片。第一次启动时，后台任务会去掉旧的代理地址前缀，再开始下载图片，日志里能看到补录数量和下载汇总。
+新版本默认改为由 API 自行下载并持久化图片。首次启动时，后台任务会自动剥离旧的代理地址前缀，再陆续拉取图片，日志里会打印补录条数和下载汇总。
 
-迁移期间请保留旧的 `image-proxy-data` 卷，有些图片在原网站上已经删了，这个卷里可能是它们仅存的副本。
+迁移期间请先留着旧的 `image-proxy-data` 卷：不少原站图片可能已经下线，这个卷里存着的或许是仅剩的副本。
 
-要回退到旧版本，先停止新版本，恢复升级前的数据库备份，再启动旧版本，并继续使用原来的代理缓存卷。旧版本依赖备份里保存的签名图片地址。
+如果中途需要回退到旧版本，先停掉新版本服务，恢复升级前备份的数据库，再挂回原来的代理缓存卷启动旧版本即可。旧版本依赖备份里记录的签名图片链接。
 
 ## 常见问题
 
 ### API 启动时卡在数据库迁移
 
-迁移进程被强行终止后，API 可能一直等待 `__EFMigrationsLock`。先停止 API，确认没有迁移在运行，然后清空这张表：
+如果上一次迁移进程被强行中断，数据库里可能残留 `__EFMigrationsLock` 锁记录，导致 API 启动后一直干等。先停掉 API，确认没有迁移进程在跑，然后清掉这张表即可：
 
 ```sql
 DELETE FROM "__EFMigrationsLock";
 ```
 
-### 改了配置但没有生效
+### 改了配置却没有生效
 
-用 Compose 部署时，环境变量改完要重新执行 `up -d`，API 容器才会用新配置重建。`NEXT_PUBLIC_API_URL` 是构建参数，要加 `--build` 重新构建 Web 镜像。
+用 Compose 部署时，修改环境变量后必须重新执行 `up -d`，API 容器才会重建并读入新值。另外，`NEXT_PUBLIC_API_URL` 属于构建参数，改完后要带上 `--build` 重新构建 Web 镜像。
 
-### 扩展保存失败
+### 扩展保存文章失败
 
-检查扩展设置里的 API URL：它是提供 `/api` 的地址，本身不带 `/api`。再确认 API 密钥还在账户设置的 **API 密钥**列表里。
+先核对扩展设置里的 API URL：这里要填的是提供 `/api` 服务的根地址，末尾不要带 `/api`。再检查一下所用密钥是否仍然存在于账户设置的 **API 密钥**列表中。

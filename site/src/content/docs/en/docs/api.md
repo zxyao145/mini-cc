@@ -1,9 +1,9 @@
 ---
 title: API
-description: Call MiniCC from scripts with an API key, and an overview of the main endpoints.
+description: Authenticate scripts and external tools with an API key, and browse the core MiniCC endpoints.
 ---
 
-The web app signs in with a cookie. Scripts and other tools can send an API key in the `X-Api-Key` header. Create keys on the **API 密钥** (API Keys) tab of account settings; each account can have up to 10.
+While the web app uses cookies for sign-in, scripts and external tools can pass an API key via the `X-Api-Key` header. Create keys under the **API 密钥** (API Keys) tab in account settings; each account supports up to 10 keys.
 
 ```bash
 curl -H "X-Api-Key: <your-api-key>" "http://localhost:5000/api/articles?view=all"
@@ -23,24 +23,24 @@ curl -H "X-Api-Key: <your-api-key>" "http://localhost:5000/api/articles?view=all
 
 ## List articles
 
-`GET /api/articles` returns `{ items, total, nextCursor }` with cursor pagination. Common parameters:
+`GET /api/articles` uses cursor-based pagination and returns `{ items, total, nextCursor }`. Common query parameters:
 
 | Parameter | Description |
 | --- | --- |
-| `view` | `inbox` (default), `all`, `favorites`, `archive`, `trash` |
-| `q` | Search text, up to 200 characters |
-| `status` | `unread`, `reading`, `read`; separate several with commas to match any of them |
-| `tags` | Tag IDs separated by commas, up to 10; an article must have all of them |
+| `view` | `inbox` (default), `all`, `favorites`, `archive`, or `trash` |
+| `q` | Search query, up to 200 characters |
+| `status` | `unread`, `reading`, or `read`; comma-separated to match any |
+| `tags` | Comma-separated tag IDs (up to 10); articles must include all of them |
 | `source` | `extension` or `feed` |
-| `contentKind` | `link` returns only entries saved as links |
-| `feedId` | Show a single feed |
-| `savedFrom` / `savedTo` | Save-date range; the start is inclusive and the end exclusive |
-| `sort` | `saved_desc`, `saved_asc`, `read_desc`, `published_desc` |
-| `cursor` / `pageSize` | The previous page's `nextCursor`; 1–50 items per page, 20 by default |
+| `contentKind` | Pass `link` to return only items saved as links |
+| `feedId` | Filter to a single feed |
+| `savedFrom` / `savedTo` | Save-date range (start inclusive, end exclusive) |
+| `sort` | `saved_desc`, `saved_asc`, `read_desc`, or `published_desc` |
+| `cursor` / `pageSize` | `nextCursor` from the previous page; 1–50 items per page (default 20) |
 
 ## Change article state
 
-Favorite, archive and reading status are set with explicit values, so repeating a request gives the same result:
+Favorite, archive, and reading status take explicit values, making requests idempotent when retried:
 
 ```bash
 curl -X PATCH -H "X-Api-Key: <your-api-key>" -H "Content-Type: application/json" \
@@ -48,8 +48,8 @@ curl -X PATCH -H "X-Api-Key: <your-api-key>" -H "Content-Type: application/json"
   "http://localhost:5000/api/articles/<article-id>/state"
 ```
 
-`POST /api/articles/batch` handles up to 200 articles per request and returns the IDs that succeeded and the reasons for any failures.
+`POST /api/articles/batch` accepts up to 200 articles per call and returns both the IDs that succeeded and per-item reasons for any failures.
 
 ## Full reference
 
-When the API runs in the Development environment, as it does with `dotnet run`, the complete reference is available in Scalar at http://localhost:5001/scalar.
+When the API runs in the Development environment (such as via `dotnet run`), you can browse the interactive Scalar API reference at http://localhost:5001/scalar.

@@ -1,26 +1,26 @@
 ---
 title: 安装部署
-description: 用 Podman 或 Docker Compose 部署 MiniCC，或者从源码运行 API 和 Web 应用。
+description: 使用 Podman 或 Docker Compose 快速部署 MiniCC，或从源码本地运行 API 与 Web 应用。
 ---
 
 import { Tabs, TabItem, Steps } from '@astrojs/starlight/components';
 
-MiniCC 有两种运行方式。自己日常使用，选 Compose；要改代码，再从源码运行。
+MiniCC 支持两种运行方式：日常自用推荐直接上 Compose，省心省力；如果要二次开发或改代码，再从源码启动。
 
 ## 用 Compose 部署（推荐）
 
-需要 [Podman](https://podman.io/) 和 `podman compose`，或者 Docker 和 Docker Compose。用 Docker 的话，把下面命令里的 `podman compose` 换成 `docker compose`。
+你需要安装 [Podman](https://podman.io/)（配 `podman compose`）或者 Docker（配 Docker Compose）。如果你用的是 Docker，把下面命令里的 `podman compose` 替换成 `docker compose` 即可。
 
 <Steps>
 
-1. 克隆仓库。
+1. 克隆仓库到本地：
 
    ```bash
    git clone https://github.com/zxyao145/mini-cc.git
    cd mini-cc
    ```
 
-2. 选一个数据库启动。两者的区别见下文的[选择数据库](#选择数据库)。
+2. 按需选一种数据库启动服务（两者的取舍可以参考下文的[选择数据库](#选择数据库)）：
 
    <Tabs syncKey="database">
      <TabItem label="PostgreSQL">
@@ -35,19 +35,19 @@ MiniCC 有两种运行方式。自己日常使用，选 Compose；要改代码�
      </TabItem>
    </Tabs>
 
-3. 打开 [http://localhost:5000](http://localhost:5000)，按[首次登录](#首次登录)的说明登录。
+3. 浏览器打开 [http://localhost:5000](http://localhost:5000)，按照[首次登录](#首次登录)里的说明登录即可。
 
 </Steps>
 
-几点说明：
+部署前有几点需要留意：
 
-- 5000 端口通过 nginx 同时提供 Web 应用和 API。PostgreSQL 版还会把数据库映射到主机的 15432 端口，密码是 `postgres`。主机要暴露到外网之前，请在 `deploy/docker-compose.yaml` 里改掉密码，或者删掉这个端口映射。
-- 数据保存在命名卷里：PostgreSQL 版用 `pgdata` 和 `api-data`，SQLite 版用 `sqlite-data`。本地图片和登录 Cookie 的加密密钥也在 API 的数据卷里。
-- 两个 Compose 文件使用相同的容器名。要换数据库，先用当前那份 Compose 文件执行 `down`，再启动另一份。
+- 5000 端口经由 nginx 同时提供 Web 应用和 API。PostgreSQL 版本还会把数据库映射到宿主机的 15432 端口，默认密码为 `postgres`。在把服务器暴露到公网之前，务必在 `deploy/docker-compose.yaml` 里修改这个密码，或直接去掉端口映射。
+- 所有持久化数据都存放在命名卷中：PostgreSQL 版使用 `pgdata` 和 `api-data`，SQLite 版使用 `sqlite-data`。本地保存的文章图片，以及加密登录 Cookie 的密钥，也一并存在 API 的数据卷里。
+- 两份 Compose 文件共用了相同的容器名。如果想切换数据库，先用当前那份文件执行 `down` 停掉容器，再拉起另一份。
 
 ### 换成自己的域名
 
-Web 应用在构建时写入 API 地址，默认是 `http://localhost:5000/api`。要通过其他主机名或域名访问，修改 Compose 文件里 `minicc-web` → `build.args` 下的 `NEXT_PUBLIC_API_URL`，例如：
+Web 应用会在构建时把 API 地址写死进前端代码，默认是 `http://localhost:5000/api`。如果你打算用其他主机名或自己的域名访问，请修改 Compose 文件中 `minicc-web` → `build.args` 下的 `NEXT_PUBLIC_API_URL`：
 
 ```yaml
 minicc-web:
@@ -56,39 +56,39 @@ minicc-web:
       NEXT_PUBLIC_API_URL: https://minicc.example.com/api
 ```
 
-改完后需要重新构建，也就是再执行一次带 `--build` 的 `up` 命令。
+改完后需要重新构建镜像，再次执行带 `--build` 的 `up` 命令即可生效。
 
 ## 选择数据库
 
 | | PostgreSQL | SQLite |
 | --- | --- | --- |
-| 运行方式 | 独立的数据库容器（zhparser 镜像） | API 数据卷里的一个文件 |
-| 搜索 | zhparser 中文分词，加标题子串匹配 | 在标题、摘要、作者和 HTML 正文里做子串匹配 |
-| 适合 | 大多数部署，尤其是中文内容多的文章库 | 只跑一个 API 实例、数据放在本地磁盘的部署 |
+| 运行方式 | 独立的数据库容器（内置 zhparser） | API 数据卷里的单个数据库文件 |
+| 搜索能力 | zhparser 中文分词，辅以标题子串匹配 | 对标题、摘要、作者和 HTML 正文做子串匹配 |
+| 适用场景 | 大多数部署，尤其是中文文章较多的用户 | 单实例轻量部署，数据放在本地磁盘上 |
 
-用 SQLite 时要注意：
+使用 SQLite 时有几个细节需要注意：
 
-- 搜索忽略 ASCII 字母大小写。因为是在 HTML 正文里匹配，标签和 HTML 实体也可能影响结果。
-- 标签名和订阅源标题按二进制顺序排序。
-- 数据库要放在本地磁盘或本地命名卷上。SQLite 运行在 WAL 模式下。
+- 搜索不区分 ASCII 字母大小写。因为直接匹配 HTML 正文，标签名和 HTML 实体有时也会被搜到。
+- 标签名和订阅源标题按二进制顺序排列。
+- SQLite 运行在 WAL 模式下，数据库文件请务必放在本地磁盘或本地命名卷上，不要放在网络文件系统里。
 
 ## 从源码运行
 
-需要：
+本地开发需要准备以下环境：
 
 - .NET 10.0 SDK
-- Node.js 22.13 及以上，pnpm 12.5.1（`npm install -g pnpm@12.5.1`）
-- 使用 PostgreSQL 时，需要装有 zhparser 的 PostgreSQL 16
+- Node.js 22.13 及以上版本，以及 pnpm 12.5.1（可通过 `npm install -g pnpm@12.5.1` 安装）
+- 如果选用 PostgreSQL，需要装有 zhparser 扩展的 PostgreSQL 16
 
 <Steps>
 
-1. 在仓库根目录安装依赖。
+1. 在仓库根目录安装工作区依赖：
 
    ```bash
    pnpm install --frozen-lockfile
    ```
 
-2. 启动 API。图片默认存到 `src/server/data/images`，经 API 提供。Web 开发服务器跑在 4000 端口，所以要把 `Images__ApiUrl` 设成 API 的完整地址，页面才能加载本地图片。
+2. 启动 API 服务。图片默认保存在 `src/server/data/images` 目录并由 API 提供访问。由于前端开发服务器跑在 4000 端口，需要把 `Images__ApiUrl` 设为 API 的完整地址，页面才能正常加载本地图片。
 
    <Tabs syncKey="database">
      <TabItem label="PostgreSQL">
@@ -107,26 +107,26 @@ minicc-web:
      </TabItem>
    </Tabs>
 
-   API 启动时会初始化 zhparser（PostgreSQL），或者创建 `src/server/data/mini_cc.db`（SQLite），然后执行数据库迁移。它监听 [http://localhost:5001](http://localhost:5001)。
+   API 启动后会自动初始化 zhparser（PostgreSQL）或创建 `src/server/data/mini_cc.db`（SQLite），并完成数据库迁移，随后监听在 [http://localhost:5001](http://localhost:5001)。
 
-   API 默认的 PostgreSQL 连接串和 Compose 里的数据库一致。只想跑一个数据库容器的话，执行 `podman compose -f deploy/docker-compose.yaml up -d db`，就不用再设置 `MiniCC_Db`。
+   API 内置的默认 PostgreSQL 连接串与 Compose 中的数据库配置一致。如果你只想用容器跑一个数据库，执行 `podman compose -f deploy/docker-compose.yaml up -d db` 即可，连 `MiniCC_Db` 都不用手动配。
 
-3. Web 应用默认请求 `http://localhost:5001/api`。API 在别的地址时，在 `src/web/.env.local` 里写上实际地址，例如：
+3. Web 应用默认请求 `http://localhost:5001/api`。如果 API 跑在别的地址，在 `src/web/.env.local` 里指定实际地址：
 
    ```dotenv
    NEXT_PUBLIC_API_URL=http://192.168.1.20:5001/api
    ```
 
-4. 在仓库根目录执行 `pnpm dev`，打开 [http://localhost:4000](http://localhost:4000)。
+4. 回到仓库根目录执行 `pnpm dev`，打开 [http://localhost:4000](http://localhost:4000) 即可访问。
 
 </Steps>
 
 ## 首次登录
 
-第一次启动会创建一个账号，用户名 `mini_cc`，密码 `mini_cc_password`。MiniCC 没有注册页面。
+系统首次启动时会自动创建一个默认账号，用户名 `mini_cc`，密码 `mini_cc_password`。MiniCC 本身不提供公开注册页面。
 
-登录后点侧边栏底部的账户，在**个人资料**标签页里修改用户名和密码。改密码之后，这个账号在其他浏览器上的登录会全部失效。
+登录后，点击侧边栏底部的账户入口，在**个人资料**标签页里尽快修改用户名和密码。修改密码后，该账号在其他浏览器上的登录会话会立刻全部失效。
 
-登录时勾选**记住我**，登录状态保留 30 天；不勾选的话，30 分钟没有操作就需要重新登录。两种情况下，只要一直在用，有效期都会自动顺延。
+登录时勾选**记住我**，登录状态可保持 30 天；不勾选的话，连续 30 分钟无操作就需要重新登录。无论哪种方式，只要你还在持续使用，会话有效期都会自动顺延。
 
 下一步：[安装浏览器扩展](/docs/extension/)。

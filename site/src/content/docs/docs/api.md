@@ -1,9 +1,9 @@
 ---
 title: API
-description: 用 API 密钥从脚本访问 MiniCC，以及主要接口一览。
+description: 使用 API 密钥通过脚本或第三方工具调用 MiniCC，以及核心接口一览。
 ---
 
-Web 应用用 Cookie 登录。脚本和其他工具可以在请求头 `X-Api-Key` 里带上 API 密钥。密钥在账户设置的 **API 密钥**标签页里创建，每个账号最多 10 个。
+Web 应用通过 Cookie 维持登录；如果是写脚本或对接外部工具，在请求头 `X-Api-Key` 里带上 API 密钥即可。密钥可以在账户设置的 **API 密钥**标签页中创建，每个账号最多 10 个。
 
 ```bash
 curl -H "X-Api-Key: <你的 API 密钥>" "http://localhost:5000/api/articles?view=all"
@@ -23,24 +23,24 @@ curl -H "X-Api-Key: <你的 API 密钥>" "http://localhost:5000/api/articles?vie
 
 ## 查询文章列表
 
-`GET /api/articles` 返回 `{ items, total, nextCursor }`，按游标分页。常用参数：
+`GET /api/articles` 采用游标分页，返回结构为 `{ items, total, nextCursor }`。常用查询参数如下：
 
 | 参数 | 说明 |
 | --- | --- |
-| `view` | `inbox`（默认）、`all`、`favorites`、`archive`、`trash` |
-| `q` | 搜索关键词，最长 200 个字符 |
-| `status` | `unread`、`reading`、`read`，多个值用逗号分隔，取并集 |
-| `tags` | 标签 ID，多个用逗号分隔，最多 10 个，文章需同时带有全部标签 |
-| `source` | `extension` 或 `feed` |
-| `contentKind` | `link`：只返回保存为链接的条目 |
-| `feedId` | 只看某个订阅源 |
-| `savedFrom` / `savedTo` | 保存时间范围，包含起点，不包含终点 |
-| `sort` | `saved_desc`、`saved_asc`、`read_desc`、`published_desc` |
-| `cursor` / `pageSize` | 上一页返回的 `nextCursor`；每页 1–50 条，默认 20 |
+| `view` | 视图：`inbox`（默认）、`all`、`favorites`、`archive`、`trash` |
+| `q` | 全文检索关键词，最长 200 个字符 |
+| `status` | 阅读状态：`unread`、`reading`、`read`，支持逗号分隔多选（取并集） |
+| `tags` | 标签 ID，逗号分隔，最多 10 个（文章须同时包含所选全部标签） |
+| `source` | 来源：`extension` 或 `feed` |
+| `contentKind` | 传 `link` 仅返回保存为链接的条目 |
+| `feedId` | 按单个订阅源筛选 |
+| `savedFrom` / `savedTo` | 保存时间范围（左闭右开，包含起点、不含终点） |
+| `sort` | 排序方式：`saved_desc`、`saved_asc`、`read_desc`、`published_desc` |
+| `cursor` / `pageSize` | 传入上一页返回的 `nextCursor`；每页 1–50 条，默认 20 |
 
 ## 修改文章状态
 
-收藏、归档和已读状态都用显式的值设置，重复请求结果相同：
+收藏、归档和已读状态都采用显式传值，接口天然幂等，重复调用结果完全一致：
 
 ```bash
 curl -X PATCH -H "X-Api-Key: <你的 API 密钥>" -H "Content-Type: application/json" \
@@ -48,8 +48,8 @@ curl -X PATCH -H "X-Api-Key: <你的 API 密钥>" -H "Content-Type: application/
   "http://localhost:5000/api/articles/<文章 ID>/state"
 ```
 
-批量接口 `POST /api/articles/batch` 一次最多处理 200 篇文章，返回成功的 ID 和失败原因。
+批量接口 `POST /api/articles/batch` 单次最多处理 200 篇文章，响应中会分别列出成功的 ID 以及每条失败记录的原因。
 
 ## 完整参考
 
-API 在 Development 环境运行时（例如用 `dotnet run` 启动），可以在 <http://localhost:5001/scalar> 查看完整的接口文档。
+当 API 运行在 Development 环境下（例如直接用 `dotnet run` 启动）时，可以访问 <http://localhost:5001/scalar> 查看完整的交互式接口文档。

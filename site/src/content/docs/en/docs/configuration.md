@@ -1,13 +1,13 @@
 ---
 title: Configuration reference
-description: The MiniCC API's configuration file and environment variables, plus database, library, sign-in and web app settings.
+description: Configuration files, environment variables, and settings for the MiniCC API, database, library, authentication, and web app.
 ---
 
 ## How configuration works
 
-The API reads its defaults from `src/server/appsettings.yaml`, where every setting has a comment in Chinese and English. The development environment also loads `appsettings.Development.yaml`.
+The API loads its defaults from `src/server/appsettings.yaml`, where every option is documented in both Chinese and English. In development, it also reads `appsettings.Development.yaml`.
 
-Deployments usually override settings with environment variables. Join the levels with two underscores: `Library:TrashRetentionDays` in YAML becomes the environment variable `Library__TrashRetentionDays`. With Compose, add variables to the `environment` section of `minicc-api`:
+In production, overriding values with environment variables is usually the cleanest approach. Join nested YAML keys with double underscores: `Library:TrashRetentionDays` maps to `Library__TrashRetentionDays`. With Compose, add them under `minicc-api`'s `environment` block:
 
 ```yaml
 minicc-api:
@@ -16,26 +16,26 @@ minicc-api:
     Library__UndoWindowSeconds: 15
 ```
 
-Then run `podman compose -f deploy/docker-compose.yaml up -d` so the API container restarts with the new settings.
+Then run `podman compose -f deploy/docker-compose.yaml up -d` to recreate the API container with the updated settings.
 
 ## Environment variables
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `Database__Provider` | `postgres` | `postgres` or `sqlite`, case-insensitive |
-| `MiniCC_Db` | See below | Database connection string. Relative SQLite paths resolve from the API content root. |
-| `Library__TrashRetentionDays` | `30` | Days to keep articles in the trash (1–365) |
-| `Library__UndoWindowSeconds` | `10` | Seconds the undo button stays visible after a deletion (3–60) |
-| `DataProtection__KeysPath` | Empty | Directory for the keys that encrypt sign-in cookies |
-| `Images__*` | | Image downloads, access and storage. See [Image storage](/en/docs/images/). |
-| `ImageProxy__SignatureKey` | Empty | Signing key for the legacy image proxy, needed only in `ImageProxy` mode |
+| `Database__Provider` | `postgres` | Database engine: `postgres` or `sqlite` (case-insensitive) |
+| `MiniCC_Db` | See below | Database connection string. Relative SQLite paths resolve against the API content root. |
+| `Library__TrashRetentionDays` | `30` | Days to retain trashed articles (1–365) |
+| `Library__UndoWindowSeconds` | `10` | Seconds the undo toast stays visible after deletion (3–60) |
+| `DataProtection__KeysPath` | Empty | Directory storing the keys that encrypt sign-in cookies |
+| `Images__*` | | Image downloads, access control, and storage. See [Image storage](/en/docs/images/). |
+| `ImageProxy__SignatureKey` | Empty | Signing key for the legacy image proxy (only required in `ImageProxy` mode) |
 
 ## Database
 
-`Database:Provider` selects the database. The connection string is read in this order:
+`Database:Provider` chooses which database engine to use. The connection string is resolved in order:
 
 1. The `MiniCC_Db` environment variable
-2. `ConnectionStrings:DefaultConnection` for PostgreSQL, or `ConnectionStrings:Sqlite` for SQLite
+2. `ConnectionStrings:DefaultConnection` (PostgreSQL) or `ConnectionStrings:Sqlite` (SQLite)
 
 Defaults:
 
@@ -44,34 +44,34 @@ Defaults:
 | PostgreSQL | `Host=127.0.0.1;Port=15432;Database=mini_cc;Username=postgres;Password=postgres` |
 | SQLite | `Data Source=data/mini_cc.db` |
 
-The default SQLite path is relative to the API content root, and the API creates its directory on startup. Both Compose files already set `MiniCC_Db`, so you usually don't need to change it.
+The default SQLite path is relative to the API content root, and the API creates the parent directory automatically if needed. Both Compose files preconfigure `MiniCC_Db`, so you rarely need to touch it.
 
-The API applies database migrations every time it starts.
+Database migrations run automatically on every API startup.
 
 ## Library
 
 | Setting | Default | Range | Effect |
 | --- | --- | --- | --- |
-| `Library:TrashRetentionDays` | 30 | 1–365 | Days an article stays in the trash before a background job deletes it permanently |
-| `Library:UndoWindowSeconds` | 10 | 3–60 | How long the undo button stays visible after you delete articles |
+| `Library:TrashRetentionDays` | 30 | 1–365 | Days an article remains in the trash before background cleanup purges it permanently |
+| `Library:UndoWindowSeconds` | 10 | 3–60 | Duration the undo button remains visible after deleting articles |
 
-The API checks both settings at startup and does not start when either is out of range.
+Both values are validated at startup; the API refuses to start if either is out of range.
 
 ## Sign-in and security
 
-`DataProtection:KeysPath` is the directory for the keys that encrypt sign-in cookies. Both Compose files set it to `/app/data/data-protection-keys` in the API data volume. For other deployments, set it to a persistent directory. Otherwise the keys are lost when the API restarts, and everyone has to sign in again.
+`DataProtection:KeysPath` sets where the API stores encryption keys for sign-in cookies. Both Compose files point it to `/app/data/data-protection-keys` inside the API data volume. If you deploy outside Compose, point it to a persistent directory; otherwise the keys are lost on restart and every user is signed out.
 
-`AllowedHosts` limits the host names accepted in the request `Host` header. Separate names with semicolons and leave out ports. The default `*` allows any host.
+`AllowedHosts` restricts which hostnames are accepted in the incoming `Host` header. Separate multiple hostnames with semicolons and omit port numbers. The default `*` allows any host.
 
-`AesKeys` holds the AES keys that encrypt API keys in the database. Each entry has an `Id`, a `Key` and an `IV`; the last two are Base64 encoded. Stored API keys can only be decrypted with the entry that encrypted them, so don't remove or change an entry that is in use.
+`AesKeys` stores the AES keys used to encrypt API keys in the database. Each entry has an `Id`, `Key`, and `IV` (the latter two Base64-encoded). Existing API keys can only be decrypted by the entry that encrypted them, so never delete or alter an entry that is still in use.
 
 ## Web app
 
-The web app has one setting: `NEXT_PUBLIC_API_URL`, the address of the API. It is built into the pages, so you must rebuild after changing it.
+The web app has only one setting: `NEXT_PUBLIC_API_URL`, which points to the API. Because Next.js bakes it in at build time, you must rebuild whenever you change it:
 
-- Compose: change the value under `minicc-web` → `build.args`. The default is `http://localhost:5000/api`.
-- From source: set it in `src/web/.env.local`. The default is `http://localhost:5001/api`.
+- **Compose**: update `minicc-web` → `build.args` (defaults to `http://localhost:5000/api`).
+- **From source**: set it in `src/web/.env.local` (defaults to `http://localhost:5001/api`).
 
 ## Logs
 
-The API logs with Serilog. It writes to the console and to hourly files under `logs/` in its working directory, with errors also written to a separate file. With Compose, `podman logs minicc-api` shows the console log.
+The API logs through Serilog to both the console and hourly rolling files under `logs/` in its working directory, with errors written to a separate file. With Compose, run `podman logs minicc-api` to inspect console output.

@@ -1,53 +1,53 @@
 ---
 title: Backup and upgrades
-description: Back up MiniCC's database and images, upgrade to a new version, and recover from a stuck database migration.
+description: Back up your MiniCC database and images, upgrade cleanly to new releases, and troubleshoot common issues.
 ---
 
 ## Backup
 
-Back up the database and the local images together. If you restore the database without its images, stored images are downloaded again from their original sites, where some may no longer exist.
+Always back up your database and local images together. If you restore the database without its matching image files, MiniCC will try to re-download them from the original sites, where older images may no longer exist.
 
-**PostgreSQL**: back up the `pgdata` volume, or dump the database:
+- **PostgreSQL**: back up the `pgdata` volume, or export a SQL dump:
 
-```bash
-podman exec db pg_dump -U postgres mini_cc > mini_cc.sql
-```
+  ```bash
+  podman exec db pg_dump -U postgres mini_cc > mini_cc.sql
+  ```
 
-**SQLite**: stop the API, then copy the database file together with any remaining WAL files. On a host with the SQLite CLI you can also back up while the API runs:
+- **SQLite**: stop the API first, then copy the database file along with any lingering WAL files. If the SQLite CLI is installed on the host, you can also take a live backup without stopping the API:
 
-```bash
-sqlite3 /path/to/mini_cc.db ".backup /path/to/backup.db"
-```
+  ```bash
+  sqlite3 /path/to/mini_cc.db ".backup /path/to/backup.db"
+  ```
 
-**Local images**: in Compose they are in `/app/data/images`, inside the `api-data` volume for PostgreSQL or the `sqlite-data` volume for SQLite. With R2, image files stay in the bucket and are covered by your R2 retention or replication setup.
+- **Local images**: under Compose, images live in `/app/data/images` inside `api-data` (PostgreSQL) or `sqlite-data` (SQLite). If you use Cloudflare R2, rely on R2's own retention or replication policies.
 
 ## Upgrade
 
-1. Back up the database and the local image directory. For PostgreSQL, dump the database and back up `api-data`. For SQLite, stop the API and back up `sqlite-data`.
-2. Pull the new version and rebuild with the same Compose command you already use:
+1. Back up both the database and your local image directory. For PostgreSQL, dump the database and back up `api-data`; for SQLite, stop the API and back up `sqlite-data`.
+2. Pull the latest code and rebuild with your usual Compose command:
 
    ```bash
    git pull
    podman compose -f deploy/docker-compose.yaml up -d --build
    ```
 
-3. The API applies migrations on startup. Follow migrations and image downloads in the API log with `podman logs -f minicc-api`.
+3. Database migrations run automatically on startup. Watch `podman logs -f minicc-api` to follow migration and image-download progress.
 
-The browser extension may have changed too. Run `pnpm build:ext` from the repository root and reload the extension on `chrome://extensions/`.
+The browser extension may also have updates. Run `pnpm build:ext` from the repository root and reload the extension on `chrome://extensions/`.
 
-### Upgrading from a version that used the image proxy
+### Upgrading from a release that used the image proxy
 
-New versions download and store images in the API by default. On first start, a background job removes the old proxy prefixes and then downloads the images. The log shows the backfill counts and download summaries.
+Newer releases download and store images directly in the API by default. On first startup, a background job strips old proxy URL prefixes and queues images for download, logging backfill counts and download summaries as it goes.
 
-Keep the old `image-proxy-data` volume during the migration. It may hold the only remaining copies of images that have been removed from their original sites.
+Hold on to the old `image-proxy-data` volume while migrating. For images that have vanished from their original websites, that volume may contain the only surviving copy.
 
-To roll back, stop the new version, restore the database backup taken before the upgrade, and start the older version with the saved proxy cache volume. The older version relies on the signed image URLs stored in that backup.
+If you need to roll back, stop the new stack, restore the pre-upgrade database backup, and start the older release with the original proxy cache volume still attached. The older release relies on the signed image URLs saved in that backup.
 
 ## Troubleshooting
 
 ### The API hangs on a database migration at startup
 
-If a migration was killed, the API can wait on `__EFMigrationsLock` forever. Stop the API, make sure no migration is running, and clear the table:
+If a previous migration was terminated abruptly, a stale lock row can remain in `__EFMigrationsLock` and stall startup indefinitely. Stop the API, verify no migration is running, and clear the lock table:
 
 ```sql
 DELETE FROM "__EFMigrationsLock";
@@ -55,8 +55,8 @@ DELETE FROM "__EFMigrationsLock";
 
 ### A configuration change has no effect
 
-With Compose, run `up -d` again after you change environment variables so the API container is recreated. `NEXT_PUBLIC_API_URL` is a build argument, so add `--build` to rebuild the web image.
+With Compose, run `up -d` after changing environment variables so the API container is recreated with the new values. `NEXT_PUBLIC_API_URL` is a build-time argument, so pass `--build` to rebuild the web image.
 
 ### The extension fails to save
 
-Check the API URL in the extension settings. It is the address that serves `/api`, without `/api` itself. Then make sure the API key still appears in the **API 密钥** (API Keys) list in account settings.
+Double-check the API URL in the extension settings: it should be the base URL that serves `/api`, without `/api` itself. Also verify that the API key is still listed under **API 密钥** (API Keys) in account settings.
