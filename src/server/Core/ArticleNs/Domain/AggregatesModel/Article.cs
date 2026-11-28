@@ -137,7 +137,7 @@ public class Article : AggregateRoot
     {
         ReadingStatus = ReadingStatus.Read;
         if (ReadAt != null) return;
-        ReadAt = now;
+        ReadAt = TruncateToMicroseconds(now);
         AddDomainEvent(new ArticleReadEvent(Id, Title));
     }
 
@@ -248,7 +248,8 @@ public class Article : AggregateRoot
         if (NormalizedUrl.Length == 0) NormalizedUrl = UrlNormalizer.Normalize(Url.Value);
     }
 
-    public void MarkSavedFromExtension(DateTimeOffset now) => SavedFromExtensionAt ??= now;
+    public void MarkSavedFromExtension(DateTimeOffset now) =>
+        SavedFromExtensionAt ??= TruncateToMicroseconds(now);
 
     public void AddTag(Tag tag)
     {
@@ -284,4 +285,8 @@ public class Article : AggregateRoot
             AddDomainEvent(new HighlightRemovedEvent(Id, highlightId));
         }
     }
+
+    // Keep newly assigned timestamps consistent with PostgreSQL round trips.
+    private static DateTimeOffset TruncateToMicroseconds(DateTimeOffset timestamp) =>
+        timestamp.AddTicks(-(timestamp.Ticks % TimeSpan.TicksPerMicrosecond));
 }

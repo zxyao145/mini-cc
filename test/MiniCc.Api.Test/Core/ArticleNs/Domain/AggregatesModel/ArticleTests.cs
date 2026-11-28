@@ -222,7 +222,8 @@ public class ArticleTests
     public void StateSetters_AreIdempotentAndIndependent()
     {
         var article = CreateTestArticle();
-        var now = DateTimeOffset.UtcNow;
+        var readAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero).AddMicroseconds(123_456);
+        var now = readAt.AddTicks(3);
         article.SetFavorite(true);
         article.SetFavorite(true);
         article.SetArchived(true);
@@ -230,7 +231,7 @@ public class ArticleTests
         article.ReadingStatus.Should().Be(ReadingStatus.Unread);
         article.MarkRead(now);
         article.MarkRead(now.AddHours(1));
-        article.ReadAt.Should().Be(now);
+        article.ReadAt.Should().Be(readAt);
         article.IsFavorite.Should().BeTrue();
         article.IsArchived.Should().BeTrue();
         article.SetFavorite(false);
@@ -265,7 +266,7 @@ public class ArticleTests
     public void ResetProgress_ClearsPositionButPreservesStateAndLastReadAt()
     {
         var article = CreateTestArticle();
-        var now = DateTimeOffset.UtcNow;
+        var now = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
         article.ApplyProgress(new ReadingPosition(23, 2, .4, 61), "old", now);
         article.MarkRead(now);
         article.ResetProgress(null, now.AddMinutes(1));
@@ -331,6 +332,18 @@ public class ArticleTests
         article.ContentKind.Should().Be(ContentKind.SummaryOnly);
         article.IsFavorite.Should().BeTrue();
         article.ReadingStatus.Should().Be(ReadingStatus.Read);
+    }
+
+    [Fact]
+    public void MarkSavedFromExtension_PreservesFirstSaveAtMicrosecondPrecision()
+    {
+        var article = CreateTestArticle();
+        var savedAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero).AddMicroseconds(123_456);
+
+        article.MarkSavedFromExtension(savedAt.AddTicks(4));
+        article.MarkSavedFromExtension(savedAt.AddHours(1));
+
+        article.SavedFromExtensionAt.Should().Be(savedAt);
     }
 
     [Fact]
