@@ -1,0 +1,13 @@
+---
+import { Code } from '@astrojs/starlight/components';
+
+interface Props {
+  database: 'sqlite' | 'postgres';
+}
+
+const { database } = Astro.props;
+const version = import.meta.env.PUBLIC_MINICC_RELEASE_TAG || 'vX.Y.Z';
+const databaseArgument = database === 'postgres' ? ' --database postgres' : '';
+---
+
+<Code lang="bash" code={`MINICC_VERSION=${version} bash deploy/docker-run.ghcr.sh${databaseArgument}`} />

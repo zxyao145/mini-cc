@@ -172,7 +172,7 @@ export default function LibraryToolbar({ query: incomingQuery, onChange, article
     </div>}
     {!!chips.length && <div className={styles.chips} aria-label="当前筛选条件">
       {chips.map(chip => <Button variant="ghost" size="sm" className={styles.chip} key={chip.label} onClick={chip.remove} aria-label={`移除${chip.label}`}><span>{chip.label}</span><X size={14} aria-hidden="true" /></Button>)}
-      <Button variant="ghost" size="sm" className={styles.clear} onClick={() => { publish({ ...parseLibraryQuery(new URLSearchParams()), view: current.current.view, sort: current.current.sort }, false); }}>清除筛选<X size={14} aria-hidden="true" /></Button>
+      <Button variant="ghost" size="sm" className={styles.clear} onClick={() => { publish({ ...parseLibraryQuery(new URLSearchParams('status=')), view: current.current.view, sort: current.current.sort }, false); }}>清除筛选<X size={14} aria-hidden="true" /></Button>
     </div>}
   </div>;
 }

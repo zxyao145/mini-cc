@@ -69,7 +69,7 @@ Both values are validated at startup; the API refuses to start if either is out 
 
 The web app has only one setting: `NEXT_PUBLIC_API_URL`, which points to the API. Because Next.js bakes it in at build time, you must rebuild whenever you change it:
 
-- **Compose**: update `minicc-web` → `build.args` (defaults to `http://localhost:5000/api`).
+- **GHCR images** use the same-origin `/api`. For a local Compose build, set `minicc-web` → `build.args` (defaults to `http://localhost:5000/api`).
 - **From source**: set it in `src/web/.env.local` (defaults to `http://localhost:5001/api`).
 
 ## Logs

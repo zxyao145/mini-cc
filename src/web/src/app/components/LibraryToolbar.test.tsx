@@ -32,7 +32,7 @@ it('selects and clears the saved links filter', async () => {
 });
 it('debounces search by 300ms and uses replace while filters use push', async () => {
   const onChange = vi.fn();
-  await act(async () => root.render(<LibraryToolbar query={parseLibraryQuery(new URLSearchParams())} onChange={onChange} articleStyle="grid" onStyleChange={() => {}} />));
+  await act(async () => root.render(<LibraryToolbar query={parseLibraryQuery(new URLSearchParams('status='))} onChange={onChange} articleStyle="grid" onStyleChange={() => {}} />));
   const input = container.querySelector('input[type=search]')!;
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, '缓存'); input.dispatchEvent(new Event('input', { bubbles: true })); });
   await act(async () => vi.advanceTimersByTime(299));

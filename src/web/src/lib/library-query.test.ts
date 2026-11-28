@@ -20,7 +20,13 @@ describe('library URLs', () => {
     expect(query.view).toBe('inbox');
     expect(query.status).toEqual(['unread']);
     expect(serializeLibraryQuery(query)).toBe('status=unread');
-    expect(isFiltered({ ...query, view: 'favorites' })).toBe(false);
+    expect(isFiltered(parseLibraryQuery(new URLSearchParams('view=favorites')))).toBe(false);
+  });
+  it('preserves a cleared inbox status across URL navigation', () => {
+    const query = parseLibraryQuery(new URLSearchParams('status='));
+    expect(query.status).toEqual([]);
+    expect(serializeLibraryQuery(query)).toBe('status=');
+    expect(toApiParams(query).has('status')).toBe(false);
   });
   it('round trips combined filters and excludes presentation range from API', () => {
     const query = parseLibraryQuery(new URLSearchParams(`view=all&status=read,unread,read&tags=${tag}&q=缓存&source=extension&savedFrom=2026-11-01T00:00:00Z&range=week&sort=read_desc`));
@@ -57,10 +63,10 @@ describe('reader cache updates', () => {
     clearLibraryCache();
     const item = { id: 'a', title: 'Old', isArchived: false, deletedAt: null, readingStatus: 'unread', tags: [] } as unknown as ArticleListItem;
     const entry = { items: [item], total: 1, nextCursor: null, scrollY: 500, savedAt: Date.now(), firstPageIds: ['a'] };
-    writeLibraryCache('', entry); writeLibraryCache('view=all', entry);
+    writeLibraryCache('status=unread', entry); writeLibraryCache('view=all', entry);
     updateCachedArticle('a', { isArchived: true, title: 'Updated' });
-    expect(readLibraryCache('')?.items).toEqual([]);
-    expect(readLibraryCache('')?.total).toBe(0);
+    expect(readLibraryCache('status=unread')?.items).toEqual([]);
+    expect(readLibraryCache('status=unread')?.total).toBe(0);
     expect(readLibraryCache('view=all')?.items[0].title).toBe('Updated');
     expect(readLibraryCache('view=all')?.scrollY).toBe(500);
     expect(JSON.parse(sessionStorage.getItem('minicc.library.cache.v1') || '[]')).toHaveLength(2);

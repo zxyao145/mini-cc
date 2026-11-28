@@ -24,16 +24,11 @@ Always back up your database and local images together. If you restore the datab
 ## Upgrade
 
 1. Back up both the database and your local image directory. For PostgreSQL, dump the database and back up `api-data`; for SQLite, stop the API and back up `sqlite-data`.
-2. Pull the latest code and rebuild with your usual Compose command:
-
-   ```bash
-   git pull
-   podman compose -f deploy/docker-compose.yaml up -d --build
-   ```
+2. Update `deploy/` from the chosen release and keep your local configuration. Set `MINICC_VERSION` in the [installation command](/en/docs/installation/) to the new tag, and keep the same Compose project and database selection. When moving an existing PostgreSQL deployment to GHCR, pass `--database postgres`. If you build locally, run `up -d --build` from the new checkout with your usual base Compose file.
 
 3. Database migrations run automatically on startup. Watch `podman logs -f minicc-api` to follow migration and image-download progress.
 
-The browser extension may also have updates. Run `pnpm build:ext` from the repository root and reload the extension on `chrome://extensions/`.
+If the browser extension has changed, extract the ZIP from the same release into the existing extension directory, then reload it on `chrome://extensions/`.
 
 ### Upgrading from a release that used the image proxy
 
@@ -55,7 +50,7 @@ DELETE FROM "__EFMigrationsLock";
 
 ### A configuration change has no effect
 
-With Compose, run `up -d` after changing environment variables so the API container is recreated with the new values. `NEXT_PUBLIC_API_URL` is a build-time argument, so pass `--build` to rebuild the web image.
+With Compose, rerun your deployment command after changing environment variables so the API container reads the new values. If you build the web image locally and change `NEXT_PUBLIC_API_URL`, pass `--build` to rebuild it.
 
 ### The extension fails to save
 

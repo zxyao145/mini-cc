@@ -4,34 +4,26 @@ description: 使用 Podman 或 Docker Compose 快速部署 MiniCC，或从源码
 ---
 
 import { Tabs, TabItem, Steps } from '@astrojs/starlight/components';
+import InstallCommand from '../../../components/InstallCommand.astro';
 
 MiniCC 支持两种运行方式：日常自用推荐直接上 Compose，省心省力；如果要二次开发或改代码，再从源码启动。
 
 ## 用 Compose 部署（推荐）
 
-你需要安装 [Podman](https://podman.io/)（配 `podman compose`）或者 Docker（配 Docker Compose）。如果你用的是 Docker，把下面命令里的 `podman compose` 替换成 `docker compose` 即可。
+发布镜像适用于 Linux amd64。部署主机需要安装 Docker Compose，或安装 [Podman](https://podman.io/) 并配置支持 `pull` 和 `up -d --no-build` 的 Compose 提供程序。
 
 <Steps>
 
-1. 克隆仓库到本地：
-
-   ```bash
-   git clone https://github.com/zxyao145/mini-cc.git
-   cd mini-cc
-   ```
+1. 在 [GitHub Releases](https://github.com/zxyao145/mini-cc/releases) 下载所选版本的 **Source code** 压缩包，解压后进入含有 `deploy/` 的目录。命令中的 `MINICC_VERSION` 应与所选 Release 标签一致。
 
 2. 按需选一种数据库启动服务（两者的取舍可以参考下文的[选择数据库](#选择数据库)）：
 
    <Tabs syncKey="database">
-     <TabItem label="PostgreSQL">
-       ```bash
-       podman compose -f deploy/docker-compose.yaml up -d --build
-       ```
-     </TabItem>
      <TabItem label="SQLite">
-       ```bash
-       podman compose -f deploy/docker-compose.sqlite.yaml up -d --build
-       ```
+       <InstallCommand database="sqlite" />
+     </TabItem>
+     <TabItem label="PostgreSQL">
+       <InstallCommand database="postgres" />
      </TabItem>
    </Tabs>
 
@@ -41,22 +33,13 @@ MiniCC 支持两种运行方式：日常自用推荐直接上 Compose，省心�
 
 部署前有几点需要留意：
 
-- 5000 端口经由 nginx 同时提供 Web 应用和 API。PostgreSQL 版本还会把数据库映射到宿主机的 15432 端口，默认密码为 `postgres`。在把服务器暴露到公网之前，务必在 `deploy/docker-compose.yaml` 里修改这个密码，或直接去掉端口映射。
+- 5000 端口经由 nginx 同时提供 Web 应用和 API。PostgreSQL 版把数据库映射到宿主机的 15432 端口，默认密码为 `postgres`。对外开放部署前，在 `deploy/docker-compose.yaml` 中收紧或移除数据库端口映射，并同步修改 `POSTGRES_PASSWORD` 和 `MiniCC_Db` 中的密码。
 - 所有持久化数据都存放在命名卷中：PostgreSQL 版使用 `pgdata` 和 `api-data`，SQLite 版使用 `sqlite-data`。本地保存的文章图片，以及加密登录 Cookie 的密钥，也一并存在 API 的数据卷里。
-- 两份 Compose 文件共用了相同的容器名。如果想切换数据库，先用当前那份文件执行 `down` 停掉容器，再拉起另一份。
+- 切换数据库前，用当前的基础 Compose 文件、GHCR 覆盖文件和当前版本执行 `down`，保留数据卷。需要沿用已有数据时，先安排跨库迁移。
 
 ### 换成自己的域名
 
-Web 应用会在构建时把 API 地址写死进前端代码，默认是 `http://localhost:5000/api`。如果你打算用其他主机名或自己的域名访问，请修改 Compose 文件中 `minicc-web` → `build.args` 下的 `NEXT_PUBLIC_API_URL`：
-
-```yaml
-minicc-web:
-  build:
-    args:
-      NEXT_PUBLIC_API_URL: https://minicc.example.com/api
-```
-
-改完后需要重新构建镜像，再次执行带 `--build` 的 `up` 命令即可生效。
+发布版 Web 镜像通过当前访问地址的 `/api` 请求 API。使用局域网地址或自定义域名时，把 Web 和 `/api/` 一起转发到 MiniCC 的 nginx 即可。
 
 ## 选择数据库
 

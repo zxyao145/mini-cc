@@ -33,7 +33,7 @@ export function serializeLibraryQuery(query: LibraryQuery): string {
   const params = new URLSearchParams();
   if (query.view !== 'inbox') params.set('view', query.view);
   if (query.q.trim()) params.set('q', query.q.trim().slice(0, 200));
-  if (query.status.length) params.set('status', statuses.filter(s => query.status.includes(s)).join(','));
+  if (query.status.length || query.view === 'inbox') params.set('status', statuses.filter(s => query.status.includes(s)).join(','));
   if (query.tags.length) params.set('tags', Array.from(new Set(query.tags)).sort().join(','));
   if (query.source) params.set('source', query.source);
   if (query.contentKind) params.set('contentKind', query.contentKind);
@@ -45,7 +45,10 @@ export function serializeLibraryQuery(query: LibraryQuery): string {
   return params.toString();
 }
 export function toApiParams(query: LibraryQuery): URLSearchParams {
-  const params = new URLSearchParams(serializeLibraryQuery(query)); params.delete('range'); return params;
+  const params = new URLSearchParams(serializeLibraryQuery(query));
+  params.delete('range');
+  if (!query.status.length) params.delete('status');
+  return params;
 }
 export function isFiltered(query: LibraryQuery): boolean {
   return !!(query.q || query.status.length || query.tags.length || query.source || query.contentKind || query.feedId || query.savedFrom || query.savedTo);

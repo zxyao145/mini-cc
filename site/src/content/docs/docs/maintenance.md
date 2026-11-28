@@ -24,16 +24,11 @@ description: 备份 MiniCC 的数据库和本地图片，安全升级到新版�
 ## 升级
 
 1. 先做好数据库和本地图片目录的备份。PostgreSQL 版导出数据库并备份 `api-data`；SQLite 版停掉 API 后备份 `sqlite-data`。
-2. 拉取最新代码，用原本的 Compose 命令重新构建并启动：
-
-   ```bash
-   git pull
-   podman compose -f deploy/docker-compose.yaml up -d --build
-   ```
+2. 用所选 Release 的部署文件更新 `deploy/`，保留自己的配置。把 [安装命令](/docs/installation/) 中的 `MINICC_VERSION` 换成新标签，并使用原 Compose 项目和数据库参数启动。已有 PostgreSQL 部署迁到 GHCR 时，请传 `--database postgres`。如果继续在本地构建，使用新版本源码和原先的基础 Compose 文件执行 `up -d --build`。
 
 3. API 启动后会自动跑完数据库迁移。运行 `podman logs -f minicc-api` 可以实时查看迁移和图片下载进度。
 
-如果新版本同时更新了浏览器扩展，记得在仓库根目录重新跑一遍 `pnpm build:ext`，然后去 `chrome://extensions/` 刷新扩展。
+如果新版本同时更新了浏览器扩展，把该 Release 的扩展 ZIP 解压到原来的扩展目录，然后在 `chrome://extensions/` 刷新扩展。
 
 ### 从旧版图片代理升级
 
@@ -55,7 +50,7 @@ DELETE FROM "__EFMigrationsLock";
 
 ### 改了配置却没有生效
 
-用 Compose 部署时，修改环境变量后必须重新执行 `up -d`，API 容器才会重建并读入新值。另外，`NEXT_PUBLIC_API_URL` 属于构建参数，改完后要带上 `--build` 重新构建 Web 镜像。
+用 Compose 部署时，修改环境变量后重新运行原来的部署命令，让 API 容器读入新值。从本地构建 Web 镜像时，修改 `NEXT_PUBLIC_API_URL` 后需要带上 `--build` 重新构建。
 
 ### 扩展保存文章失败
 

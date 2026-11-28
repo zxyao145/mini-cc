@@ -1,0 +1,7 @@
+services:
+  minicc-api:
+    image: "ghcr.io/zxyao145/minicc-api:${MINICC_VERSION:?Set MINICC_VERSION to the Release tag}"
+  minicc-web:
+    image: "ghcr.io/zxyao145/minicc-web:${MINICC_VERSION:?Set MINICC_VERSION to the Release tag}"
+  lb:
+    image: "ghcr.io/zxyao145/minicc-lb:${MINICC_VERSION:?Set MINICC_VERSION to the Release tag}"

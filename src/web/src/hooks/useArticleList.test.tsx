@@ -3,15 +3,15 @@ import { createRoot, Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { articleApi } from '@/lib/api';
 import { ArticleListItem, ArticleListPage } from '@/types';
-import { parseLibraryQuery } from '@/lib/library-query';
+import { type LibrarySort, parseLibraryQuery } from '@/lib/library-query';
 import { clearLibraryCache, readLibraryCache, writeLibraryCache } from '@/lib/library-cache';
 import { useArticleList } from './useArticleList';
 vi.mock('@/lib/api', () => ({ articleApi: { getArticles: vi.fn() } }));
 const item = (id: string) => ({ id, isArchived: false, deletedAt: null, readingStatus: 'unread', tags: [] } as unknown as ArticleListItem);
 let root: Root, container: HTMLDivElement;
 let hook: ReturnType<typeof useArticleList>;
-const query = parseLibraryQuery(new URLSearchParams());
-function Harness({ view = 'inbox', sort = 'saved_desc' }: { view?: string; sort?: typeof query.sort }) { hook = useArticleList({ ...query, view: view as typeof query.view, sort }); return null; }
+const inboxKey = 'status=unread';
+function Harness({ view = 'inbox', sort = 'saved_desc' }: { view?: string; sort?: LibrarySort }) { hook = useArticleList(parseLibraryQuery(new URLSearchParams({ view, sort }))); return null; }
 beforeEach(() => { Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true }); clearLibraryCache(); vi.clearAllMocks(); container = document.createElement('div'); document.body.append(container); root = createRoot(container); vi.spyOn(window, 'scrollTo').mockImplementation(() => {}); });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); vi.restoreAllMocks(); });
 it('appends pages without duplicates and removes newly archived items from inbox and total', async () => {
@@ -36,7 +36,7 @@ it('aborts and ignores obsolete responses after query change', async () => {
   expect(hook.items[0].id).toBe('new');
 });
 it('restores loaded tail and merges a refreshed first page without resetting its cursor', async () => {
-  writeLibraryCache('', { items: [item('a'), item('b')], total: 3, nextCursor: 'tail', scrollY: 640, savedAt: Date.now(), firstPageIds: ['a'] });
+  writeLibraryCache(inboxKey, { items: [item('a'), item('b')], total: 3, nextCursor: 'tail', scrollY: 640, savedAt: Date.now(), firstPageIds: ['a'] });
   vi.mocked(articleApi.getArticles).mockResolvedValue({ items: [{ ...item('a'), title: 'Updated' }], total: 3, nextCursor: 'first' });
   await act(async () => root.render(<Harness />));
   expect(hook.items.map(a => a.id)).toEqual(['a', 'b']);
@@ -66,13 +66,13 @@ it('keeps loaded rows on load-more error and retries the same cursor', async () 
   expect(vi.mocked(articleApi.getArticles).mock.calls.slice(1).map(([params]) => params?.get('cursor'))).toEqual(['next', 'next']);
 });
 it('restores scroll after rendering cached rows and persists loaded pages on departure', async () => {
-  writeLibraryCache('', { items: [item('a'), item('b')], total: 2, nextCursor: null, scrollY: 640, savedAt: Date.now(), firstPageIds: ['a'] });
+  writeLibraryCache(inboxKey, { items: [item('a'), item('b')], total: 2, nextCursor: null, scrollY: 640, savedAt: Date.now(), firstPageIds: ['a'] });
   vi.mocked(articleApi.getArticles).mockResolvedValue({ items: [item('a')], total: 2, nextCursor: 'first' });
   await act(async () => root.render(<Harness />));
   await act(async () => new Promise(resolve => setTimeout(resolve, 30)));
   expect(window.scrollTo).toHaveBeenCalledWith(0, 640);
   await act(async () => root.unmount());
-  expect(readLibraryCache('')?.items.map(a => a.id)).toEqual(['a', 'b']);
+  expect(readLibraryCache(inboxKey)?.items.map(a => a.id)).toEqual(['a', 'b']);
   root = createRoot(container);
 });
 
@@ -83,7 +83,7 @@ it('saves the last library scroll when a short reader document clamps window scr
   window.dispatchEvent(new Event('scroll'));
   scroll.mockReturnValue(0); // The destination document is shorter than the library.
   await act(async () => root.unmount());
-  expect(readLibraryCache('')?.scrollY).toBe(640);
+  expect(readLibraryCache(inboxKey)?.scrollY).toBe(640);
   root = createRoot(container);
 });
 
@@ -92,13 +92,13 @@ const deferredPage = () => {
   const promise = new Promise<ArticleListPage>(done => { resolve = done; });
   return { promise, resolve };
 };
-const seedCachedRows = (rows: ArticleListItem[], total: number, key = '') => {
+const seedCachedRows = (rows: ArticleListItem[], total: number, key = inboxKey) => {
   writeLibraryCache(key, { items: rows, total, nextCursor: 'after:a40', scrollY: 640, savedAt: Date.now(), firstPageIds: rows.slice(0, 20).map(a => a.id) });
 };
 it.each(['leading save', 'changed sort key'])('reconciles a cached loaded prefix after a %s and traverses every row exactly once', async reason => {
   const original = Array.from({ length: 65 }, (_, index) => ({ ...item(`a${index + 1}`), createdAt: new Date(Date.UTC(2026, 10, 8, 10, -index)).toISOString(), lastReadAt: new Date(Date.UTC(2026, 10, 8, 10, -index)).toISOString() }));
   const sort = reason === 'changed sort key' ? 'read_desc' : 'saved_desc';
-  seedCachedRows(original.slice(0, 40), 65, sort === 'read_desc' ? 'sort=read_desc' : '');
+  seedCachedRows(original.slice(0, 40), 65, sort === 'read_desc' ? `${inboxKey}&sort=read_desc` : inboxKey);
   const server = reason === 'leading save' ? [item('new'), ...original] : [{ ...original[39], lastReadAt: '2026-11-08T12:00:00Z' }, ...original.filter(a => a.id !== 'a40')];
   vi.mocked(articleApi.getArticles).mockImplementation(async params => {
     const after = params?.get('cursor')?.replace('after:', '');
@@ -116,7 +116,7 @@ it.each(['leading save', 'changed sort key'])('reconciles a cached loaded prefix
 });
 it.each(['archive', 'delete', 'favorite'])('does not let a stale silent refresh undo an acknowledged %s', async action => {
   const view = action === 'favorite' ? 'all' : 'inbox';
-  writeLibraryCache(view === 'all' ? 'view=all' : '', { items: [item('a'), item('b')], total: 3, nextCursor: 'tail', scrollY: 640, savedAt: Date.now(), firstPageIds: ['a'] });
+  writeLibraryCache(view === 'all' ? 'view=all' : inboxKey, { items: [item('a'), item('b')], total: 3, nextCursor: 'tail', scrollY: 640, savedAt: Date.now(), firstPageIds: ['a'] });
   const old = deferredPage(); const fresh = deferredPage();
   vi.mocked(articleApi.getArticles).mockReset().mockReturnValueOnce(old.promise).mockReturnValueOnce(fresh.promise);
   await act(async () => root.render(<Harness view={view} />));

@@ -222,7 +222,7 @@ pnpm dev                       # http://localhost:4321
 pnpm build                     # Static output in site/dist
 ```
 
-Pushing a `v*` tag runs `.github/workflows/deploy-site.yml`, which builds the site and runs `wrangler deploy` to Cloudflare Workers static assets (`site/wrangler.jsonc`, custom domain `cc.zxyao.net`). The workflow needs the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets and can also be started manually.
+Publishing a GitHub Release runs `.github/workflows/deploy-site.yml` on the release commit. It verifies both Compose deployments, pushes the release images to GHCR, and attaches the Chrome extension ZIP. For a stable release, it then builds the site with `PUBLIC_MINICC_RELEASE_TAG` set to the release tag and runs `wrangler deploy` to Cloudflare Workers static assets (`site/wrangler.jsonc`, custom domain `cc.zxyao.net`). The site deploy job uses the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repository secrets.
 
 ### Docker Development
 

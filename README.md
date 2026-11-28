@@ -43,33 +43,39 @@ MiniCC consists of an API, a web app, nginx, a database, and a Chrome extension.
 
 ### Option 1: Podman or Docker Compose (recommended)
 
-You need [Podman](https://podman.io/) with `podman compose`, or Docker with Docker Compose. With Docker, replace `podman compose` with `docker compose` in the commands below.
+Release images target Linux amd64. Install Docker with Docker Compose, or [Podman](https://podman.io/) with a Compose provider that supports `pull` and `up -d --no-build`.
 
-1. Clone the repository.
+1. Download the **Source code** archive for a version from [GitHub Releases](https://github.com/zxyao145/mini-cc/releases), extract it, and open the directory containing `deploy/`.
 
-   ```bash
-   git clone https://github.com/zxyao145/mini-cc.git
-   cd mini-cc
-   ```
-
-2. Start the stack with the database you want. See [Choosing a database](#choosing-a-database).
+2. Start the stack. Replace `vX.Y.Z` with the exact release tag. See [Choosing a database](#choosing-a-database).
 
    ```bash
+   # SQLite (default)
+   MINICC_VERSION=vX.Y.Z bash deploy/docker-run.ghcr.sh
+
    # PostgreSQL
-   podman compose -f deploy/docker-compose.yaml up -d --build
-
-   # SQLite
-   podman compose -f deploy/docker-compose.sqlite.yaml up -d --build
+   MINICC_VERSION=vX.Y.Z bash deploy/docker-run.ghcr.sh --database postgres
    ```
 
 3. Open http://localhost:5000 and [sign in](#sign-in).
 
 Compose notes:
 
-- **Ports**: 5000 serves the web app and API through nginx. The PostgreSQL stack also publishes the database on port 15432 with the password `postgres`. Change the password or remove the port mapping in `deploy/docker-compose.yaml` before you expose the host.
-- **Data**: The database and locally stored images live in `pgdata` and `api-data` for PostgreSQL, or in `sqlite-data` for SQLite. The image proxy is not part of either default stack.
-- **Another address**: The web app has `http://localhost:5000/api` built in as its API address. To serve MiniCC from another host or domain, change `NEXT_PUBLIC_API_URL` under `minicc-web` → `build.args` in the Compose file, for example to `https://minicc.example.com/api`, and rebuild.
-- **Switching databases**: Both stacks use the same container names. Stop the running stack with `down` and its own Compose file before you start the other one.
+- Port 5000 serves the web app and API through nginx. Before exposing a PostgreSQL deployment, restrict or remove host port 15432 and replace the default password in both `POSTGRES_PASSWORD` and `MiniCC_Db` in `deploy/docker-compose.yaml`.
+- PostgreSQL uses `pgdata` and `api-data` for the database and API files. SQLite keeps both in `sqlite-data`.
+- The published web image calls `/api` on the same origin as the page. For a LAN address or custom domain, route both the web app and `/api/` through MiniCC's nginx.
+- To switch databases, run `down` with the current base Compose file, GHCR override and version, and keep the volumes. Plan a database migration if you need to move your data between engines.
+
+#### Build the images locally
+
+From a source checkout, use the corresponding base Compose file. Use `podman compose` if you run Podman.
+
+```bash
+docker compose -f deploy/docker-compose.sqlite.yaml up -d --build
+docker compose -f deploy/docker-compose.yaml up -d --build
+```
+
+The local builds use `http://localhost:5000/api` by default. To change that address, set `NEXT_PUBLIC_API_URL` under `minicc-web` → `build.args` in the base Compose file and rebuild.
 
 ### Option 2: Run from source
 
@@ -232,10 +238,14 @@ podman compose -f deploy/docker-compose.yaml -f deploy/docker-compose.image-prox
 podman compose -f deploy/docker-compose.sqlite.yaml -f deploy/docker-compose.image-proxy.yaml up -d --build
 ```
 
-### Upgrading from an older version
+### Upgrading a Compose deployment
+
+Back up your database and local images, then update the deployment files and `MINICC_VERSION` to the matching new release. Keep the same Compose project and database selection to reuse the volumes. For an existing PostgreSQL deployment moving to GHCR, pass `--database postgres`. If you originally built the images locally and want to keep doing so, rebuild from the new checkout with the same base Compose file.
+
+### Upgrading from a release that used the legacy image proxy
 
 1. Back up the database and the local image directory. For PostgreSQL, dump the database and back up `api-data`. For SQLite, stop the API and back up `sqlite-data`.
-2. Pull the new version and rebuild the services with the same default Compose command you already use.
+2. Start the new version using the same database and Compose project.
 3. The API applies migrations on startup. A background worker then removes legacy proxy prefixes and downloads images. Watch the API logs for the backfill counts and image download summaries.
 4. Keep the old `image-proxy-data` volume during the migration. It may contain the only remaining copies of images removed from their original sites.
 5. To roll back, stop the new version and restore the pre-upgrade database backup before starting the older version. Reuse the saved proxy cache volume. The older version expects the signed image URLs stored in the backup.

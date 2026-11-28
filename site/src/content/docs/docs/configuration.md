@@ -69,7 +69,7 @@ API 启动时会校验这两项配置，一旦超出允许范围就会拒绝启�
 
 Web 应用只有一个配置项：`NEXT_PUBLIC_API_URL`（API 地址）。它会在构建阶段写进前端代码，修改后必须重新构建镜像或重新编译：
 
-- **Compose 部署**：修改 `minicc-web` → `build.args` 下的配置，默认值为 `http://localhost:5000/api`。
+- **GHCR 镜像**使用同源的 `/api`。从本地构建 Compose 镜像时，可以修改 `minicc-web` → `build.args` 下的配置，默认值为 `http://localhost:5000/api`。
 - **从源码运行**：写在 `src/web/.env.local` 中，默认值为 `http://localhost:5001/api`。
 
 ## 日志
