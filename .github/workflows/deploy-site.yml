@@ -1,10 +1,12 @@
 name: Publish MiniCC release
 
 # Publishes verified container images and the Chrome extension for each release.
+# Manual runs deploy the site using the latest stable release assets.
 # Requires the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets.
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,6 +21,7 @@ defaults:
 
 jobs:
   build-images:
+    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     outputs:
       artifact-name: ${{ steps.release.outputs.artifact-name }}
@@ -150,6 +153,7 @@ jobs:
           printf '%s\n' "${summary[@]}" >> "$GITHUB_STEP_SUMMARY"
 
   publish-extension:
+    if: ${{ github.event_name == 'release' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -189,7 +193,12 @@ jobs:
 
   deploy:
     needs: [publish-images, publish-extension]
-    if: ${{ success() && !github.event.release.prerelease }}
+    if: >-
+      ${{
+        !cancelled() &&
+        (github.event_name == 'workflow_dispatch' ||
+         (success() && !github.event.release.prerelease))
+      }}
     runs-on: ubuntu-latest
     concurrency:
       group: deploy-site
@@ -202,6 +211,18 @@ jobs:
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
+
+      - name: Resolve and verify the latest stable release for manual deployment
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MINICC_VERSION=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')
+          : "${MINICC_VERSION:?Missing latest stable release tag}"
+          for service in api web lb; do
+            docker buildx imagetools inspect "$IMAGE_PREFIX-$service:$MINICC_VERSION" >/dev/null
+          done
+          printf 'MINICC_VERSION=%s\n' "$MINICC_VERSION" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v7
         with:
@@ -218,11 +239,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build the site for this release
-        env:
-          PUBLIC_MINICC_RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: |
-          : "${PUBLIC_MINICC_RELEASE_TAG:?Missing Release tag}"
-          pnpm build
+        run: PUBLIC_MINICC_RELEASE_TAG="${MINICC_VERSION:?Missing Release tag}" pnpm build
 
       - name: Include the Chrome extension from this release
         env:
