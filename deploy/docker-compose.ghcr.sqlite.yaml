@@ -1,0 +1,33 @@
+name: mini-cc
+
+services:
+  minicc-api:
+    image: "ghcr.io/zxyao145/minicc-api:${MINICC_VERSION:?Set MINICC_VERSION to the Release tag}"
+    platform: linux/amd64
+    container_name: minicc-api
+    environment:
+      Database__Provider: sqlite
+      MiniCC_Db: "Data Source=/app/data/mini_cc.db"
+      DataProtection__KeysPath: /app/data/data-protection-keys
+    volumes:
+      - sqlite-data:/app/data
+
+  minicc-web:
+    image: "ghcr.io/zxyao145/minicc-web:${MINICC_VERSION:?Set MINICC_VERSION to the Release tag}"
+    platform: linux/amd64
+    container_name: minicc-web
+    depends_on:
+      - minicc-api
+
+  lb:
+    image: "ghcr.io/zxyao145/minicc-lb:${MINICC_VERSION:?Set MINICC_VERSION to the Release tag}"
+    platform: linux/amd64
+    container_name: minicc-lb
+    ports:
+      - "5000:80"
+    depends_on:
+      - minicc-api
+      - minicc-web
+
+volumes:
+  sqlite-data:

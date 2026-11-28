@@ -20,16 +20,14 @@ interface HomeContent {
 	};
 	start: {
 		heading: string;
-		steps: { title: string; body: string; code?: string }[];
+		services: { title: string; body: string; download: string; preview: string };
+		steps: { title: string; body: string }[];
 		more: { text: string; link: string };
 	};
 	footer: { license: string; source: string; otherLanguage: { text: string; lang: string; link: string } };
 }
 
 const repo = 'https://github.com/zxyao145/mini-cc';
-const startCommand = `git clone ${repo}.git
-cd mini-cc
-podman compose -f deploy/docker-compose.yaml up -d --build`;
 
 export const homeContent: Record<HomeLang, HomeContent> = {
 	'zh-CN': {
@@ -85,26 +83,27 @@ export const homeContent: Record<HomeLang, HomeContent> = {
 					items: [
 						'一条 Compose 命令启动全部服务。',
 						'数据库用 PostgreSQL 或 SQLite。',
-						'文章图片存到本地目录，或 Cloudflare R2 等 S3 兼容存储。',
+						'文章图片可存到本地目录或 Cloudflare R2 等 S3 兼容存储，也可用 ImageProxy 按需代理。',
 					],
 				},
 			],
 		},
 		start: {
 			heading: '三步开始使用',
+			services: {
+				title: '启动服务',
+				body: '在空目录中运行以下命令，Podman 会从 GitHub Container Registry（GHCR）拉取 Linux amd64 镜像并启动 SQLite 版。PostgreSQL 部署见完整安装说明。',
+				download: '下载 docker-compose.yaml',
+				preview: '查看 YAML 内容',
+			},
 			steps: [
-				{
-					title: '启动服务',
-					body: '需要 Podman 或 Docker。下面的命令使用 PostgreSQL，也可以换成 SQLite 版的 Compose 文件。',
-					code: startCommand,
-				},
 				{
 					title: '登录',
 					body: '打开 http://localhost:5000，用户名 mini_cc，密码 mini_cc_password。登录后先在账户设置里改掉用户名和密码。',
 				},
 				{
 					title: '连接浏览器扩展',
-					body: '构建并加载 Chrome 扩展，填入服务器地址和 API 密钥，就可以开始剪藏了。',
+					body: '按安装说明下载并加载 Chrome 扩展，填入服务器地址和 API 密钥，就可以开始剪藏了。',
 				},
 			],
 			more: { text: '查看完整安装说明', link: '/docs/installation/' },
@@ -169,26 +168,27 @@ export const homeContent: Record<HomeLang, HomeContent> = {
 					items: [
 						'One Compose command starts every service.',
 						'Run it on PostgreSQL or SQLite.',
-						'Article images are kept in a local directory or in S3-compatible storage such as Cloudflare R2.',
+						'Keep article images on local disk or in S3-compatible storage such as Cloudflare R2, or serve them on demand with ImageProxy.',
 					],
 				},
 			],
 		},
 		start: {
 			heading: 'Get started in three steps',
+			services: {
+				title: 'Start the services',
+				body: 'Run these commands in an empty directory. Podman pulls the Linux amd64 images from GitHub Container Registry (GHCR) and starts MiniCC with SQLite. For PostgreSQL, see the full installation guide.',
+				download: 'Download docker-compose.yaml',
+				preview: 'View YAML contents',
+			},
 			steps: [
-				{
-					title: 'Start the services',
-					body: 'You need Podman or Docker. This command uses PostgreSQL; there is also a Compose file for SQLite.',
-					code: startCommand,
-				},
 				{
 					title: 'Sign in',
 					body: 'Open http://localhost:5000 and sign in as mini_cc with the password mini_cc_password. Change both in account settings right away.',
 				},
 				{
 					title: 'Connect the browser extension',
-					body: 'Build and load the Chrome extension, then enter your server address and an API key to start clipping.',
+					body: 'Follow the installation guide to download and load the Chrome extension, then enter your server address and an API key to start clipping.',
 				},
 			],
 			more: { text: 'Read the full installation guide', link: '/en/docs/installation/' },

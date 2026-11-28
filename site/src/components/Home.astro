@@ -5,8 +5,12 @@ import { Image } from 'astro:assets';
 import { Code } from '@astrojs/starlight/components';
 import inbox from '../../../assets/inbox.png';
 import { homeContent, homeLang, repoUrl } from './home-content';
+import { composeDownloadPath, quickstartCompose } from './quickstart-compose';
 
 const t = homeContent[homeLang(Astro.locals.starlightRoute.lang)];
+const composeUrl = new URL(composeDownloadPath, Astro.site);
+const startCommand = `curl -fLO ${composeUrl.href} &&
+podman compose -f docker-compose.yaml up -d`;
 ---
 
 <div class="home not-content">
@@ -43,12 +47,21 @@ const t = homeContent[homeLang(Astro.locals.starlightRoute.lang)];
 	<section aria-labelledby="start">
 		<h2 id="start">{t.start.heading}</h2>
 		<ol class="steps">
+			<li>
+				<h3>{t.start.services.title}</h3>
+				<p>{t.start.services.body}</p>
+				<Code code={startCommand} lang="bash" />
+				<p class="compose-download"><a href={composeDownloadPath} download>{t.start.services.download}</a></p>
+				<details class="compose-preview">
+					<summary>{t.start.services.preview}</summary>
+					<Code code={quickstartCompose} lang="yaml" title="docker-compose.yaml" />
+				</details>
+			</li>
 			{
 				t.start.steps.map((step) => (
 					<li>
 						<h3>{step.title}</h3>
 						<p>{step.body}</p>
-						{step.code && <Code code={step.code} lang="bash" />}
 					</li>
 				))
 			}
@@ -187,10 +200,20 @@ const t = homeContent[homeLang(Astro.locals.starlightRoute.lang)];
 		margin-top: 1rem;
 	}
 
+	.steps .compose-download,
+	.compose-preview {
+		margin-top: 0.75rem;
+	}
+
+	.compose-preview summary {
+		cursor: pointer;
+	}
+
 	.more {
 		margin: 2.25rem 0 0 3.25rem;
 	}
 
+	.compose-download a,
 	.more a,
 	footer a {
 		color: var(--sl-color-text-accent);

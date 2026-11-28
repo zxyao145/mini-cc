@@ -28,7 +28,7 @@ minicc-api:
 | `Library__UndoWindowSeconds` | `10` | 删除文章后撤销提示的显示秒数，范围 3–60 |
 | `DataProtection__KeysPath` | 空 | 登录 Cookie 加密密钥的存放目录 |
 | `Images__*` | | 图片下载、访问控制与存储配置，详见[图片存储](/docs/images/) |
-| `ImageProxy__SignatureKey` | 空 | 旧版图片代理的签名密钥，仅在 `ImageProxy` 模式下需要 |
+| `ImageProxy__SignatureKey` | 空 | 图片代理的签名密钥，仅在 `ImageProxy` 模式下需要 |
 
 ## 数据库
 

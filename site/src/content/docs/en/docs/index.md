@@ -21,7 +21,7 @@ The web interface is in Simplified Chinese. Throughout these docs, each UI label
 | Database | PostgreSQL 16 with zhparser for Chinese word segmentation, or SQLite. |
 | Chrome extension | Extracts clean article text directly in your browser and sends it to your server. |
 
-Article images are downloaded in the background by the API and saved either to a local directory or to S3-compatible object storage. The legacy image proxy is still included as an optional mode.
+MiniCC supports two image modes long term. The default `Store` mode downloads article images to local disk or S3-compatible object storage. `ImageProxy` serves and caches them on demand through signed proxy URLs.
 
 ## Where to start
 

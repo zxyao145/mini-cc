@@ -1,9 +1,11 @@
 ---
 title: 图片存储
-description: 了解 MiniCC 如何下载和保存文章图片，配置本地目录或 Cloudflare R2 等 S3 兼容存储，以及两者之间的迁移方法。
+description: 配置 MiniCC 的图片存储与代理模式，在本地目录和 Cloudflare R2 等 S3 兼容存储之间迁移图片。
 ---
 
-保存文章后，API 会在后台自动下载正文里的图片，独立存放在文件系统或对象存储里，而不塞进数据库。默认目录是 `data/images`（相对于 API 内容根目录）；在 Compose 部署中，对应 API 数据卷里的 `/app/data/images`。
+MiniCC 长期支持 `Store` 和 `ImageProxy` 两种图片模式。`ImageProxy` 通过签名链接按需代理并缓存图片。
+
+在默认的 `Store` 模式下，保存文章后，API 会在后台下载正文图片并存到文件系统或对象存储。默认目录是 `data/images`（相对于 API 内容根目录），在 Compose 部署中对应 API 数据卷里的 `/app/data/images`。
 
 请确保一个存储目录或存储桶只对应一个 MiniCC 数据库，不要多个实例混用。后台清理任务会把数据库里不再引用的图片视作孤立文件自动删除。
 
@@ -11,8 +13,8 @@ description: 了解 MiniCC 如何下载和保存文章图片，配置本地目�
 
 | 变量 | 默认值 | 说明 |
 | --- | --- | --- |
-| `Images__Mode` | `Store` | `Store` 由 API 自行下载并持久化图片；`ImageProxy` 切换回旧版图片代理 |
-| `Images__Delivery` | `Authenticated` | `Authenticated` 需登录或携带 API 密钥才能看图；`Public` 允许匿名访问 |
+| `Images__Mode` | `Store` | `Store` 下载并持久化图片，`ImageProxy` 按需代理图片 |
+| `Images__Delivery` | `Authenticated` | `Store` 模式的访问权限。`Authenticated` 需要登录或 API 密钥，`Public` 允许匿名访问 |
 | `Images__ApiUrl` | `/api/images` | API 拼接图片链接时使用的地址。本地开发请设为 `http://localhost:5001/api/images` |
 | `Images__PublicBaseUrl` | 空 | 公开存储桶的访问域名，例如 `https://images.example.com`。需同时启用 `Delivery=Public` 和 S3 存储 |
 | `Images__AllowPrivateNetworks` | `false` | 是否允许从内网、环回及链路本地地址下载图片 |
@@ -24,7 +26,7 @@ description: 了解 MiniCC 如何下载和保存文章图片，配置本地目�
 | `Images__Storage__S3__AccessKeyId` | 空 | 访问密钥 ID，建议通过环境变量传入 |
 | `Images__Storage__S3__SecretAccessKey` | 空 | 访问密钥，建议通过环境变量传入 |
 
-## 谁能看到图片
+## Store 模式的图片访问权限
 
 | 配置 | 图片地址 | 访问权限 |
 | --- | --- | --- |
@@ -98,9 +100,9 @@ Images__Delivery: Authenticated
 
 若要从 R2 迁回本地，把命令里的源和目标对调即可。
 
-## 旧版图片代理
+## ImageProxy 模式
 
-启用旧版代理需要为 API 配置 `Images__Mode=ImageProxy` 以及签名密钥 `ImageProxy__SignatureKey`。使用 Compose 时，先导出 `IMAGE_PROXY_SECRET`，再叠加上 `deploy/docker-compose.image-proxy.yaml` 启动即可。这份覆盖文件会自动配好上述变量，并拉起代理容器和对应的 nginx 路由：
+启用代理模式需要为 API 配置 `Images__Mode=ImageProxy` 和签名密钥 `ImageProxy__SignatureKey`。用 Compose 从源码构建时，先导出 `IMAGE_PROXY_SECRET`，再叠加 `deploy/docker-compose.image-proxy.yaml`。覆盖文件会配置 API、代理容器和对应的 nginx 路由。
 
 ```bash
 export IMAGE_PROXY_SECRET="your-long-random-secret"

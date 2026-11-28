@@ -28,7 +28,7 @@ Then run `podman compose -f deploy/docker-compose.yaml up -d` to recreate the AP
 | `Library__UndoWindowSeconds` | `10` | Seconds the undo toast stays visible after deletion (3–60) |
 | `DataProtection__KeysPath` | Empty | Directory storing the keys that encrypt sign-in cookies |
 | `Images__*` | | Image downloads, access control, and storage. See [Image storage](/en/docs/images/). |
-| `ImageProxy__SignatureKey` | Empty | Signing key for the legacy image proxy (only required in `ImageProxy` mode) |
+| `ImageProxy__SignatureKey` | Empty | Signing key required in `ImageProxy` mode |
 
 ## Database
 

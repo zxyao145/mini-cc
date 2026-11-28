@@ -38,7 +38,7 @@ pnpm build:ext             # Load src/web-extension/dist in Chrome
 - **Frontend**: Next.js 15 App Router with TypeScript
 - **Chrome Extension**: The TypeScript content-handler SDK extracts the loaded page with site-specific DOM handling, Mozilla Readability and DOMPurify. The website handles reading and management.
 - **Database**: PostgreSQL 16 with zhparser or SQLite
-- **Image storage**: API-downloaded images are persisted in a local directory or S3-compatible object storage. The legacy image proxy is optional.
+- **Image storage**: Both `Store` and `ImageProxy` are supported long term. `Store` persists API-downloaded images locally or in S3-compatible object storage. `ImageProxy` serves and caches images on demand via signed URLs.
 - **Proxy**: Nginx routing (localhost:5000)
 
 ### Clean Architecture Layers
@@ -240,7 +240,7 @@ podman compose -f deploy/docker-compose.yaml down
 - SQLite defaults to `Data Source=data/mini_cc.db`. The path is relative to the API content root and the API creates the directory on startup.
 
 ### External Services
-- **Image downloads**: The API downloads article images in the background and stores them locally or through the S3 API. Default delivery requires a signed-in user. `Images__Mode=ImageProxy` opts into the legacy proxy service and its nginx route.
+- **Image downloads**: In `Store` mode the API downloads article images in the background and saves them locally or through the S3 API. Default delivery requires a signed-in user or an API key. `Images__Mode=ImageProxy` uses the proxy service and its nginx route.
 - **Page collection**: The Chrome extension sends extracted HTML to `POST /api/articles/content` and link metadata to `POST /api/articles/link`. Extraction runs on the loaded page in Chrome.
 - **CORS**: Configured for localhost:4000, localhost:5000
 
@@ -276,7 +276,7 @@ podman compose -f deploy/docker-compose.yaml down
 ### Infrastructure Layer
 - **Repositories**: Generic repository with EF Core
 - **Entity Configurations**: Fluent API configurations
-- **Image URLs**: `ImageHtml` normalizes original HTTP(S) image URLs on writes. `ImageUrlResolver` serves completed images from `IImageStore`, adds `no-referrer` for unresolved external images, and uses `ImageProxyService` only in the optional image-proxy mode.
+- **Image URLs**: `ImageHtml` normalizes original HTTP(S) image URLs on writes. `ImageUrlResolver` serves completed images from `IImageStore` and adds `no-referrer` for unresolved external images in `Store` mode. In `ImageProxy` mode it uses `ImageProxyService` to sign image URLs.
 
 ### Image Storage
 - `Images:Mode` defaults to `Store`. Choose `ImageProxy` for signed proxy URLs. `Images:Delivery` defaults to `Authenticated`. `Images:Storage:Provider` defaults to `Local`. S3-compatible storage uses `ServiceUrl`, `Bucket`, `Region` (`auto` for R2), `AccessKeyId` and `SecretAccessKey`. Keep access keys in environment variables.
@@ -303,7 +303,7 @@ podman compose -f deploy/docker-compose.yaml down
 
 ### Saved Links and Markdown Copy
 - `ContentKind.Link = 2` serializes as `"link"` and stores empty original and readable content. The existing schema supports it.
-- `POST /api/articles/link` requires an HTTP(S) URL and title. The saved address is the page's original `document.URL`. The existing `UrlNormalizer` handles deduplication, keeping YouTube playlist parameters distinct. Link saves restore existing matches and preserve their content, metadata, and state. Full content saves upgrade `Link` and `SummaryOnly` and fill missing metadata. Re-saving a `Full` article refreshes the title and any nonempty author, summary and cover. Article HTML is normalized before comparison so legacy proxy URLs and their original URLs resolve to the same stored body. A changed body increments `contentRevision`, resets progress with a strictly newer version, and marks highlights Pending. An identical body keeps progress, highlights and the revision.
+- `POST /api/articles/link` requires an HTTP(S) URL and title. The saved address is the page's original `document.URL`. The existing `UrlNormalizer` handles deduplication, keeping YouTube playlist parameters distinct. Link saves restore existing matches and preserve their content, metadata, and state. Full content saves upgrade `Link` and `SummaryOnly` and fill missing metadata. Re-saving a `Full` article refreshes the title and any nonempty author, summary and cover. Article HTML is normalized before comparison so previously stored signed proxy URLs and their original URLs resolve to the same stored body. A changed body increments `contentRevision`, resets progress with a strictly newer version, and marks highlights Pending. An identical body keeps progress, highlights and the revision.
 - Link details show the domain, save date, available cover and summary, and an original-page button. Reading progress saves, resets, and new highlights on links return 400.
 - The popup shows both `Save Article` and `Save Link`; the user chooses. Extraction returns `PageChoices { suggested, article, link }`: classification only picks the highlighted primary button, and `Save Article` is disabled when Readability finds no content. Settings open from the top-right gear icon.
 - After an in-page navigation changes the URL beyond the fragment, extraction skips stale head metadata. The YouTube popup requests oEmbed for supported video, Shorts and playlist links with a five-second deadline. It uses the extracted metadata and the watch/Shorts thumbnail fallback when oEmbed is unavailable.

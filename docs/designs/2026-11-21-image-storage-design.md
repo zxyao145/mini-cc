@@ -8,13 +8,13 @@
 
 ## 1. 背景与目标
 
-现在文章里的图片全靠 image-proxy（[willnorris/imageproxy](https://github.com/willnorris/imageproxy) 0.13.0）显示。API 在保存文章时，把每个图片地址改写成带 HMAC 签名的 `/imageProxy/{宽}x{高},s{签名}/{原图地址}`，再存进数据库。阅读时浏览器请求这个地址，nginx 把请求转给 image-proxy，由它去原站取图并缓存。这样能绕过防盗链，但有三个问题：
+增加 Store 模式前，文章里的图片通过 image-proxy（[willnorris/imageproxy](https://github.com/willnorris/imageproxy) 0.13.0）显示。API 在保存文章时，把每个图片地址改写成带 HMAC 签名的 `/imageProxy/{宽}x{高},s{签名}/{原图地址}`，再存进数据库。阅读时浏览器请求这个地址，nginx 把请求转给 image-proxy，由它去原站取图并缓存。这样能绕过防盗链，但有三个问题：
 
 1. 自部署要多跑一个容器，还要配置一个两边必须一致的密钥 `IMAGE_PROXY_SECRET`。
 2. 签名已经写进了数据库里的正文，中途更换密钥，旧文章的图片就会全部失效。
 3. image-proxy 只是缓存，不是存档。原站删图以后，缓存一过期，图片就没了。
 
-本次让 **API 自己下载并永久保存图片**，默认部署不再需要 image-proxy。image-proxy 保留为可选模式，在 appsettings 里切换。
+新增 `Store` 模式作为默认配置，由 **API 下载并持久化保存原图**。`ImageProxy` 同样是长期支持的模式，两者通过 `Images:Mode` 选择。
 
 **成功标准：** 第 4 节的测试和验收全部通过。具体包括：
 
@@ -25,8 +25,8 @@
 
 ### 1.1 用户已定的事项
 
-- 目标：完全取代 image-proxy，简化服务，图片持久化保存。
-- 在 appsettings 中配置是否使用 image-proxy。**启用 image-proxy 时不使用本功能**：不下载、不存图，行为和现在一样。
+- 默认使用 `Store` 模式，简化部署并持久化保存图片。
+- 选择 `ImageProxy` 模式时，图片继续通过签名链接按需获取和缓存。
 - 图片存在**本地目录**或**对象存储（OSS）**中，用配置二选一。不存进数据库。用户使用的对象存储是 **Cloudflare R2**。
 - 图片访问支持两种方式，用配置二选一：
   - **登录后访问**：由 mini-cc 校验登录，再返回图片。
@@ -401,7 +401,7 @@ nginx 已经把 `/api/` 转发给 API，所以不需要修改 nginx 配置。
 - 说明备份：复制 SQLite 文件或做 PostgreSQL dump 时，**还要备份图片目录**（Compose 部署下就是 `/app/data/images` 所在的卷）；用 R2 时，图片的持久性交给 R2；
 - 说明换存储的方法：用 rclone 同步，再改配置；
 - 说明如何切换到 image-proxy 模式；
-- 新增"从旧版本升级"一节：
+- 新增升级旧版本并改用 `Store` 模式的说明：
   1. 先备份；
   2. 拉取新版本并重新构建；
   3. 启动时自动执行迁移，后台开始回填和下载，可以在日志里看进度；

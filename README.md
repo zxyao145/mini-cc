@@ -39,7 +39,7 @@ Clip web pages with the Chrome extension, follow RSS and Atom feeds, then read, 
 
 ## Installation
 
-MiniCC consists of an API, a web app, nginx, a database, and a Chrome extension. Images are downloaded by the API and stored locally or in S3-compatible storage. The legacy image proxy is available as an optional mode.
+MiniCC consists of an API, a web app, nginx, a database, and a Chrome extension. Both image modes are supported long term. The default `Store` mode saves images locally or in S3-compatible storage. `ImageProxy` serves and caches images on demand through signed proxy URLs.
 
 ### Option 1: Podman or Docker Compose (recommended)
 
@@ -152,7 +152,7 @@ Set these environment variables on the API. With Compose, add them to the `envir
 | --- | --- | --- |
 | `Database__Provider` | `postgres` | `postgres` or `sqlite`, case-insensitive |
 | `MiniCC_Db` | From `appsettings.yaml` | Database connection string. Relative SQLite paths resolve from the API content root. |
-| `Images__Mode` | `Store` | `Store` downloads and persists article images. `ImageProxy` enables the optional legacy proxy. |
+| `Images__Mode` | `Store` | `Store` downloads and persists article images. `ImageProxy` serves them through signed proxy URLs. |
 | `Images__Delivery` | `Authenticated` | `Authenticated` requires sign-in for stored image URLs. `Public` permits anonymous access. |
 | `Images__ApiUrl` | `/api/images` | API image endpoint address. Set to `http://localhost:5001/api/images` for a local web dev server. |
 | `Images__PublicBaseUrl` | Empty | Optional public S3 domain, for example `https://images.example.com`. Requires `Delivery=Public` and S3 storage. |
@@ -176,7 +176,7 @@ Set these environment variables on the API. With Compose, add them to the `envir
 
 ### Image storage
 
-MiniCC stores image files outside the database. The default provider is a local directory, `data/images` relative to the API content root. In Compose this is `/app/data/images` in the API data volume. Images are fetched in the background after the article is saved. Use a directory or bucket dedicated to one MiniCC database. Cleanup treats image keys without a reference in that database as unused.
+In `Store` mode, MiniCC stores image files outside the database. The default provider is a local directory, `data/images` relative to the API content root. In Compose this is `/app/data/images` in the API data volume. Images are fetched in the background after the article is saved. Use a directory or bucket dedicated to one MiniCC database. Cleanup treats image keys without a reference in that database as unused.
 
 The delivery setting controls who can open an image and where it is served.
 
@@ -230,7 +230,9 @@ rclone sync /path/to/images r2:your-bucket
 
 Configure the destination provider after the copy completes. Keep a separate backup before switching. When moving from R2 to local storage, reverse the source and destination paths.
 
-To use the legacy image proxy, set `Images__Mode=ImageProxy` and provide `ImageProxy__SignatureKey` through the environment. Compose includes the optional service and nginx route when you add `deploy/docker-compose.image-proxy.yaml`.
+#### ImageProxy mode
+
+Set `Images__Mode=ImageProxy` and provide `ImageProxy__SignatureKey` on the API. When building from source with Compose, export `IMAGE_PROXY_SECRET` and include `deploy/docker-compose.image-proxy.yaml` to configure the API, proxy service and nginx route.
 
 ```bash
 export IMAGE_PROXY_SECRET="your-long-random-secret"
@@ -242,11 +244,13 @@ podman compose -f deploy/docker-compose.sqlite.yaml -f deploy/docker-compose.ima
 
 Back up your database and local images, then update the deployment files and `MINICC_VERSION` to the matching new release. Keep the same Compose project and database selection to reuse the volumes. For an existing PostgreSQL deployment moving to GHCR, pass `--database postgres`. If you originally built the images locally and want to keep doing so, rebuild from the new checkout with the same base Compose file.
 
-### Upgrading from a release that used the legacy image proxy
+To keep using `ImageProxy` after an upgrade, use the matching release’s proxy overlay and reuse the signing key and cache volume.
+
+### Upgrading to Store from a release that stored signed image URLs
 
 1. Back up the database and the local image directory. For PostgreSQL, dump the database and back up `api-data`. For SQLite, stop the API and back up `sqlite-data`.
-2. Start the new version using the same database and Compose project.
-3. The API applies migrations on startup. A background worker then removes legacy proxy prefixes and downloads images. Watch the API logs for the backfill counts and image download summaries.
+2. Start the new version in `Store` mode using the same database and Compose project.
+3. The API applies migrations on startup. A background worker then strips proxy prefixes from previously stored image URLs and downloads the originals. Watch the API logs for the backfill counts and image download summaries.
 4. Keep the old `image-proxy-data` volume during the migration. It may contain the only remaining copies of images removed from their original sites.
 5. To roll back, stop the new version and restore the pre-upgrade database backup before starting the older version. Reuse the saved proxy cache volume. The older version expects the signed image URLs stored in the backup.
 

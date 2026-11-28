@@ -44,8 +44,8 @@ Library:
 # 文章图片的处理方式、访问权限和存储设置。
 # Processing, access, and storage settings for article images.
 Images:
-  # Store 由 API 下载并保存图片，ImageProxy 使用旧版图片代理。
-  # Store downloads and saves images in the API. ImageProxy uses the legacy image proxy.
+  # Store 由 API 下载并保存图片，ImageProxy 通过签名链接按需代理图片。
+  # Store downloads and saves images in the API. ImageProxy serves images on demand through signed proxy URLs.
   Mode: Store
   # Authenticated 要求登录或提供 API 密钥，Public 允许匿名访问。
   # Authenticated requires sign-in or an API key. Public permits anonymous access.
@@ -79,8 +79,8 @@ Images:
       AccessKeyId: ""
       SecretAccessKey: ""
 
-# 旧版图片代理配置。启用 ImageProxy 模式时，通过 ImageProxy__SignatureKey 提供签名密钥。
-# Legacy image proxy settings. Set ImageProxy__SignatureKey when using ImageProxy mode.
+# 图片代理模式配置。启用 ImageProxy 时，通过 ImageProxy__SignatureKey 提供签名密钥。
+# ImageProxy mode settings. Set ImageProxy__SignatureKey when using this mode.
 ImageProxy:
   # 生成代理图片链接时使用的基础路径或 URL。
   # Base path or URL used to build proxied image links.

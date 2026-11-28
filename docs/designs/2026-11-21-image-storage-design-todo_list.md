@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** API 在保存和导入时把文章图片下载到本地目录或 S3 兼容存储，返回文章时再替换图片地址；默认部署不再需要 image-proxy，image-proxy 保留为可选模式。
+**Goal:** 默认使用 `Store` 模式。API 在保存和导入后将图片下载到本地目录或 S3 兼容存储，返回文章时替换图片地址。`ImageProxy` 是长期支持的按需代理模式。
 
 **Architecture:**
 - 正文只存规范化后的原图地址。下载结果记在 `Articles.Images`（JSON）和 `Articles.ImagesDueAt` 两列。

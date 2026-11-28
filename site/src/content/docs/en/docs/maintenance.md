@@ -30,9 +30,11 @@ Always back up your database and local images together. If you restore the datab
 
 If the browser extension has changed, extract the ZIP from the same release into the existing extension directory, then reload it on `chrome://extensions/`.
 
-### Upgrading from a release that used the image proxy
+To keep using `ImageProxy` after an upgrade, use the matching release’s proxy overlay and reuse the signing key and cache volume.
 
-Newer releases download and store images directly in the API by default. On first startup, a background job strips old proxy URL prefixes and queues images for download, logging backfill counts and download summaries as it goes.
+### Upgrading to Store from a release that stored signed image URLs
+
+When you upgrade and select `Store` mode, a background job strips proxy prefixes from previously stored image URLs and queues the originals for download. It logs backfill counts and download summaries.
 
 Hold on to the old `image-proxy-data` volume while migrating. For images that have vanished from their original websites, that volume may contain the only surviving copy.
 

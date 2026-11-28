@@ -1,9 +1,11 @@
 ---
 title: Image storage
-description: How MiniCC downloads and persists article images, how to set up local disk or S3-compatible storage such as Cloudflare R2, and how to migrate between them.
+description: Configure MiniCC image storage and proxy modes, and move images between local disk and S3-compatible storage such as Cloudflare R2.
 ---
 
-Once an article is saved, the API downloads its embedded images in the background and saves them on disk or in object storage rather than inside the database. By default, files go into `data/images` (relative to the API content root), which maps to `/app/data/images` in the API data volume under Compose.
+MiniCC supports both `Store` and `ImageProxy` long term. `ImageProxy` serves and caches images on demand through signed proxy URLs.
+
+In the default `Store` mode, the API downloads images in the background after saving an article and stores them on disk or in object storage. The default directory is `data/images` relative to the API content root. This maps to `/app/data/images` in the API data volume under Compose.
 
 Dedicate each image directory or bucket to a single MiniCC database. The cleanup job treats any file not referenced by that database as orphaned and removes it.
 
@@ -11,8 +13,8 @@ Dedicate each image directory or bucket to a single MiniCC database. The cleanup
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `Images__Mode` | `Store` | `Store` downloads and persists images via the API; `ImageProxy` switches to the legacy image proxy. |
-| `Images__Delivery` | `Authenticated` | `Authenticated` requires sign-in or an API key to view images; `Public` allows anonymous access. |
+| `Images__Mode` | `Store` | `Store` downloads and persists images. `ImageProxy` serves them on demand through the proxy. |
+| `Images__Delivery` | `Authenticated` | Image access in `Store` mode. `Authenticated` requires sign-in or an API key. `Public` allows anonymous access. |
 | `Images__ApiUrl` | `/api/images` | Base URL the API uses when building image links. Set to `http://localhost:5001/api/images` during local development. |
 | `Images__PublicBaseUrl` | Empty | Public bucket domain, such as `https://images.example.com`. Requires `Delivery=Public` with S3 storage. |
 | `Images__AllowPrivateNetworks` | `false` | Allow downloading images from private, loopback, and link-local addresses |
@@ -24,7 +26,7 @@ Dedicate each image directory or bucket to a single MiniCC database. The cleanup
 | `Images__Storage__S3__AccessKeyId` | Empty | Access key ID (pass via environment variable) |
 | `Images__Storage__S3__SecretAccessKey` | Empty | Secret access key (pass via environment variable) |
 
-## Who can see images
+## Image access in Store mode
 
 | Configuration | Image URL | Access |
 | --- | --- | --- |
@@ -98,9 +100,9 @@ By default, the downloader blocks loopback, private, and link-local addresses. O
 
 To move back from R2 to local disk, simply swap the source and destination.
 
-## Legacy image proxy
+## ImageProxy mode
 
-The legacy proxy requires `Images__Mode=ImageProxy` and `ImageProxy__SignatureKey` on the API. Under Compose, export `IMAGE_PROXY_SECRET` and include `deploy/docker-compose.image-proxy.yaml` when starting the stack. That overlay sets both variables and wires up the proxy container and its nginx route:
+Set `Images__Mode=ImageProxy` and `ImageProxy__SignatureKey` on the API. When building from source with Compose, export `IMAGE_PROXY_SECRET` and include `deploy/docker-compose.image-proxy.yaml` to configure the API, proxy service and nginx route.
 
 ```bash
 export IMAGE_PROXY_SECRET="your-long-random-secret"
